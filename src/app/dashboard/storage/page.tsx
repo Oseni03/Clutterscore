@@ -214,6 +214,7 @@ export default function StoragePage() {
 												<HardDrive className="h-5 w-5" />
 											)}
 											{file.type === "Image" && (
+												// eslint-disable-next-line jsx-a11y/alt-text
 												<Image className="h-5 w-5" />
 											)}
 										</div>
