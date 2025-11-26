@@ -191,6 +191,7 @@ const Page = () => {
 							<ResponsiveContainer width="100%" height="100%">
 								<AreaChart data={mockTrendData}>
 									<defs>
+										{/* Theme-aware gradient */}
 										<linearGradient
 											id="colorScore"
 											x1="0"
@@ -199,22 +200,24 @@ const Page = () => {
 											y2="1"
 										>
 											<stop
-												offset="5%"
+												offset="0%"
 												stopColor="hsl(var(--foreground))"
-												stopOpacity={0.1}
+												stopOpacity={0.25}
 											/>
 											<stop
-												offset="95%"
+												offset="80%"
 												stopColor="hsl(var(--foreground))"
-												stopOpacity={0}
+												stopOpacity={0.05}
 											/>
 										</linearGradient>
 									</defs>
+
 									<CartesianGrid
 										strokeDasharray="3 3"
 										vertical={false}
 										stroke="hsl(var(--border))"
 									/>
+
 									<XAxis
 										dataKey="name"
 										stroke="hsl(var(--muted-foreground))"
@@ -222,23 +225,32 @@ const Page = () => {
 										tickLine={false}
 										axisLine={false}
 									/>
+
 									<Tooltip
 										contentStyle={{
 											backgroundColor: "hsl(var(--card))",
 											borderRadius: "8px",
 											border: "1px solid hsl(var(--border))",
+											boxShadow:
+												"0 4px 12px rgba(0,0,0,0.1)",
 										}}
 										itemStyle={{
 											color: "hsl(var(--foreground))",
 										}}
+										labelStyle={{
+											color: "hsl(var(--muted-foreground))",
+										}}
 									/>
+
 									<Area
 										type="monotone"
 										dataKey="score"
-										stroke="hsl(var(--muted-foreground))"
+										stroke="hsl(var(--foreground))"
 										strokeWidth={2}
-										fillOpacity={1}
 										fill="url(#colorScore)"
+										isAnimationActive={true}
+										animationDuration={700}
+										animationEasing="ease-in-out"
 									/>
 								</AreaChart>
 							</ResponsiveContainer>

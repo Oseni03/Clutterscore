@@ -8,11 +8,11 @@ import { Download, Film } from "lucide-react";
 import StorageAISuggestions from "@/components/storage/storage-ai-suggestions";
 
 const storageData = [
-	{ name: "Documents", value: 35, color: "hsl(var(--foreground))" },
-	{ name: "Images", value: 25, color: "hsl(var(--chart-4))" },
-	{ name: "Video", value: 20, color: "hsl(var(--chart-2))" },
-	{ name: "Archives", value: 15, color: "hsl(var(--chart-5))" },
-	{ name: "Audio", value: 5, color: "hsl(var(--chart-3))" },
+	{ name: "Documents", value: 35, color: "hsl(var(--chart-1))" },
+	{ name: "Images", value: 25, color: "hsl(var(--chart-2))" },
+	{ name: "Video", value: 20, color: "hsl(var(--chart-3))" },
+	{ name: "Archives", value: 15, color: "hsl(var(--chart-4))" },
+	{ name: "Audio", value: 5, color: "hsl(var(--chart-5))" },
 ];
 
 const largeFiles = [

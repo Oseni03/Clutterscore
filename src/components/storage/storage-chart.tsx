@@ -24,7 +24,20 @@ export default function StorageChart({
 						<Cell key={`cell-${index}`} fill={entry.color} />
 					))}
 				</Pie>
-				<Tooltip />
+
+				<Tooltip
+					contentStyle={{
+						backgroundColor: "hsl(var(--card))",
+						borderRadius: "8px",
+						border: "1px solid hsl(var(--border))",
+					}}
+					labelStyle={{
+						color: "hsl(var(--muted-foreground))",
+					}}
+					itemStyle={{
+						color: "hsl(var(--foreground))",
+					}}
+				/>
 			</PieChart>
 		</ResponsiveContainer>
 	);
