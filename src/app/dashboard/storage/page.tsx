@@ -141,7 +141,7 @@ export default function StoragePage() {
 						</div>
 
 						{/* Scrollable legend */}
-						<div className="mt-4 space-y-2 overflow-y-auto max-h-32 pr-1">
+						<div className="mt-4 space-y-2 max-h-32 pr-1">
 							{storageData.map((item) => (
 								<div
 									key={item.name}

@@ -12,14 +12,12 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { Member, Organization } from "@/types";
-import { useRouter } from "next/navigation";
 
 export default function Page({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	const router = useRouter();
 	const {
 		setAdmin,
 		setOrganizations,
@@ -77,11 +75,6 @@ export default function Page({
 		setActiveOrganization,
 		updateSubscription,
 	]);
-
-	if (!session?.user.id) {
-		router.push("/login"); // Redirect to login if not authenticated
-		return null; // Render nothing while redirecting
-	}
 
 	return (
 		<SidebarProvider>
