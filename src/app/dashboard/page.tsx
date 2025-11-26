@@ -200,12 +200,12 @@ const Page = () => {
 										>
 											<stop
 												offset="5%"
-												stopColor="hsl(var(--primary))"
+												stopColor="hsl(var(--foreground))"
 												stopOpacity={0.1}
 											/>
 											<stop
 												offset="95%"
-												stopColor="hsl(var(--primary))"
+												stopColor="hsl(var(--foreground))"
 												stopOpacity={0}
 											/>
 										</linearGradient>
