@@ -135,9 +135,13 @@ export default function StoragePage() {
 					<CardHeader>
 						<CardTitle>File Type Distribution</CardTitle>
 					</CardHeader>
-					<CardContent className="h-[350px]">
-						<StorageChart storageData={storageData} />
-						<div className="mt-4 space-y-2">
+					<CardContent className="h-[350px] flex flex-col">
+						<div className="flex-1">
+							<StorageChart storageData={storageData} />
+						</div>
+
+						{/* Scrollable legend */}
+						<div className="mt-4 space-y-2 overflow-y-auto max-h-32 pr-1">
 							{storageData.map((item) => (
 								<div
 									key={item.name}
@@ -145,14 +149,19 @@ export default function StoragePage() {
 								>
 									<div className="flex items-center gap-2">
 										<div
-											className="w-3 h-3 rounded-full"
+											className="h-3 w-3 rounded-sm border"
 											style={{
 												backgroundColor: item.color,
+												borderColor:
+													"hsl(var(--border))",
 											}}
 										/>
-										<span>{item.name}</span>
+										<span className="text-foreground">
+											{item.name}
+										</span>
 									</div>
-									<span className="font-mono text-muted-foreground">
+
+									<span className="text-muted-foreground">
 										{item.value}%
 									</span>
 								</div>
