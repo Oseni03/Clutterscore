@@ -1,18 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-	HardDrive,
-	Image,
-	Film,
-	Archive,
-	Download,
-	Trash2,
-	ExternalLink,
-} from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
+import StorageChart from "@/components/storage/storage-chart";
+import FilesTable from "@/components/storage/files-table";
+import { Download, Film } from "lucide-react";
+import StorageAISuggestions from "@/components/storage/storage-ai-suggestions";
 
 const storageData = [
 	{ name: "Documents", value: 35, color: "hsl(var(--primary))" },
@@ -143,27 +136,7 @@ export default function StoragePage() {
 						<CardTitle>File Type Distribution</CardTitle>
 					</CardHeader>
 					<CardContent className="h-[300px]">
-						<ResponsiveContainer width="100%" height="100%">
-							<PieChart>
-								<Pie
-									data={storageData}
-									cx="50%"
-									cy="50%"
-									innerRadius={60}
-									outerRadius={80}
-									paddingAngle={5}
-									dataKey="value"
-								>
-									{storageData.map((entry, index) => (
-										<Cell
-											key={`cell-${index}`}
-											fill={entry.color}
-										/>
-									))}
-								</Pie>
-								<Tooltip />
-							</PieChart>
-						</ResponsiveContainer>
+						<StorageChart storageData={storageData} />
 						<div className="mt-4 space-y-2">
 							{storageData.map((item) => (
 								<div
@@ -196,69 +169,7 @@ export default function StoragePage() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-1">
-							{largeFiles.map((file, i) => (
-								<div
-									key={i}
-									className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg group transition-colors border border-transparent hover:border-border/50"
-								>
-									<div className="flex items-center gap-3 overflow-hidden">
-										<div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground">
-											{file.type === "Video" && (
-												<Film className="h-5 w-5" />
-											)}
-											{file.type === "Archive" && (
-												<Archive className="h-5 w-5" />
-											)}
-											{file.type === "Database" && (
-												<HardDrive className="h-5 w-5" />
-											)}
-											{file.type === "Image" && (
-												// eslint-disable-next-line jsx-a11y/alt-text
-												<Image className="h-5 w-5" />
-											)}
-										</div>
-										<div className="min-w-0">
-											<p className="font-medium truncate">
-												{file.name}
-											</p>
-											<div className="flex items-center gap-2 text-xs text-muted-foreground">
-												<span>{file.location}</span>
-												<span>•</span>
-												<span>
-													Last accessed{" "}
-													{file.lastAccess}
-												</span>
-											</div>
-										</div>
-									</div>
-									<div className="flex items-center gap-4 flex-shrink-0 pl-4">
-										<Badge
-											variant="secondary"
-											className="font-mono"
-										>
-											{file.size}
-										</Badge>
-										<div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-											<Button
-												size="icon"
-												variant="ghost"
-												className="h-8 w-8"
-											>
-												<ExternalLink className="h-4 w-4" />
-											</Button>
-											<Button
-												size="icon"
-												variant="ghost"
-												className="h-8 w-8 text-destructive hover:text-destructive"
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										</div>
-									</div>
-								</div>
-							))}
-						</div>
+						<FilesTable files={largeFiles} />
 						<Button
 							variant="outline"
 							className="w-full mt-4"
@@ -269,6 +180,8 @@ export default function StoragePage() {
 					</CardContent>
 				</Card>
 			</div>
+
+			<StorageAISuggestions />
 		</div>
 	);
 }
