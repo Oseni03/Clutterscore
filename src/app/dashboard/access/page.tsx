@@ -244,7 +244,7 @@ export default function AccessPage() {
 												<DropdownMenuItem>
 													<ShieldAlert className="mr-2 h-4 w-4" />
 													<Link
-														href="/audit-logs"
+														href="/dashboard/audit-logs"
 														className="w-full"
 													>
 														View Audit Logs

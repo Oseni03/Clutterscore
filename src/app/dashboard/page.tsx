@@ -235,7 +235,7 @@ const Page = () => {
 									<Area
 										type="monotone"
 										dataKey="score"
-										stroke="hsl(var(--primary))"
+										stroke="hsl(var(--muted-foreground))"
 										strokeWidth={2}
 										fillOpacity={1}
 										fill="url(#colorScore)"
