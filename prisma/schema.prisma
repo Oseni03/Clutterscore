@@ -13,18 +13,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  OWNER
+  ADMIN
+  MANAGER
+  ANALYST
+  USER
+}
+
 model User {
-  id            String       @id  @default(cuid())
+  id            String         @id @default(cuid())
   name          String
   email         String
-  emailVerified Boolean      @default(false)
+  emailVerified Boolean        @default(false)
   image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @default(now()) @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
   members       Member[]
   invitations   Invitation[]
+  auditLogs     AuditLog[]
+  activities    Activity[]
+  notifications Notification[]
 
   @@unique([email])
   @@map("user")
@@ -77,7 +88,7 @@ model Verification {
 }
 
 model Organization {
-  id              String        @id  @default(cuid())
+  id              String        @id @default(cuid())
   name            String
   slug            String?
   logo            String?
@@ -88,12 +99,19 @@ model Organization {
   members         Member[]
   invitations     Invitation[]
 
+  integrations ToolIntegration[]
+  audits       AuditResult[]
+  playbooks    Playbook[]
+  auditLogs    AuditLog[]
+  scoreTrends  ScoreTrend[]
+  activities   Activity[]
+
   @@unique([slug])
   @@map("organization")
 }
 
 model Member {
-  id             String       @id  @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
@@ -105,7 +123,7 @@ model Member {
 }
 
 model Invitation {
-  id             String       @id  @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   email          String
@@ -148,4 +166,298 @@ model Subscription {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("subscription")
+}
+
+enum ImpactType {
+  SECURITY
+  SAVINGS
+  EFFICIENCY
+}
+
+enum ToolSource {
+  SLACK
+  GOOGLE
+  MICROSOFT
+  NOTION
+  DROPBOX
+  FIGMA
+  LINEAR
+  JIRA
+}
+
+enum SubscriptionTier {
+  FREE
+  AUDIT
+  PRO
+}
+
+enum PlaybookStatus {
+  PENDING
+  APPROVED
+  DISMISSED
+  EXECUTING
+  EXECUTED
+  FAILED
+}
+
+enum RiskLevel {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AuditLogStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum AuditLogActionType {
+  REVOKE_ACCESS
+  DELETE_FILE
+  ARCHIVE_CHANNEL
+  ARCHIVE_PAGE
+  REMOVE_GUEST
+  REMOVE_LICENSE
+  UPDATE_PERMISSIONS
+  OTHER
+}
+
+enum FileType {
+  DOCUMENT
+  IMAGE
+  VIDEO
+  MUSIC
+  ARCHIVE
+  DATABASE
+  OTHER
+}
+
+enum FileStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum IntegrationSyncStatus {
+  IDLE
+  SYNCING
+  ERROR
+}
+
+enum NotificationType {
+  PLAYBOOK_READY
+  RISK_DETECTED
+  AUDIT_COMPLETE
+  INTEGRATION_ERROR
+  SUBSCRIPTION_EXPIRING
+  APPROVAL_REQUIRED
+}
+
+model ToolIntegration {
+  id             String                @id @default(uuid())
+  organizationId String
+  source         ToolSource
+  accessToken    String                @db.Text
+  refreshToken   String?               @db.Text
+  expiresAt      DateTime?
+  scopes         String[]
+  connectedAt    DateTime              @default(now())
+  lastSyncedAt   DateTime?
+  syncStatus     IntegrationSyncStatus @default(IDLE)
+  lastError      String?               @db.Text
+  lastErrorAt    DateTime?
+  isActive       Boolean               @default(true)
+  metadata       Json? // Tool-specific configuration
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, source])
+  @@index([organizationId])
+  @@index([isActive, lastSyncedAt])
+}
+
+model AuditResult {
+  id               String   @id @default(uuid())
+  organizationId   String
+  score            Int
+  estimatedSavings Float    @default(0) // Renamed from projectedWaste
+  storageWaste     Float    @default(0)
+  licenseWaste     Float    @default(0)
+  activeRisks      Int      @default(0)
+  criticalRisks    Int      @default(0)
+  moderateRisks    Int      @default(0)
+  auditedAt        DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playbooks    Playbook[]
+  files        File[]
+
+  @@index([organizationId])
+  @@index([auditedAt])
+}
+
+model ScoreTrend {
+  id             String   @id @default(uuid())
+  organizationId String
+  month          String // e.g., '2025-11'
+  score          Int
+  waste          Float
+  riskScore      Int? // Separate security score
+  activeUsers    Int?
+  storageUsedGb  Float?
+  licenseCount   Int?
+  recordedAt     DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, month])
+  @@index([organizationId, recordedAt])
+}
+
+model Playbook {
+  id             String         @id @default(uuid())
+  auditResultId  String?
+  organizationId String
+  title          String
+  description    String
+  impact         String
+  impactType     ImpactType
+  source         ToolSource
+  itemsCount     Int
+  riskLevel      RiskLevel?
+  status         PlaybookStatus @default(PENDING)
+
+  // Execution tracking
+  estimatedSavings Float?
+  actualSavings    Float?
+  executedBy       String?
+  executionTime    Int? // Milliseconds
+  itemsProcessed   Int     @default(0)
+  itemsFailed      Int     @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  executedAt  DateTime?
+  dismissedAt DateTime?
+
+  // Relations
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  auditResult  AuditResult?   @relation(fields: [auditResultId], references: [id], onDelete: SetNull)
+  items        PlaybookItem[]
+  auditLog     AuditLog?
+
+  @@index([organizationId])
+  @@index([auditResultId])
+  @@index([status, createdAt])
+  @@index([impactType, status])
+}
+
+model PlaybookItem {
+  id         String  @id @default(uuid())
+  playbookId String
+  itemName   String
+  itemType   String // e.g., 'channel', 'file', 'access_token', 'user', 'guest'
+  externalId String? // Generic ID for the resource in external system
+  metadata   Json // All details: size, lastAccessed, email, role, reason, etc.
+  isSelected Boolean @default(true) // For preview/approval selection
+
+  playbook Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  @@index([playbookId])
+  @@index([itemType])
+}
+
+model AuditLog {
+  id             String             @id @default(uuid())
+  organizationId String
+  playbookId     String?            @unique
+  userId         String?
+  actionType     AuditLogActionType
+  target         String // e.g., user email, file name, channel name
+  targetType     String // e.g., 'User', 'File', 'Slack Channel'
+  executor       String // 'Admin (You)', 'Automated Policy', etc.
+  status         AuditLogStatus
+  details        Json? // Additional info like size, age, error message
+  undoActions    Json[] // For undo functionality
+  undoExpiresAt  DateTime? // e.g., 30 days from execution
+  timestamp      DateTime           @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playbook     Playbook?    @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([playbookId])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model File {
+  id               String     @id @default(uuid())
+  auditResultId    String
+  name             String
+  sizeMb           Float
+  type             FileType
+  source           ToolSource
+  mimeType         String?
+  fileHash         String? // SHA-256 for duplicate detection
+  url              String? // External file URL
+  path             String? // Full path in the tool
+  lastAccessed     DateTime?
+  ownerEmail       String?
+  isPubliclyShared Boolean    @default(false)
+  sharedWith       String[] // Emails/domains with access
+  isDuplicate      Boolean    @default(false)
+  duplicateGroup   String? // If duplicate, group identifier
+  status           FileStatus @default(ACTIVE)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Relations
+  auditResult AuditResult @relation(fields: [auditResultId], references: [id], onDelete: Cascade)
+
+  @@index([auditResultId])
+  @@index([source])
+  @@index([fileHash])
+  @@index([isDuplicate, duplicateGroup])
+  @@index([lastAccessed])
+}
+
+model Activity {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String?
+  action         String // 'audit.run', 'playbook.approved', 'integration.added'
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+  @@index([type])
 }
