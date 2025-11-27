@@ -202,6 +202,7 @@ export interface FilesListResponse extends PaginatedResponse<FileData> {
 export interface PlaybooksListResponse {
 	success: boolean;
 	playbooks: PlaybookWithItems[];
+	error?: any;
 }
 
 /**
