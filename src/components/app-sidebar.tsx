@@ -43,12 +43,6 @@ const dashboardItems = [
 		url: "/dashboard/storage",
 	},
 	{
-		id: "access",
-		label: "Access Review",
-		icon: Users,
-		url: "/dashboard/access",
-	},
-	{
 		id: "settings",
 		label: "Settings",
 		icon: Settings,
