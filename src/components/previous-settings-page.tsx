@@ -7,7 +7,7 @@ import OrganizationCard from "@/components/settings/organizations";
 import SubscriptionCard from "@/components/settings/subscription";
 import { QuickActions } from "@/components/settings/quick-actions";
 
-import { MembersCard } from "@/components/settings/members";
+import MembersCard from "@/components/settings/members";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
