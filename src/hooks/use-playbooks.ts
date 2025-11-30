@@ -146,14 +146,14 @@ export function usePlaybooks() {
 
 	const getFilteredPlaybooks = useCallback(() => {
 		return playbooks.filter((playbook) => {
+			const searchLower = filters.search.toLowerCase();
+
 			const matchesSearch =
-				filters.search === "" ||
-				playbook.title
+				!filters.search || // if no search term, match all
+				(playbook.title ?? "").toLowerCase().includes(searchLower) ||
+				(playbook.description ?? "")
 					.toLowerCase()
-					.includes(filters.search.toLowerCase()) ||
-				playbook.description
-					.toLowerCase()
-					.includes(filters.search.toLowerCase());
+					.includes(searchLower);
 
 			const matchesStatus =
 				filters.status === "all" || playbook.status === filters.status;

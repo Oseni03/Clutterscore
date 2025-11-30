@@ -23,9 +23,12 @@ export function useAuditLogs() {
 			setIsLoading(true);
 			setError(null);
 
+			const page = pagination.page ?? 1;
+			const limit = pagination.limit ?? 20;
+
 			const params = new URLSearchParams({
-				page: pagination.page.toString(),
-				limit: pagination.limit.toString(),
+				page: String(page),
+				limit: String(limit),
 			});
 
 			if (filters.actionType !== "all") {

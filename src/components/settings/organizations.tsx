@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Building2, Edit, Loader2, Trash2 } from "lucide-react";
 import {
 	AlertDialog,
@@ -57,6 +57,13 @@ const OrganizationCard = () => {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const isMountedRef = useRef(true);
+
+	useEffect(() => {
+		return () => {
+			isMountedRef.current = false;
+		};
+	}, []);
 
 	// Memoized handlers to prevent unnecessary re-renders
 	const handleOpenUpdateDialog = useCallback(() => {
@@ -78,6 +85,8 @@ const OrganizationCard = () => {
 				activeOrganization.id
 			);
 
+			if (!isMountedRef.current) return;
+
 			if (!success || !data) {
 				toast.error("Failed to delete tenant", { id: toastId });
 				return;
@@ -87,19 +96,18 @@ const OrganizationCard = () => {
 			toast.success("Tenant deleted successfully", { id: toastId });
 			setDeleteDialogOpen(false);
 		} catch (error) {
-			console.error("Delete organization error:", error);
-			toast.error("Failed to delete tenant", { id: toastId });
+			if (isMountedRef.current) {
+				console.error("Delete organization error:", error);
+				toast.error("Failed to delete tenant", { id: toastId });
+			}
 		} finally {
-			setIsLoading(false);
+			if (isMountedRef.current) {
+				setIsLoading(false);
+			}
 		}
 	}, [activeOrganization, removeOrganization]);
 
-	// Early return for loading state
-	if (!activeOrganization) {
-		return <OrganizationSkeleton />;
-	}
-
-	const formattedDate = format(activeOrganization.createdAt, "MMMM d, yyyy");
+	const formattedDate = format(activeOrganization!.createdAt, "MMMM d, yyyy");
 
 	return (
 		<div className="space-y-6">
@@ -141,11 +149,11 @@ const OrganizationCard = () => {
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<InfoField
 							label="Name"
-							value={activeOrganization.name}
+							value={activeOrganization!.name}
 						/>
 						<InfoField
 							label="Slug"
-							value={activeOrganization.slug}
+							value={activeOrganization!.slug}
 						/>
 						<InfoField label="Created" value={formattedDate} />
 					</div>
@@ -162,7 +170,9 @@ const OrganizationCard = () => {
 							save when you&rsquo;re done.
 						</DialogDescription>
 					</DialogHeader>
-					<UpdateOrganizationForm organization={activeOrganization} />
+					<UpdateOrganizationForm
+						organization={activeOrganization!}
+					/>
 				</DialogContent>
 			</Dialog>
 
@@ -179,7 +189,7 @@ const OrganizationCard = () => {
 						<AlertDialogDescription>
 							This action cannot be undone. This will permanently
 							delete the tenant{" "}
-							<strong>{activeOrganization.name}</strong> and
+							<strong>{activeOrganization!.name}</strong> and
 							remove all associated data from our servers.
 						</AlertDialogDescription>
 					</AlertDialogHeader>

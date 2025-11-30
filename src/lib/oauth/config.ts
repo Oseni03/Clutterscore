@@ -34,8 +34,8 @@ export const OAUTH_CONFIGS: Record<ToolSource, OAuthConfig> = {
 		user_scopes: [
 			// Admin scopes - requires workspace app + admin approval
 			// Only add if your app is configured as a workspace app
-			"admin.users:read",
-			"admin.users:write",
+			// "admin.users:read",
+			// "admin.users:write",
 		],
 		redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/slack/callback`,
 	},

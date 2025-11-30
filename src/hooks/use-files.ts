@@ -33,10 +33,10 @@ export function useFiles() {
 			if (filters.type !== "all") {
 				params.set("type", filters.type);
 			}
-			if (filters.isDuplicate !== null) {
+			if (filters.isDuplicate != null) {
 				params.set("isDuplicate", filters.isDuplicate.toString());
 			}
-			if (filters.isPubliclyShared !== null) {
+			if (filters.isPubliclyShared != null) {
 				params.set(
 					"isPubliclyShared",
 					filters.isPubliclyShared.toString()
