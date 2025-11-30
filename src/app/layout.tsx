@@ -16,9 +16,86 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Clutterscore - The Digital Hygiene Platform",
+	title: {
+		default: "ClusterScore - Digital Workspace Hygiene Platform",
+		template: "%s | ClusterScore",
+	},
 	description:
-		"Your workspace is filthy. We’ll prove it in 90 seconds. The self-service AI janitor for modern teams.",
+		"Audit, optimize, and secure your digital workspace in minutes. ClutterScore identifies waste, security risks, and inefficiencies across Slack, Google Drive, Microsoft 365, and more.",
+	keywords: [
+		"workspace audit",
+		"digital hygiene",
+		"SaaS optimization",
+		"security audit",
+		"workspace cleanup",
+		"cost savings",
+		"license management",
+		"file management",
+		"Slack audit",
+		"Google Drive audit",
+		"Microsoft 365 audit",
+	],
+	authors: [{ name: "ClutterScore" }],
+	creator: "ClutterScore",
+	openGraph: {
+		type: "website",
+		locale: "en_US",
+		url:
+			process.env.NEXT_PUBLIC_BASE_URL ||
+			"https://clusterscore.vercel.app",
+		siteName: "ClusterScore",
+		title: "ClusterScore - Digital Workspace Hygiene Platform",
+		description:
+			"Audit your workspace in 90 seconds. Identify waste, security risks, and optimization opportunities across your entire digital ecosystem.",
+		images: [
+			{
+				url: "/og-image.png",
+				width: 1200,
+				height: 630,
+				alt: "ClusterScore - Digital Workspace Hygiene Platform",
+			},
+		],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "ClusterScore - Digital Workspace Hygiene Platform",
+		description:
+			"Audit your workspace in 90 seconds. Find waste, risks, and savings opportunities.",
+		images: ["/og-image.png"],
+		creator: "@Oseni03",
+	},
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			"max-video-preview": -1,
+			"max-image-preview": "large",
+			"max-snippet": -1,
+		},
+	},
+	icons: {
+		icon: [
+			{ url: "/favicon.ico" },
+			{
+				url: "/generated_images/logo.png",
+				type: "image/png",
+				sizes: "32x32",
+			},
+		],
+		apple: [
+			{
+				url: "/generated_images/logo.png",
+				sizes: "180x180",
+				type: "image/png",
+			},
+		],
+	},
+	manifest: "/site.webmanifest",
+	alternates: {
+		canonical: "https://clusterscore.vercel.app",
+	},
 };
 
 export default function RootLayout({

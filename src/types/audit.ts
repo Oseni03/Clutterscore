@@ -123,7 +123,12 @@ export function transformAuditData(
 		activeRisks: auditResult.activeRisks,
 		criticalRisks: auditResult.criticalRisks,
 		moderateRisks: auditResult.moderateRisks,
-		auditedAt: auditResult.auditedAt.toLocaleString(),
+		auditedAt:
+			typeof auditResult.auditedAt === "string"
+				? auditResult.auditedAt
+				: auditResult.auditedAt instanceof Date
+					? auditResult.auditedAt.toISOString()
+					: new Date().toISOString(), // fallback (should never happen),
 		playbooks: auditResult.playbooks,
 		_count: auditResult._count,
 	};
@@ -170,8 +175,18 @@ export function transformPlaybookSummary(
 		status: playbook.status,
 		riskLevel: playbook.riskLevel,
 		estimatedSavings: playbook.estimatedSavings,
-		createdAt: playbook.createdAt.toLocaleString(),
-		executedAt: playbook.executedAt?.toLocaleString() || null,
+		createdAt:
+			typeof playbook.createdAt === "string"
+				? playbook.createdAt
+				: playbook.createdAt instanceof Date
+					? playbook.createdAt.toISOString()
+					: new Date().toISOString(), // fallback (should never happen),
+		executedAt:
+			typeof playbook.executedAt === "string"
+				? playbook.executedAt
+				: playbook.executedAt instanceof Date
+					? playbook.executedAt.toISOString()
+					: new Date().toISOString(), // fallback (should never happen),
 	};
 }
 

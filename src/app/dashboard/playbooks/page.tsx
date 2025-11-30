@@ -60,14 +60,25 @@ export default function PlaybooksPage() {
 
 	const filteredPlaybooks = getFilteredPlaybooks();
 
-	// Stats
+	// Stats with safe array checks
 	const stats = {
-		total: playbooks.length,
-		security: playbooks.filter((p) => p.impactType === "SECURITY").length,
-		savings: playbooks.filter((p) => p.impactType === "SAVINGS").length,
-		efficiency: playbooks.filter((p) => p.impactType === "EFFICIENCY")
-			.length,
+		total: Array.isArray(playbooks) ? playbooks.length : 0,
+		security: Array.isArray(playbooks)
+			? playbooks.filter((p) => p?.impactType === "SECURITY").length
+			: 0,
+		savings: Array.isArray(playbooks)
+			? playbooks.filter((p) => p?.impactType === "SAVINGS").length
+			: 0,
+		efficiency: Array.isArray(playbooks)
+			? playbooks.filter((p) => p?.impactType === "EFFICIENCY").length
+			: 0,
 	};
+
+	// Get current tab value safely
+	const currentTabValue =
+		filters?.impactType === "all" || !filters?.impactType
+			? "all"
+			: String(filters.impactType).toLowerCase();
 
 	if (isLoading) {
 		return (
@@ -146,11 +157,7 @@ export default function PlaybooksPage() {
 			{/* Filters */}
 			<div className="flex flex-col md:flex-row gap-4 items-center justify-between">
 				<Tabs
-					value={
-						filters.impactType === "all"
-							? "all"
-							: filters.impactType.toLowerCase()
-					}
+					value={currentTabValue}
 					className="w-full md:w-auto"
 					onValueChange={handleTabChange}
 				>
@@ -196,7 +203,7 @@ export default function PlaybooksPage() {
 						<Input
 							placeholder="Filter playbooks..."
 							className="pl-9"
-							value={filters.search}
+							value={filters?.search || ""}
 							onChange={(e) => handleSearchChange(e.target.value)}
 						/>
 					</div>
@@ -225,7 +232,7 @@ export default function PlaybooksPage() {
 							}
 						/>
 					))
-				) : playbooks.length === 0 ? (
+				) : stats.total === 0 ? (
 					// No playbooks at all
 					<div className="col-span-2">
 						<div className="text-center py-12 md:py-20 border rounded-lg bg-muted/20">
@@ -272,7 +279,7 @@ export default function PlaybooksPage() {
 			</div>
 
 			{/* Summary Stats */}
-			{playbooks.length > 0 && (
+			{stats.total > 0 && (
 				<div className="mt-8 pt-6 border-t">
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						<div className="text-center">

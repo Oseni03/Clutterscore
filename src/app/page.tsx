@@ -29,9 +29,7 @@ export default function LandingPage() {
 				<div className="container mx-auto px-4 h-16 flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<Image
-							src={
-								"/generated_images/minimalist_logo_for_clutterscore.png"
-							}
+							src={"/generated_images/logo.png"}
 							alt="Clutterscore Logo"
 							className="h-8 w-8"
 						/>

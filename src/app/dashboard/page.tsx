@@ -141,7 +141,8 @@ const DashboardPage = () => {
 						Dashboard
 					</h1>
 					<p className="text-xs md:text-sm text-muted-foreground mt-1">
-						Last updated {auditData.auditedAt}
+						Last updated{" "}
+						{new Date(auditData.auditedAt).toLocaleString()}
 					</p>
 				</div>
 				<Button
