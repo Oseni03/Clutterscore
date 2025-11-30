@@ -34,7 +34,7 @@ import { removeMember } from "@/server/members";
 import { cancelInvitation } from "@/server/invitations";
 import { authClient } from "@/lib/auth-client";
 
-export const MembersCard = () => {
+export default function MembersCard() {
 	const {
 		activeOrganization,
 		members,
@@ -532,4 +532,4 @@ export const MembersCard = () => {
 			)}
 		</div>
 	);
-};
+}

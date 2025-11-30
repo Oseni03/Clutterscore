@@ -27,6 +27,12 @@ export class ConnectorFactory {
 			case "LINEAR":
 				return new LinearConnector(config);
 			case "JIRA":
+				// Validate Jira-specific metadata before creating connector
+				if (!config.metadata?.cloudId) {
+					throw new Error(
+						"Jira cloudId is required in config.metadata. Ensure the OAuth callback properly stored cloudId during integration setup."
+					);
+				}
 				return new JiraConnector(config);
 			default:
 				throw new Error(`Unsupported connector: ${source}`);

@@ -90,7 +90,7 @@ export default function StorageAISuggestions({
 							</p>
 						</div>
 						<Button size="lg" asChild>
-							<Link href="/playbooks">
+							<Link href="/dashboard/playbooks">
 								View Cleanup Playbooks
 							</Link>
 						</Button>

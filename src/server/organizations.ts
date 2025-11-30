@@ -102,7 +102,7 @@ export async function getOrganizationById(orgId: string) {
 
 export async function updateOrganization(
 	organizationId: string,
-	data: { name: string; slug: string }
+	data: { name: string; slug?: string }
 ) {
 	try {
 		const result = await auth.api.updateOrganization({

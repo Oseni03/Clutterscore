@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
 					accessToken: integration.accessToken,
 					refreshToken: integration.refreshToken || undefined,
 					organizationId: user.organizationId,
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					metadata: integration.metadata as Record<string, any>,
 				});
 
 				const newAccessToken = await connector.refreshToken();

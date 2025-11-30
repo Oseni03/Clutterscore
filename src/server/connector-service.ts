@@ -38,6 +38,7 @@ export class ConnectorService {
 				accessToken: integration.accessToken,
 				refreshToken: integration.refreshToken || undefined,
 				organizationId,
+				metadata: integration.metadata as Record<string, any>,
 			});
 
 			const auditData = await connector.fetchAuditData();
@@ -659,6 +660,7 @@ export class ConnectorService {
 			accessToken: integration.accessToken,
 			refreshToken: integration.refreshToken || undefined,
 			organizationId,
+			metadata: integration.metadata as Record<string, any>,
 		});
 
 		return connector.testConnection();

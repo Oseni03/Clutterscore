@@ -188,12 +188,52 @@ async function exchangeCodeForTokens(
 			},
 		};
 	} else if (source === "JIRA") {
+		// Jira 3-legged OAuth: Get cloudId for the site
+		const cloudIdResponse = await fetch(
+			"https://api.atlassian.com/oauth/token/accessible-resources",
+			{
+				headers: {
+					Authorization: `Bearer ${data.access_token}`,
+					Accept: "application/json",
+				},
+			}
+		);
+
+		if (!cloudIdResponse.ok) {
+			throw new Error(
+				`Failed to fetch Jira accessible resources: ${await cloudIdResponse.text()}`
+			);
+		}
+
+		const accessibleResources = await cloudIdResponse.json();
+
+		if (
+			!Array.isArray(accessibleResources) ||
+			accessibleResources.length === 0
+		) {
+			throw new Error("No accessible Jira sites found for this token");
+		}
+
+		// Use the first accessible site (or implement site selection logic)
+		const primarySite = accessibleResources[0];
+
 		return {
 			access_token: data.access_token,
 			refresh_token: data.refresh_token,
 			expires_in: data.expires_in,
 			metadata: {
-				scope: data.scope,
+				cloudId: primarySite.id,
+				siteName: primarySite.name,
+				siteUrl: primarySite.url,
+				scopes: primarySite.scopes,
+				avatarUrl: primarySite.avatarUrl,
+				// Store all accessible sites if user has multiple
+				accessibleSites: accessibleResources.map((site) => ({
+					id: site.id,
+					name: site.name,
+					url: site.url,
+					scopes: site.scopes,
+				})),
 			},
 		};
 	} else if (source === "NOTION") {

@@ -5,6 +5,7 @@ export interface ConnectorConfig {
 	accessToken: string;
 	refreshToken?: string;
 	organizationId: string;
+	metadata?: Record<string, any>;
 }
 
 export interface FileData {
@@ -31,6 +32,7 @@ export interface UserData {
 	lastActive?: Date;
 	isGuest?: boolean;
 	licenseType?: string;
+	metadata?: Record<string, any>;
 }
 
 export interface ChannelData {
@@ -56,6 +58,7 @@ export interface AuditData {
 	storageUsedGb: number;
 	totalLicenses: number;
 	activeUsers: number;
+	metadata?: Record<string, any>;
 }
 
 export interface ConnectorError {

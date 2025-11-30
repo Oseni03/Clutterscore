@@ -7,11 +7,20 @@ import { SUBSCRIPTION_PLANS } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { authClient } from "@/lib/auth-client";
+import { useEffect } from "react";
 
 const SubscriptionCard = () => {
-	const { activeOrganization, isAdmin, subscription } = useOrganizationStore(
-		(state) => state
-	);
+	const { activeOrganization, isAdmin, subscription, loadSubscription } =
+		useOrganizationStore((state) => state);
+
+	useEffect(() => {
+		if (activeOrganization?.id) {
+			// load latest subscription from API if not present
+			loadSubscription(activeOrganization.id).catch((err) => {
+				console.error("Failed to load subscription:", err);
+			});
+		}
+	}, [activeOrganization?.id, loadSubscription]);
 
 	const productIds = SUBSCRIPTION_PLANS.map((plan) => plan.productId).filter(
 		Boolean

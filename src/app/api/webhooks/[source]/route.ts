@@ -26,8 +26,16 @@ export async function POST(
 			);
 		}
 
-		// Verify webhook signature
-		const isValid = await handler.verify(req);
+		// Read raw body once and clone a Request for handler verification
+		const rawBody = await req.text();
+		const verifyReq = new Request(req.url, {
+			method: req.method,
+			headers: req.headers,
+			body: rawBody,
+		});
+
+		// Verify webhook signature using cloned request
+		const isValid = await handler.verify(verifyReq);
 
 		if (!isValid) {
 			return NextResponse.json(
@@ -36,11 +44,13 @@ export async function POST(
 			);
 		}
 
-		const body = await req.json();
+		const body = rawBody ? JSON.parse(rawBody) : {};
 
-		// Handle Slack URL verification
+		// Handle Slack URL verification (respond with plain text challenge)
 		if (source === "SLACK" && body.type === "url_verification") {
-			return NextResponse.json({ challenge: body.challenge });
+			return new NextResponse(body.challenge, {
+				headers: { "Content-Type": "text/plain" },
+			});
 		}
 
 		// Handle Microsoft subscription validation
