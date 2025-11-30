@@ -1,11 +1,13 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 
 export function useAudit() {
 	const [isRunning, setIsRunning] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const runAudit = async () => {
+	const runAudit = useCallback(async () => {
 		setIsRunning(true);
 		setError(null);
 
@@ -17,7 +19,7 @@ export function useAudit() {
 			const data = await response.json();
 
 			if (!response.ok) {
-				throw new Error(data.error || "Audit failed");
+				throw new Error(data.error || "Failed to run audit");
 			}
 
 			toast.success("Audit completed successfully");
@@ -30,28 +32,11 @@ export function useAudit() {
 		} finally {
 			setIsRunning(false);
 		}
-	};
-
-	const fetchLatestAudit = async () => {
-		try {
-			const response = await fetch("/api/audit/latest");
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || "Failed to fetch audit");
-			}
-
-			return data.auditResult;
-		} catch (err) {
-			toast.error((err as Error).message || "Failed to fetch audit");
-			throw err;
-		}
-	};
+	}, []);
 
 	return {
+		runAudit,
 		isRunning,
 		error,
-		runAudit,
-		fetchLatestAudit,
 	};
 }

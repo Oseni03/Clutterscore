@@ -36,34 +36,34 @@ export const metadata: Metadata = {
 		"Microsoft 365 audit",
 	],
 	authors: [{ name: "ClutterScore" }],
-	creator: "ClutterScore",
-	openGraph: {
-		type: "website",
-		locale: "en_US",
-		url:
-			process.env.NEXT_PUBLIC_BASE_URL ||
-			"https://clusterscore.vercel.app",
-		siteName: "ClusterScore",
-		title: "ClusterScore - Digital Workspace Hygiene Platform",
-		description:
-			"Audit your workspace in 90 seconds. Identify waste, security risks, and optimization opportunities across your entire digital ecosystem.",
-		images: [
-			{
-				url: "/og-image.png",
-				width: 1200,
-				height: 630,
-				alt: "ClusterScore - Digital Workspace Hygiene Platform",
-			},
-		],
-	},
-	twitter: {
-		card: "summary_large_image",
-		title: "ClusterScore - Digital Workspace Hygiene Platform",
-		description:
-			"Audit your workspace in 90 seconds. Find waste, risks, and savings opportunities.",
-		images: ["/og-image.png"],
-		creator: "@Oseni03",
-	},
+	creator: "ClusterScore",
+	// openGraph: {
+	// 	type: "website",
+	// 	locale: "en_US",
+	// 	url:
+	// 		process.env.NEXT_PUBLIC_BASE_URL ||
+	// 		"https://clusterscore.vercel.app",
+	// 	siteName: "ClusterScore",
+	// 	title: "ClusterScore - Digital Workspace Hygiene Platform",
+	// 	description:
+	// 		"Audit your workspace in 90 seconds. Identify waste, security risks, and optimization opportunities across your entire digital ecosystem.",
+	// 	images: [
+	// 		{
+	// 			url: "/og-image.png",
+	// 			width: 1200,
+	// 			height: 630,
+	// 			alt: "ClusterScore - Digital Workspace Hygiene Platform",
+	// 		},
+	// 	],
+	// },
+	// twitter: {
+	// 	card: "summary_large_image",
+	// 	title: "ClusterScore - Digital Workspace Hygiene Platform",
+	// 	description:
+	// 		"Audit your workspace in 90 seconds. Find waste, risks, and savings opportunities.",
+	// 	images: ["/og-image.png"],
+	// 	creator: "@Oseni03",
+	// },
 	robots: {
 		index: true,
 		follow: true,
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
 			},
 		],
 	},
-	manifest: "/site.webmanifest",
+	// manifest: "/site.webmanifest",
 	alternates: {
 		canonical: "https://clusterscore.vercel.app",
 	},
