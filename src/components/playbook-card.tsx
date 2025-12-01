@@ -65,7 +65,7 @@ export function PlaybookCard({
 			<div className="flex items-start justify-between mb-4">
 				<div className="flex items-start gap-3 flex-1">
 					<div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xl flex-shrink-0">
-						{SOURCE_ICONS[source] || "File"}
+						{SOURCE_ICONS[source] || "❓"}
 					</div>
 					<div className="flex-1 min-w-0">
 						<h3 className="font-semibold text-base mb-1 text-foreground">
