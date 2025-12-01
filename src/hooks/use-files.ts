@@ -76,16 +76,50 @@ export function useFiles() {
 	}, [filters, pagination.page, pagination.limit, setFiles, setPagination]);
 
 	const getFilteredFiles = useCallback(() => {
-		if (!filters.search) return files;
+		let filtered = [...files];
 
-		const query = filters.search.toLowerCase();
-		return files.filter(
-			(file) =>
-				file.name.toLowerCase().includes(query) ||
-				file.path?.toLowerCase().includes(query) ||
-				file.ownerEmail?.toLowerCase().includes(query)
-		);
-	}, [files, filters.search]);
+		// Apply source filter
+		if (filters.source && filters.source !== "all") {
+			filtered = filtered.filter(
+				(file) => file.source === filters.source
+			);
+		}
+
+		// Apply type filter
+		if (filters.type && filters.type !== "all") {
+			filtered = filtered.filter((file) => file.type === filters.type);
+		}
+
+		// Apply isDuplicate filter
+		if (filters.isDuplicate !== null && filters.isDuplicate !== undefined) {
+			filtered = filtered.filter(
+				(file) => file.isDuplicate === filters.isDuplicate
+			);
+		}
+
+		// Apply isPubliclyShared filter
+		if (
+			filters.isPubliclyShared !== null &&
+			filters.isPubliclyShared !== undefined
+		) {
+			filtered = filtered.filter(
+				(file) => file.isPubliclyShared === filters.isPubliclyShared
+			);
+		}
+
+		// Apply search filter
+		if (filters.search) {
+			const query = filters.search.toLowerCase();
+			filtered = filtered.filter(
+				(file) =>
+					file.name.toLowerCase().includes(query) ||
+					file.path?.toLowerCase().includes(query) ||
+					file.ownerEmail?.toLowerCase().includes(query)
+			);
+		}
+
+		return filtered;
+	}, [files, filters]);
 
 	const deleteFile = useCallback(
 		async (fileId: string) => {
