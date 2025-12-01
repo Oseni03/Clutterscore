@@ -90,7 +90,7 @@ export class JiraConnector extends BaseConnector {
 
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
-		const fileHashes = new Map<string, string[]>();
+		const duplicateMap = new Map<string, string[]>();
 
 		try {
 			let startAt = 0;
@@ -113,19 +113,21 @@ export class JiraConnector extends BaseConnector {
 							sizeMb
 						);
 
-						// Track duplicates
-						if (!fileHashes.has(hash)) {
-							fileHashes.set(hash, []);
+						// Create duplicate key using hash OR name-size combination
+						const nameSize = `${attachment.filename}-${sizeMb}`;
+						const duplicateKey = hash || nameSize;
+
+						// Track duplicates by hash or name-size
+						if (!duplicateMap.has(duplicateKey)) {
+							duplicateMap.set(duplicateKey, []);
 						}
-						fileHashes.get(hash)!.push(attachment.id);
-
-						const isDuplicate = fileHashes.get(hash)!.length > 1;
-
+						duplicateMap.get(duplicateKey)!.push(attachment.id);
 						files.push({
 							name: attachment.filename,
 							sizeMb,
 							type: this.inferFileType(attachment.mimeType || ""),
 							source: "JIRA",
+							externalId: attachment.id,
 							mimeType: attachment.mimeType,
 							fileHash: hash,
 							url: attachment.content,
@@ -137,8 +139,8 @@ export class JiraConnector extends BaseConnector {
 								attachment.author?.emailAddress || undefined,
 							isPubliclyShared: false,
 							sharedWith: [],
-							isDuplicate,
-							duplicateGroup: isDuplicate ? hash : undefined,
+							isDuplicate: false, // Will be updated after processing all files
+							duplicateGroup: duplicateKey,
 						});
 					}
 				}
@@ -148,6 +150,18 @@ export class JiraConnector extends BaseConnector {
 		} catch (error) {
 			console.error("Error fetching Jira attachments:", error);
 			throw error;
+		}
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined; // Clear group if not a duplicate
+			}
 		}
 
 		return files;

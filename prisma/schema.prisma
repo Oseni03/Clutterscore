@@ -407,6 +407,7 @@ model File {
   source           ToolSource
   mimeType         String?
   fileHash         String? // SHA-256 for duplicate detection
+  externalId       String?  // ID of the resource in the external tool (e.g., Drive/Dropbox ID)
   url              String? // External file URL
   path             String? // Full path in the tool
   lastAccessed     DateTime?
@@ -424,6 +425,8 @@ model File {
 
   @@index([auditResultId])
   @@index([source])
+  @@index([externalId])
+  @@index([source, externalId])
   @@index([fileHash])
   @@index([isDuplicate, duplicateGroup])
   @@index([lastAccessed])

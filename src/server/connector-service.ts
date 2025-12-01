@@ -159,40 +159,14 @@ export class ConnectorService {
 				},
 			});
 
-			// 2. Save all files in batches (createMany doesn't support relations)
-			if (allFiles.length > 0) {
-				const fileBatches = this.chunkArray(allFiles, 500);
-				for (const batch of fileBatches) {
-					await tx.file.createMany({
-						data: batch.map((f) => ({
-							auditResultId: audit.id,
-							name: f.name,
-							sizeMb: f.sizeMb,
-							type: f.type,
-							source: f.source,
-							mimeType: f.mimeType,
-							fileHash: f.fileHash,
-							url: f.url,
-							path: f.path,
-							lastAccessed: f.lastAccessed || new Date(),
-							ownerEmail: f.ownerEmail,
-							isPubliclyShared: f.isPubliclyShared,
-							sharedWith: f.sharedWith,
-							isDuplicate: f.isDuplicate,
-							duplicateGroup: f.duplicateGroup,
-						})),
-						skipDuplicates: true,
-					});
-				}
-			}
+			// 2. Save all files using the new method
+			await this.saveFilesToDatabase(tx, audit.id, allFiles);
 
 			// 3. Generate and save playbooks with items
 			await this.generateAndSavePlaybooks(
 				tx,
 				audit.id,
 				organizationId,
-				allFiles,
-				allUsers,
 				syncResults
 			);
 
@@ -248,14 +222,54 @@ export class ConnectorService {
 	}
 
 	/**
+	 * Save files to database with proper validation and error handling
+	 */
+	private async saveFilesToDatabase(
+		tx: any,
+		auditResultId: string,
+		files: FileData[]
+	): Promise<void> {
+		if (files.length === 0) return;
+
+		// Validate and sanitize file data before saving
+		const sanitizedFiles = files.map((f) => ({
+			auditResultId,
+			name: f.name || "Unknown",
+			sizeMb: f.sizeMb || 0,
+			type: f.type, // Already a valid FileType enum
+			source: f.source, // Already a valid ToolSource enum
+			mimeType: f.mimeType || null,
+			fileHash: f.fileHash || null,
+			externalId: f.externalId || null, // CRITICAL: Must be saved for deletion/updates
+			url: f.url || null,
+			path: f.path || null,
+			lastAccessed: f.lastAccessed || new Date(), // Prisma requires DateTime (non-nullable in schema)
+			ownerEmail: f.ownerEmail || null,
+			isPubliclyShared: f.isPubliclyShared ?? false,
+			sharedWith: f.sharedWith || [],
+			isDuplicate: f.isDuplicate ?? false,
+			duplicateGroup: f.duplicateGroup || null,
+			status: "ACTIVE" as const, // Default to ACTIVE
+		}));
+
+		// Save files in batches to avoid query size limits
+		const fileBatches = this.chunkArray(sanitizedFiles, 500);
+
+		for (const batch of fileBatches) {
+			await tx.file.createMany({
+				data: batch,
+				skipDuplicates: true, // Skip if duplicate constraint violation
+			});
+		}
+	}
+
+	/**
 	 * Generate and save playbooks with proper transaction handling
 	 */
 	private async generateAndSavePlaybooks(
 		tx: any,
 		auditResultId: string,
 		organizationId: string,
-		files: FileData[],
-		users: UserData[],
 		syncResults: Map<ToolSource, AuditData>
 	): Promise<void> {
 		for (const [source, data] of syncResults) {
@@ -278,7 +292,7 @@ export class ConnectorService {
 					},
 				});
 
-				// Save playbook items in batches
+				// Save playbook items with CORRECT externalId (not fileHash!)
 				const itemBatches = this.chunkArray(duplicates, 500);
 				for (const batch of itemBatches) {
 					await tx.playbookItem.createMany({
@@ -286,12 +300,14 @@ export class ConnectorService {
 							playbookId: playbook.id,
 							itemName: f.name,
 							itemType: "file",
-							externalId: f.fileHash,
+							externalId: f.externalId, // CRITICAL: Use externalId (e.g., Dropbox file ID)
 							metadata: {
 								size: f.sizeMb,
 								path: f.path,
 								url: f.url,
 								source: f.source,
+								fileHash: f.fileHash, // Store hash in metadata for reference
+								duplicateGroup: f.duplicateGroup,
 							},
 						})),
 					});
@@ -326,54 +342,13 @@ export class ConnectorService {
 							playbookId: playbook.id,
 							itemName: f.name,
 							itemType: "file",
-							externalId: f.url || f.fileHash,
+							externalId: f.externalId, // CRITICAL: Use externalId for API operations
 							metadata: {
 								url: f.url,
 								sharedWith: f.sharedWith,
 								type: f.type,
 								source: f.source,
-							},
-						})),
-					});
-				}
-			}
-
-			// Playbook 3: Inactive users
-			const inactiveUsers = data.users.filter(
-				(u) =>
-					u.lastActive &&
-					u.lastActive <
-						new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-			);
-			if (inactiveUsers.length > 0) {
-				const playbook = await tx.playbook.create({
-					data: {
-						auditResultId,
-						organizationId,
-						title: `Remove ${inactiveUsers.length} Inactive Users`,
-						description: `Found ${inactiveUsers.length} users inactive for 90+ days`,
-						impact: `Save $${inactiveUsers.length * 15}/month`,
-						impactType: "SAVINGS",
-						source,
-						itemsCount: inactiveUsers.length,
-						riskLevel: "MEDIUM",
-						estimatedSavings: inactiveUsers.length * 15 * 12,
-					},
-				});
-
-				const itemBatches = this.chunkArray(inactiveUsers, 500);
-				for (const batch of itemBatches) {
-					await tx.playbookItem.createMany({
-						data: batch.map((u) => ({
-							playbookId: playbook.id,
-							itemName: u.email,
-							itemType: "user",
-							externalId: u.email,
-							metadata: {
-								name: u.name,
-								lastActive: u.lastActive,
-								role: u.role,
-								source,
+								path: f.path,
 							},
 						})),
 					});
@@ -410,7 +385,7 @@ export class ConnectorService {
 							playbookId: playbook.id,
 							itemName: f.name,
 							itemType: "file",
-							externalId: f.url || f.fileHash,
+							externalId: f.externalId, // CRITICAL: Use externalId
 							metadata: {
 								size: f.sizeMb,
 								lastAccessed: f.lastAccessed,

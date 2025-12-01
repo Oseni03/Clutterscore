@@ -94,7 +94,7 @@ export class SlackConnector extends BaseConnector {
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
 		let page = 1;
-		const fileHashes = new Map<string, string[]>();
+		const duplicateMap = new Map<string, string[]>();
 
 		try {
 			while (true) {
@@ -110,19 +110,21 @@ export class SlackConnector extends BaseConnector {
 						sizeMb
 					);
 
-					// Track duplicates
-					if (!fileHashes.has(hash)) {
-						fileHashes.set(hash, []);
+					// Create duplicate key using hash OR name-size combination
+					const nameSize = `${file.name || "Untitled"}-${sizeMb}`;
+					const duplicateKey = hash || nameSize;
+
+					// Track duplicates by hash or name-size
+					if (!duplicateMap.has(duplicateKey)) {
+						duplicateMap.set(duplicateKey, []);
 					}
-					fileHashes.get(hash)!.push(file.id);
-
-					const isDuplicate = fileHashes.get(hash)!.length > 1;
-
+					duplicateMap.get(duplicateKey)!.push(file.id);
 					files.push({
 						name: file.name || file.title || "Untitled",
 						sizeMb,
 						type: this.inferFileType(file.mimetype || ""),
 						source: "SLACK",
+						externalId: file.id,
 						mimeType: file.mimetype || undefined,
 						fileHash: hash,
 						url: file.url_private || file.permalink,
@@ -134,8 +136,8 @@ export class SlackConnector extends BaseConnector {
 						isPubliclyShared:
 							file.is_public || file.public_url_shared || false,
 						sharedWith: file.channels || [],
-						isDuplicate,
-						duplicateGroup: isDuplicate ? hash : undefined,
+						isDuplicate: false, // Will be updated after processing all files
+						duplicateGroup: duplicateKey,
 					});
 				}
 
@@ -147,6 +149,18 @@ export class SlackConnector extends BaseConnector {
 			}
 		} catch (error) {
 			console.error("Error fetching Slack files:", error);
+		}
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined; // Clear group if not a duplicate
+			}
 		}
 
 		return files;

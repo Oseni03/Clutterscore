@@ -59,7 +59,7 @@ export class MicrosoftConnector extends BaseConnector {
 
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
-		const fileHashes = new Map<string, string[]>();
+		const duplicateMap = new Map<string, string[]>();
 
 		// Fetch from OneDrive and SharePoint
 		const drives = await this.getAllDrives();
@@ -73,7 +73,7 @@ export class MicrosoftConnector extends BaseConnector {
 					.api(nextLink)
 					.top(999)
 					.select(
-						"id,name,size,file,webUrl,lastModifiedDateTime,createdBy,shared,permissions"
+						"id,name,size,file,webUrl,lastModifiedDateTime,createdDateTime,createdBy,shared,permissions"
 					)
 					.get();
 
@@ -85,13 +85,15 @@ export class MicrosoftConnector extends BaseConnector {
 						item.file?.hashes?.sha256Hash ||
 						this.generateFileHash(item.name, sizeMb);
 
-					// Track duplicates
-					if (!fileHashes.has(hash)) {
-						fileHashes.set(hash, []);
-					}
-					fileHashes.get(hash)!.push(item.id);
+					// Create duplicate key using hash OR name-size combination
+					const nameSize = `${item.name}-${sizeMb}`;
+					const duplicateKey = hash || nameSize;
 
-					const isDuplicate = fileHashes.get(hash)!.length > 1;
+					// Track duplicates by hash or name-size
+					if (!duplicateMap.has(duplicateKey)) {
+						duplicateMap.set(duplicateKey, []);
+					}
+					duplicateMap.get(duplicateKey)!.push(item.id);
 					const sharedWith = await this.getSharedWith(
 						drive.id,
 						item.id
@@ -102,24 +104,39 @@ export class MicrosoftConnector extends BaseConnector {
 						sizeMb,
 						type: this.inferFileType(item.file.mimeType || ""),
 						source: "MICROSOFT",
+						externalId: item.id,
 						mimeType: item.file.mimeType,
 						fileHash: hash,
 						url: item.webUrl,
 						path: item.parentReference?.path || `/${item.name}`,
 						lastAccessed: item.lastModifiedDateTime
 							? new Date(item.lastModifiedDateTime)
-							: undefined,
+							: item.createdDateTime
+								? new Date(item.createdDateTime)
+								: new Date(), // ✅ FIXED: Always provide a date
 						ownerEmail: item.createdBy?.user?.email,
 						isPubliclyShared:
 							item.shared?.scope === "anonymous" ||
 							item.shared?.scope === "organization",
 						sharedWith,
-						isDuplicate,
-						duplicateGroup: isDuplicate ? hash : undefined,
+						isDuplicate: false, // Will be updated after processing all files
+						duplicateGroup: duplicateKey,
 					});
 				}
 
 				nextLink = response["@odata.nextLink"];
+			}
+		}
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined; // Clear group if not a duplicate
 			}
 		}
 

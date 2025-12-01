@@ -60,7 +60,7 @@ export class FigmaConnector extends BaseConnector {
 
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
-		const fileHashes = new Map<string, string[]>();
+		const duplicateMap = new Map<string, string[]>();
 
 		try {
 			const teamProjects = await this.getTeamProjects();
@@ -75,19 +75,21 @@ export class FigmaConnector extends BaseConnector {
 					const sizeMb = 5; // Rough estimate for design files
 					const hash = this.generateFileHash(file.name, sizeMb);
 
-					// Track duplicates (by name similarity)
-					if (!fileHashes.has(hash)) {
-						fileHashes.set(hash, []);
+					// Create duplicate key using hash OR name-size combination
+					const nameSize = `${file.name}-${sizeMb}`;
+					const duplicateKey = hash || nameSize;
+
+					// Track duplicates by hash or name-size
+					if (!duplicateMap.has(duplicateKey)) {
+						duplicateMap.set(duplicateKey, []);
 					}
-					fileHashes.get(hash)!.push(file.key);
-
-					const isDuplicate = fileHashes.get(hash)!.length > 1;
-
+					duplicateMap.get(duplicateKey)!.push(file.key);
 					files.push({
 						name: file.name,
 						sizeMb,
 						type: "OTHER", // Figma files are design files
 						source: "FIGMA",
+						externalId: file.key,
 						mimeType: "application/figma",
 						fileHash: hash,
 						url: `https://www.figma.com/file/${file.key}`,
@@ -96,13 +98,25 @@ export class FigmaConnector extends BaseConnector {
 						ownerEmail: undefined, // Figma API doesn't expose owner easily
 						isPubliclyShared: false, // Would need to check file permissions separately
 						sharedWith: [],
-						isDuplicate,
-						duplicateGroup: isDuplicate ? hash : undefined,
+						isDuplicate: false, // Will be updated after processing all files
+						duplicateGroup: duplicateKey,
 					});
 				}
 			}
 		} catch (error) {
 			console.error("Error fetching Figma files:", error);
+		}
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined; // Clear group if not a duplicate
+			}
 		}
 
 		return files;

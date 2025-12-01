@@ -79,7 +79,7 @@ export class GoogleConnector extends BaseConnector {
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
 		let pageToken: string | undefined;
-		const fileHashes = new Map<string, string[]>();
+		const duplicateMap = new Map<string, string[]>();
 
 		do {
 			try {
@@ -100,13 +100,15 @@ export class GoogleConnector extends BaseConnector {
 						file.md5Checksum ||
 						this.generateFileHash(file.name || "Untitled", sizeMb);
 
-					// Track duplicates by hash
-					if (!fileHashes.has(hash)) {
-						fileHashes.set(hash, []);
-					}
-					fileHashes.get(hash)!.push(file.id!);
+					// Create duplicate key using hash OR name-size combination
+					const nameSize = `${file.name || "Untitled"}-${sizeMb}`;
+					const duplicateKey = hash || nameSize;
 
-					const isDuplicate = fileHashes.get(hash)!.length > 1;
+					// Track duplicates by hash or name-size
+					if (!duplicateMap.has(duplicateKey)) {
+						duplicateMap.set(duplicateKey, []);
+					}
+					duplicateMap.get(duplicateKey)!.push(file.id!);
 					const sharedWith = this.extractSharedWith(
 						file.permissions || []
 					);
@@ -116,6 +118,7 @@ export class GoogleConnector extends BaseConnector {
 						sizeMb,
 						type: this.inferFileType(file.mimeType || ""),
 						source: "GOOGLE",
+						externalId: file.id!,
 						mimeType: file.mimeType || undefined,
 						fileHash: hash,
 						url: file.webViewLink || undefined,
@@ -126,7 +129,7 @@ export class GoogleConnector extends BaseConnector {
 								? new Date(file.modifiedTime)
 								: file.createdTime
 									? new Date(file.createdTime)
-									: undefined,
+									: new Date(), // ✅ FIXED: Always provide a date
 						ownerEmail: file.owners?.[0]?.emailAddress || "",
 						isPubliclyShared:
 							sharedWith.includes("anyone") ||
@@ -134,8 +137,8 @@ export class GoogleConnector extends BaseConnector {
 						sharedWith: sharedWith.filter(
 							(e) => e !== "anyone" && e !== "domain"
 						),
-						isDuplicate,
-						duplicateGroup: isDuplicate ? hash : undefined,
+						isDuplicate: false, // Will be updated after processing all files
+						duplicateGroup: duplicateKey,
 					});
 				}
 
@@ -145,6 +148,18 @@ export class GoogleConnector extends BaseConnector {
 				throw error;
 			}
 		} while (pageToken);
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined; // Clear group if not a duplicate
+			}
+		}
 
 		return files;
 	}

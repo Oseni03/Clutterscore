@@ -134,14 +134,26 @@ export function useFiles() {
 					throw new Error(data.error || "Failed to delete file");
 				}
 
+				// Optimistically update the state
+				const updatedFiles = allFiles.filter(
+					(file) => file.id !== fileId
+				);
+				setFiles(updatedFiles);
+
+				// Update pagination total
+				setPagination({
+					total: pagination.total - 1,
+				});
+
 				toast.success("File deleted successfully");
-				await fetchFiles();
 			} catch (err) {
 				toast.error((err as Error).message || "Failed to delete file");
+				// Refetch to ensure consistency on error
+				await fetchFiles();
 				throw err;
 			}
 		},
-		[fetchFiles]
+		[allFiles, pagination.total, setFiles, setPagination, fetchFiles]
 	);
 
 	const exportFiles = useCallback(async () => {

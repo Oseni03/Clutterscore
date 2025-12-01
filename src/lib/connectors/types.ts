@@ -13,6 +13,7 @@ export interface FileData {
 	name: string;
 	sizeMb: number;
 	type: FileType;
+	externalId: string;
 	source: ToolSource;
 	mimeType?: string;
 	fileHash?: string;

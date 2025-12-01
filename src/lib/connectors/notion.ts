@@ -49,6 +49,7 @@ export class NotionConnector extends BaseConnector {
 
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
+		const duplicateMap = new Map<string, string[]>();
 		let cursor: string | undefined;
 
 		do {
@@ -69,14 +70,23 @@ export class NotionConnector extends BaseConnector {
 
 				// Fake size estimate
 				const sizeMb = 0.1;
-
 				const hash = this.generateFileHash(title, sizeMb);
 
+				// Create duplicate key using hash OR name-size combination
+				const nameSize = `${title}-${sizeMb}`;
+				const duplicateKey = hash || nameSize;
+
+				// Track duplicates by hash or name-size
+				if (!duplicateMap.has(duplicateKey)) {
+					duplicateMap.set(duplicateKey, []);
+				}
+				duplicateMap.get(duplicateKey)!.push(page.id);
 				files.push({
 					name: title,
 					sizeMb,
 					type: "DOCUMENT",
 					source: "NOTION",
+					externalId: page.id,
 					mimeType: "application/vnd.notebook",
 					fileHash: hash,
 					url: page.url, // now safe
@@ -85,8 +95,8 @@ export class NotionConnector extends BaseConnector {
 					ownerEmail: undefined,
 					isPubliclyShared: page.public_url !== null, // safe
 					sharedWith: [],
-					isDuplicate: false,
-					duplicateGroup: undefined,
+					isDuplicate: false, // Will be updated after processing all files
+					duplicateGroup: duplicateKey,
 				});
 			}
 
@@ -94,6 +104,18 @@ export class NotionConnector extends BaseConnector {
 				? response.next_cursor || undefined
 				: undefined;
 		} while (cursor);
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined; // Clear group if not a duplicate
+			}
+		}
 
 		return files;
 	}

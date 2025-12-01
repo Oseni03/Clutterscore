@@ -8,6 +8,7 @@ import {
 	UserData,
 } from "./types";
 import crypto from "crypto";
+import { ToolSource } from "@prisma/client";
 
 export class DropboxConnector extends BaseConnector {
 	private client: Dropbox;
@@ -96,7 +97,8 @@ export class DropboxConnector extends BaseConnector {
 
 	private async fetchFiles(): Promise<FileData[]> {
 		const files: FileData[] = [];
-		const fileHashes = new Map<string, string[]>();
+		// Map to track duplicates by name + size combination
+		const duplicateMap = new Map<string, string[]>();
 
 		const listFiles = async (path: string = "") => {
 			let cursor: string | undefined;
@@ -116,40 +118,38 @@ export class DropboxConnector extends BaseConnector {
 						if (entry[".tag"] !== "file") continue;
 
 						const sizeMb = this.bytesToMb(entry.size || 0);
-						const hash =
-							entry.content_hash ||
-							this.generateFileHash(entry.name, sizeMb);
 
-						// Track duplicates by hash
-						if (!fileHashes.has(hash)) {
-							fileHashes.set(hash, []);
+						// Create duplicate key from name + size (rounded to 2 decimals for consistency)
+						const duplicateKey = `${entry.name.toLowerCase()}_${sizeMb.toFixed(2)}`;
+
+						// Track duplicates by name + size
+						if (!duplicateMap.has(duplicateKey)) {
+							duplicateMap.set(duplicateKey, []);
 						}
-						fileHashes.get(hash)!.push(entry.id);
+						duplicateMap.get(duplicateKey)!.push(entry.id);
 
-						const isDuplicate = fileHashes.get(hash)!.length > 1;
 						const sharedInfo = await this.getSharedInfo(entry.id);
 
 						files.push({
 							name: entry.name,
 							sizeMb,
-							type: this.inferFileType(
-								entry.media_info?.[".tag"] || ""
-							),
-							source: "DROPBOX",
-							mimeType: "application/octet-stream",
-							fileHash: hash,
-							url: undefined,
+							type: this.inferFileType(entry.name), // Infer from file extension
+							source: "DROPBOX" as ToolSource,
+							externalId: entry.id, // CRITICAL: Store Dropbox file ID
+							mimeType: "application/octet-stream", // Dropbox doesn't provide MIME type easily
+							fileHash: entry.content_hash || undefined, // Optional content hash
+							url: undefined, // Can be populated later if needed
 							path: entry.path_display || `/${entry.name}`,
 							lastAccessed: entry.client_modified
 								? new Date(entry.client_modified)
 								: entry.server_modified
 									? new Date(entry.server_modified)
-									: undefined,
+									: new Date(), // Fallback to current date to satisfy non-nullable requirement
 							ownerEmail: undefined, // Dropbox doesn't expose owner email easily
 							isPubliclyShared: sharedInfo.isPublic,
 							sharedWith: sharedInfo.sharedWith,
-							isDuplicate,
-							duplicateGroup: isDuplicate ? hash : undefined,
+							isDuplicate: false, // Will be updated in second pass
+							duplicateGroup: duplicateKey, // Store temporarily for processing
 						});
 					}
 
@@ -164,6 +164,22 @@ export class DropboxConnector extends BaseConnector {
 		};
 
 		await listFiles("");
+
+		// Second pass: Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+				// Keep duplicateGroup for grouping in UI
+			} else {
+				// Clear group if not a duplicate
+				file.isDuplicate = false;
+				file.duplicateGroup = undefined;
+			}
+		}
+
 		return files;
 	}
 
