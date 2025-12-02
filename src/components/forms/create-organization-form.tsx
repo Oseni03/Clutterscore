@@ -11,35 +11,60 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { DialogFooter } from "../ui/dialog";
 import { createOrganization } from "@/server/organizations";
 import { SUBSCRIPTION_PLANS } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { useRouter } from "next/navigation";
-import { Organization } from "@/types";
 
 const formSchema = z.object({
-	name: z.string().min(2).max(50),
-	slug: z.string().min(2).max(50),
+	name: z.string().min(2, "Name must be at least 2 characters").max(50),
+	slug: z
+		.string()
+		.min(2, "Slug must be at least 2 characters")
+		.max(50)
+		.regex(
+			/^[a-z0-9-]+$/,
+			"Slug can only contain lowercase letters, numbers, and hyphens"
+		),
 	planProductId: z.string().optional(),
 	trial: z.boolean().optional(),
 });
 
 export function CreateOrganizationForm() {
-	const { data } = authClient.useSession();
-	const { addOrganization } = useOrganizationStore((state) => state);
+	const { data: session } = authClient.useSession();
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
+	const [canUseTrial, setCanUseTrial] = useState(false);
 
-	const user = data?.user;
+	const user = session?.user;
+
+	// Check if user can use trial (first organization)
+	useEffect(() => {
+		const checkTrialEligibility = async () => {
+			if (!user?.id) return;
+
+			try {
+				const response = await fetch(
+					"/api/organizations/check-trial-eligibility"
+				);
+				const data = await response.json();
+				setCanUseTrial(data.eligible || false);
+			} catch (error) {
+				console.error("Error checking trial eligibility:", error);
+				setCanUseTrial(false);
+			}
+		};
+
+		checkTrialEligibility();
+	}, [user?.id]);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -47,22 +72,37 @@ export function CreateOrganizationForm() {
 			name: "",
 			slug: "",
 			planProductId: SUBSCRIPTION_PLANS[0]?.productId || "",
-			trial: true,
+			trial: canUseTrial,
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
-		try {
-			toast.loading("Creating Workspace...");
-			setIsLoading(true);
+	// Auto-generate slug from name
+	const watchName = form.watch("name");
+	useEffect(() => {
+		if (watchName && !form.formState.dirtyFields.slug) {
+			const generatedSlug = watchName
+				.toLowerCase()
+				.replace(/[^a-z0-9]+/g, "-")
+				.replace(/^-+|-+$/g, "");
+			form.setValue("slug", generatedSlug);
+		}
+	}, [watchName, form]);
 
-			if (!user) return;
+	async function onSubmit(values: z.infer<typeof formSchema>) {
+		if (!user) {
+			toast.error("You must be logged in to create an workspace");
+			return;
+		}
+
+		try {
+			setIsLoading(true);
+			const loadingToast = toast.loading("Creating workspace...");
 
 			const payload = {
 				name: values.name,
 				slug: values.slug,
 				productId: values.planProductId,
-				trial: !!values.trial,
+				trial: canUseTrial && !!values.trial,
 			};
 
 			const { data, success } = await createOrganization(
@@ -71,39 +111,49 @@ export function CreateOrganizationForm() {
 			);
 
 			if (!data || !success) {
-				toast.dismiss();
+				toast.dismiss(loadingToast);
 				toast.error("Failed to create workspace");
 				return;
 			}
 
-			addOrganization(data as Organization);
-			toast.dismiss();
+			toast.dismiss(loadingToast);
 
 			const selectedProductId = payload.productId;
+			const isPaidPlan = selectedProductId && selectedProductId !== "";
 
-			if (selectedProductId) {
-				// Paid plan selected — initiate checkout and redirect
+			// If paid plan selected, initiate checkout
+			if (isPaidPlan && !payload.trial) {
 				try {
-					toast.loading("Creating checkout session...");
-					const productIds = [selectedProductId].filter(Boolean);
+					toast.loading("Redirecting to checkout...");
+
 					const { data: checkoutData, error } =
 						await authClient.checkout({
-							products: productIds,
+							products: [selectedProductId],
 							referenceId: data.id,
 							allowDiscountCodes: true,
 						});
-					if (error) throw new Error(error.message);
+
+					if (error) {
+						console.error("Checkout error:", error);
+						toast.dismiss();
+						toast.error(
+							"Failed to start checkout. Redirecting to dashboard."
+						);
+						router.push("/dashboard");
+						return;
+					}
+
 					if (checkoutData?.url) {
 						toast.dismiss();
 						window.location.href = checkoutData.url;
 						return;
 					}
+
 					toast.dismiss();
 					toast.error(
-						"Failed to start checkout. Redirecting to dashboard."
+						"No checkout URL received. Redirecting to dashboard."
 					);
 					router.push("/dashboard");
-					return;
 				} catch (err) {
 					console.error("Checkout initiation failed:", err);
 					toast.dismiss();
@@ -111,15 +161,18 @@ export function CreateOrganizationForm() {
 						"Failed to start checkout. Redirecting to dashboard."
 					);
 					router.push("/dashboard");
-					return;
 				}
 			} else {
-				toast.success("Organization created successfully");
-				// After creating organization and subscription, redirect to dashboard
+				// Free plan or trial - redirect to dashboard
+				toast.success("Workspace created successfully!");
+
+				// Refresh session to update activeOrganizationId
+				await authClient.getSession();
+
 				router.push("/dashboard");
 			}
 		} catch (error) {
-			console.error(error);
+			console.error("Workspace creation error:", error);
 			toast.dismiss();
 			toast.error("Failed to create workspace");
 		} finally {
@@ -129,34 +182,50 @@ export function CreateOrganizationForm() {
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 				<FormField
 					control={form.control}
 					name="name"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Name</FormLabel>
+							<FormLabel>Workspace Name</FormLabel>
 							<FormControl>
-								<Input placeholder="My Workspace" {...field} />
+								<Input
+									placeholder="My Workspace"
+									{...field}
+									disabled={isLoading}
+								/>
 							</FormControl>
+							<FormDescription>
+								The display name for your workspace
+							</FormDescription>
 							<FormMessage />
 						</FormItem>
 					)}
 				/>
+
 				<FormField
 					control={form.control}
 					name="slug"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Slug</FormLabel>
+							<FormLabel>URL Slug</FormLabel>
 							<FormControl>
-								<Input placeholder="my-workspace" {...field} />
+								<Input
+									placeholder="my-workspace"
+									{...field}
+									disabled={isLoading}
+								/>
 							</FormControl>
+							<FormDescription>
+								Used in your workspace&apos;s URL (lowercase,
+								hyphens allowed)
+							</FormDescription>
 							<FormMessage />
 						</FormItem>
 					)}
 				/>
-				{/* Plan selection */}
+
 				<FormField
 					control={form.control}
 					name="planProductId"
@@ -167,8 +236,8 @@ export function CreateOrganizationForm() {
 								<RadioGroup
 									value={field.value}
 									onValueChange={field.onChange}
-									aria-label="Subscription plan"
-									className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+									disabled={isLoading}
+									className="grid grid-cols-1 gap-4"
 								>
 									{SUBSCRIPTION_PLANS.map((plan) => (
 										<label
@@ -177,15 +246,16 @@ export function CreateOrganizationForm() {
 												field.value === plan.productId
 													? "border-primary bg-primary/5"
 													: "border-border hover:border-primary/50"
-											}`}
+											} ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
 										>
 											<div className="flex items-start gap-3">
 												<RadioGroupItem
 													value={plan.productId}
 													className="mt-1"
+													disabled={isLoading}
 												/>
 												<div className="flex-1">
-													<div className="font-semibold">
+													<div className="font-semibold text-base">
 														{plan.name}
 													</div>
 													<div className="text-sm text-muted-foreground mb-2">
@@ -193,7 +263,7 @@ export function CreateOrganizationForm() {
 													</div>
 													<div className="text-lg font-bold mb-3">
 														{plan.price}
-														<span className="text-sm font-normal text-muted-foreground">
+														<span className="text-sm font-normal text-muted-foreground ml-1">
 															{plan.period}
 														</span>
 													</div>
@@ -204,7 +274,7 @@ export function CreateOrganizationForm() {
 																	key={idx}
 																	className="text-sm flex items-start gap-2"
 																>
-																	<span className="text-primary mt-1">
+																	<span className="text-primary mt-0.5">
 																		✓
 																	</span>
 																	<span>
@@ -225,32 +295,55 @@ export function CreateOrganizationForm() {
 							<FormMessage />
 						</FormItem>
 					)}
-				/>{" "}
-				<FormField
-					control={form.control}
-					name="trial"
-					render={({ field }) => (
-						<FormItem className="flex items-center gap-2">
-							<FormControl>
-								<Checkbox
-									checked={!!field.value}
-									onCheckedChange={field.onChange}
-								/>
-							</FormControl>
-							<FormLabel className="m-0">
-								Start trial (first workspace only)
-							</FormLabel>
-						</FormItem>
-					)}
 				/>
-				<DialogFooter>
-					<Button disabled={isLoading} type="submit">
-						Create Workspace
-						{isLoading && (
-							<Loader2 className="size-4 animate-spin" />
+
+				{canUseTrial && (
+					<FormField
+						control={form.control}
+						name="trial"
+						render={({ field }) => (
+							<FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
+								<FormControl>
+									<Checkbox
+										checked={!!field.value}
+										onCheckedChange={field.onChange}
+										disabled={isLoading}
+									/>
+								</FormControl>
+								<div className="space-y-1 leading-none">
+									<FormLabel className="font-medium">
+										Start 14-day free trial
+									</FormLabel>
+									<FormDescription>
+										Available for your first workspace only.
+										No credit card required.
+									</FormDescription>
+								</div>
+							</FormItem>
+						)}
+					/>
+				)}
+
+				<div className="flex justify-end gap-3 pt-4">
+					<Button
+						type="button"
+						variant="outline"
+						onClick={() => router.push("/dashboard")}
+						disabled={isLoading}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" disabled={isLoading}>
+						{isLoading ? (
+							<>
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								Creating...
+							</>
+						) : (
+							"Create Workspace"
 						)}
 					</Button>
-				</DialogFooter>
+				</div>
 			</form>
 		</Form>
 	);

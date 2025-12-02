@@ -1,21 +1,57 @@
 "use client";
 
 import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { authClient } from "@/lib/auth-client";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function CreateOrganizationPage() {
-	return (
-		<div className="min-h-screen flex items-center justify-center p-6">
-			<div className="w-full max-w-xl">
-				<h1 className="text-2xl font-bold mb-4">
-					Create your organization
-				</h1>
-				<p className="text-sm text-muted-foreground mb-6">
-					Create your organization and choose a subscription plan. If
-					this is your first organization, you can start with a free
-					trial.
-				</p>
-				<CreateOrganizationForm />
+	const { data: session, isPending } = authClient.useSession();
+	const router = useRouter();
+
+	useEffect(() => {
+		// If user already has an active organization, redirect to dashboard
+		if (!isPending && session?.activeOrganizationId) {
+			router.push("/dashboard");
+		}
+	}, [session, isPending, router]);
+
+	if (isPending) {
+		return (
+			<div className="flex min-h-screen items-center justify-center">
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
 			</div>
+		);
+	}
+
+	if (!session?.user) {
+		return null; // Middleware will redirect to login
+	}
+
+	return (
+		<div className="flex min-h-screen items-center justify-center p-4 md:p-6">
+			<Card className="w-full max-w-2xl">
+				<CardHeader className="space-y-1">
+					<CardTitle className="text-2xl font-bold">
+						Create Your Organization
+					</CardTitle>
+					<CardDescription>
+						Set up your workspace and choose a subscription plan.
+						First-time users can start with a 14-day free trial.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<CreateOrganizationForm />
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

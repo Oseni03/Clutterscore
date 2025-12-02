@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "./users";
-import { isAdmin } from "./permissions";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -100,60 +99,37 @@ export async function getOrganizationById(orgId: string) {
 	}
 }
 
-export async function updateOrganization(
-	organizationId: string,
-	data: { name: string; slug?: string }
-) {
-	try {
-		const result = await auth.api.updateOrganization({
-			body: {
-				data,
-				organizationId,
-			},
-			// This endpoint requires session cookies.
-			headers: await headers(),
-		});
-		return { data: result, success: true };
-	} catch (error) {
-		console.error("Error updating organization: ", error);
-		return {
-			success: false,
-			error: "Failed to upgrade organization",
-		};
-	}
-}
-
-export async function deleteOrganization(organizationId: string) {
-	try {
-		const { success } = await isAdmin();
-
-		if (!success) {
-			throw new Error("You are not authorized to remove members.");
-		}
-
-		const result = await auth.api.deleteOrganization({
-			body: {
-				organizationId,
-			},
-			// This endpoint requires session cookies.
-			headers: await headers(),
-		});
-		return { success: true, data: result };
-	} catch (error) {
-		console.error(error);
-		return { success: false, error };
-	}
-}
-
+/**
+ * Create a new organization
+ */
 export async function createOrganization(
 	userId: string,
-	data: { name: string; slug: string; productId?: string; trial?: boolean }
+	data: {
+		name: string;
+		slug: string;
+		productId?: string;
+		trial?: boolean;
+	}
 ) {
 	try {
-		// Check if this user already has organizations
-		const existingOrgs = await prisma.member.count({ where: { userId } });
+		// Check if slug is already taken
+		const existingOrg = await prisma.organization.findFirst({
+			where: { slug: data.slug },
+		});
 
-		// Direct database creation bypassing auth API
+		if (existingOrg) {
+			return {
+				success: false,
+				error: "This slug is already taken",
+			};
+		}
+
+		// Check if this user already has organizations (for trial eligibility)
+		const existingOrgsCount = await prisma.member.count({
+			where: { userId },
+		});
+
+		// Create organization with user as admin
 		const organization = await prisma.organization.create({
 			data: {
 				name: data.name,
@@ -167,44 +143,50 @@ export async function createOrganization(
 				},
 			},
 			include: {
-				members: true,
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								image: true,
+							},
+						},
+					},
+				},
 			},
 		});
 
-		// Set this organization as the active organization for the user's session
-		// so they have immediate access after creation.
+		// Set this as the active organization
 		try {
 			await setActiveOrganization(organization.id);
 		} catch (err) {
 			console.error("Failed to set active organization:", err);
 		}
 
-		// If this is the first organization for the user and a trial was requested,
-		// create a trial subscription. If a paid productId was provided, create
-		// a placeholder (pending) subscription so webhooks can update it after
-		// checkout completes. Otherwise, create a free subscription.
+		// Create subscription
 		try {
-			const { createFreeSubscription } = await import("./subscription");
+			const { createFreeSubscription, createSubscription } = await import(
+				"./subscription"
+			);
 
 			const productId = data.productId || "";
-
 			const isPaidPlan = productId && productId !== "";
 
-			if (existingOrgs === 0 && data.trial) {
-				// Trial for first org: 14 days
-				const trialDays = 14;
-				await import("./subscription").then((mod) =>
-					mod.createSubscription({
-						organizationId: organization.id,
-						productId,
-						amount: 0,
-						currency: "USD",
-						recurringInterval: "monthly",
-						trialDays,
-					})
-				);
+			if (existingOrgsCount === 0 && data.trial) {
+				// First organization with trial: 14 days
+				await createSubscription({
+					organizationId: organization.id,
+					productId,
+					amount: 0,
+					currency: "USD",
+					recurringInterval: "monthly",
+					trialDays: 14,
+				});
 			} else if (isPaidPlan) {
-				// Create a pending subscription placeholder for paid plans.
+				// Create pending subscription for paid plans
+				// This will be updated by Polar webhook after checkout
 				const now = new Date();
 				await prisma.subscription.create({
 					data: {
@@ -224,17 +206,156 @@ export async function createOrganization(
 					},
 				});
 			} else {
-				// create free subscription
+				// Create free subscription
 				await createFreeSubscription(organization.id);
 			}
 		} catch (err) {
 			console.error("Error creating subscription for organization:", err);
+			// Don't fail the entire operation if subscription creation fails
 		}
 
 		return { data: organization, success: true };
 	} catch (error) {
-		console.error("Error creating organization: ", error);
-		return { success: false, error };
+		console.error("Error creating organization:", error);
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: "Failed to create organization",
+		};
+	}
+}
+
+/**
+ * Update an organization
+ */
+export async function updateOrganization(
+	organizationId: string,
+	data: Partial<{
+		name: string;
+		slug: string;
+		targetScore: number;
+	}>
+) {
+	try {
+		const sessionData = await auth.api.getSession({
+			headers: await headers(),
+		});
+
+		if (!sessionData?.user) {
+			return { success: false, error: "Unauthorized" };
+		}
+
+		// Verify user has admin role
+		const member = await prisma.member.findFirst({
+			where: {
+				userId: sessionData.user.id,
+				organizationId,
+				role: "admin",
+			},
+		});
+
+		if (!member) {
+			return {
+				success: false,
+				error: "You must be an admin to update this organization",
+			};
+		}
+
+		// If slug is being updated, check if it's taken
+		if (data.slug) {
+			const existingOrg = await prisma.organization.findFirst({
+				where: {
+					slug: data.slug,
+					id: { not: organizationId },
+				},
+			});
+
+			if (existingOrg) {
+				return {
+					success: false,
+					error: "This slug is already taken",
+				};
+			}
+		}
+
+		const organization = await prisma.organization.update({
+			where: { id: organizationId },
+			data,
+			include: {
+				subscription: true,
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								image: true,
+							},
+						},
+					},
+				},
+			},
+		});
+
+		return { data: organization, success: true };
+	} catch (error) {
+		console.error("Error updating organization:", error);
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: "Failed to update organization",
+		};
+	}
+}
+
+/**
+ * Delete an organization
+ */
+export async function deleteOrganization(organizationId: string) {
+	try {
+		const sessionData = await auth.api.getSession({
+			headers: await headers(),
+		});
+
+		if (!sessionData?.user) {
+			return { success: false, error: "Unauthorized" };
+		}
+
+		// Verify user has admin role
+		const member = await prisma.member.findFirst({
+			where: {
+				userId: sessionData.user.id,
+				organizationId,
+				role: "admin",
+			},
+		});
+
+		if (!member) {
+			return {
+				success: false,
+				error: "You must be an admin to delete this organization",
+			};
+		}
+
+		await prisma.organization.delete({
+			where: { id: organizationId },
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error("Error deleting organization:", error);
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: "Failed to delete organization",
+		};
 	}
 }
 
