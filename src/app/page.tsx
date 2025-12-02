@@ -24,13 +24,15 @@ export default function LandingPage() {
 
 	return (
 		<div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-primary-foreground">
-			{/* Navigation */}
+			{/* Navigation – full-width with inner container */}
 			<nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-				<div className="container mx-auto px-4 h-16 flex items-center justify-between">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<Image
 							src={"/generated_images/logo.png"}
 							alt="Clutterscore Logo"
+							width={32}
+							height={32}
 							className="h-8 w-8"
 						/>
 						<span className="font-display font-bold text-xl tracking-tight">
@@ -87,134 +89,138 @@ export default function LandingPage() {
 
 			{/* Hero Section */}
 			<section className="relative pt-20 pb-32 overflow-hidden">
-				<div className="container mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center">
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5 }}
-						className="max-w-2xl"
-					>
-						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-sm font-medium mb-6">
-							<span className="relative flex h-2 w-2">
-								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-								<span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
-							</span>
-							Launch Special: 40% off lifetime (First 500
-							companies)
-						</div>
-						<h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1] mb-6 text-primary">
-							Your workspace is{" "}
-							<span className="text-destructive/90 decoration-4 underline-offset-4 decoration-destructive/30 underline">
-								filthy
-							</span>
-							.
-						</h1>
-						<p className="text-xl text-muted-foreground mb-8 leading-relaxed max-w-lg">
-							The self-service AI janitor that audits, scores, and
-							cleans your entire digital workspace. We&apos;ll
-							prove it in 90 seconds.
-						</p>
-
-						<div className="flex flex-col sm:flex-row gap-4 mb-12">
-							<Button
-								size="lg"
-								className="h-14 px-8 text-lg"
-								onClick={() => router.push("/dashboard")}
-							>
-								Get Your Clutterscore
-								<ArrowRight className="ml-2 h-5 w-5" />
-							</Button>
-							<Button
-								size="lg"
-								variant="outline"
-								className="h-14 px-8 text-lg bg-background"
-							>
-								See a Demo
-							</Button>
-						</div>
-
-						<div className="flex items-center gap-4 text-sm text-muted-foreground">
-							<div className="flex -space-x-2">
-								{[1, 2, 3, 4].map((i) => (
-									<div
-										key={i}
-										className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-bold"
-									>
-										{String.fromCharCode(64 + i)}
-									</div>
-								))}
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="grid lg:grid-cols-2 gap-12 items-center">
+						{/* Left column */}
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5 }}
+							className="max-w-2xl"
+						>
+							<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-sm font-medium mb-6">
+								<span className="relative flex h-2 w-2">
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+									<span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+								</span>
+								Launch Special: 40% off lifetime (First 500
+								companies)
 							</div>
-							<p>Trusted by 500+ messy companies</p>
-						</div>
-					</motion.div>
+							<h1 className="font-display text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1] mb-6 text-primary">
+								Your workspace is{" "}
+								<span className="text-destructive/90 decoration-4 underline-offset-4 decoration-destructive/30 underline">
+									filthy
+								</span>
+								.
+							</h1>
+							<p className="text-xl text-muted-foreground mb-8 leading-relaxed max-w-lg">
+								The self-service AI janitor that audits, scores,
+								and cleans your entire digital workspace.
+								We&apos;ll prove it in 90 seconds.
+							</p>
 
-					<motion.div
-						initial={{ opacity: 0, scale: 0.95 }}
-						animate={{ opacity: 1, scale: 1 }}
-						transition={{ duration: 0.7, delay: 0.2 }}
-						className="relative"
-					>
-						<div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl border border-border/50 bg-background/50 backdrop-blur-sm">
-							<Image
-								src={
-									"/generated_images/abstract_3d_visualization_of_digital_chaos_becoming_order.png"
-								}
-								alt="Digital Cleanup Visualization"
-								className="w-full h-auto object-cover"
-							/>
+							<div className="flex flex-col sm:flex-row gap-4 mb-12">
+								<Button
+									size="lg"
+									className="h-14 px-8 text-lg"
+									onClick={() => router.push("/dashboard")}
+								>
+									Get Your Clutterscore
+									<ArrowRight className="ml-2 h-5 w-5" />
+								</Button>
+								<Button
+									size="lg"
+									variant="outline"
+									className="h-14 px-8 text-lg bg-background"
+								>
+									See a Demo
+								</Button>
+							</div>
 
-							{/* Floating UI Elements for Effect */}
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 1, duration: 0.5 }}
-								className="absolute bottom-8 left-8 bg-white dark:bg-zinc-900 p-4 rounded-lg shadow-lg border border-border max-w-[200px]"
-							>
-								<div className="flex items-center gap-2 mb-2">
-									<div className="h-2 w-2 rounded-full bg-destructive"></div>
-									<span className="text-xs font-bold uppercase text-muted-foreground">
-										Waste Detected
-									</span>
+							<div className="flex items-center gap-4 text-sm text-muted-foreground">
+								<div className="flex -space-x-2">
+									{[1, 2, 3, 4].map((i) => (
+										<div
+											key={i}
+											className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-bold"
+										>
+											{String.fromCharCode(64 + i)}
+										</div>
+									))}
 								</div>
-								<p className="font-mono text-2xl font-bold">
-									$47,200
-									<span className="text-xs text-muted-foreground font-sans font-normal ml-1">
-										/yr
-									</span>
-								</p>
-							</motion.div>
+								<p>Trusted by 500+ messy companies</p>
+							</div>
+						</motion.div>
 
-							<motion.div
-								initial={{ opacity: 0, x: 20 }}
-								animate={{ opacity: 1, x: 0 }}
-								transition={{ delay: 1.2, duration: 0.5 }}
-								className="absolute top-8 right-8 bg-white dark:bg-zinc-900 p-4 rounded-lg shadow-lg border border-border"
-							>
-								<div className="flex items-center gap-3">
-									<div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-										<Sparkles className="h-5 w-5" />
-									</div>
-									<div>
-										<p className="text-sm font-bold">
-											Cleanup Complete
-										</p>
-										<p className="text-xs text-muted-foreground">
-											Recovered 4TB space
-										</p>
-									</div>
-								</div>
-							</motion.div>
-						</div>
+						{/* Right column – image */}
+						<motion.div
+							initial={{ opacity: 0, scale: 0.95 }}
+							animate={{ opacity: 1, scale: 1 }}
+							transition={{ duration: 0.7, delay: 0.2 }}
+							className="relative"
+						>
+							<div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl border border-border/50 bg-background/50 backdrop-blur-sm">
+								<Image
+									src={
+										"/generated_images/abstract_3d_visualization_of_digital_chaos_becoming_order.png"
+									}
+									alt="Digital Cleanup Visualization"
+									className="w-full h-auto object-cover"
+								/>
 
-						{/* Abstract decoration */}
-						<div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-50 to-emerald-50 dark:from-blue-950/20 dark:to-emerald-950/20 rounded-full blur-3xl opacity-60"></div>
-					</motion.div>
+								{/* Floating UI Elements for Effect */}
+								<motion.div
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: 1, duration: 0.5 }}
+									className="absolute bottom-8 left-8 bg-white dark:bg-zinc-900 p-4 rounded-lg shadow-lg border border-border max-w-[200px]"
+								>
+									<div className="flex items-center gap-2 mb-2">
+										<div className="h-2 w-2 rounded-full bg-destructive"></div>
+										<span className="text-xs font-bold uppercase text-muted-foreground">
+											Waste Detected
+										</span>
+									</div>
+									<p className="font-mono text-2xl font-bold">
+										$47,200
+										<span className="text-xs text-muted-foreground font-sans font-normal ml-1">
+											/yr
+										</span>
+									</p>
+								</motion.div>
+
+								<motion.div
+									initial={{ opacity: 0, x: 20 }}
+									animate={{ opacity: 1, x: 0 }}
+									transition={{ delay: 1.2, duration: 0.5 }}
+									className="absolute top-8 right-8 bg-white dark:bg-zinc-900 p-4 rounded-lg shadow-lg border border-border"
+								>
+									<div className="flex items-center gap-3">
+										<div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+											<Sparkles className="h-5 w-5" />
+										</div>
+										<div>
+											<p className="text-sm font-bold">
+												Cleanup Complete
+											</p>
+											<p className="text-xs text-muted-foreground">
+												Recovered 4TB space
+											</p>
+										</div>
+									</div>
+								</motion.div>
+							</div>
+
+							{/* Abstract decoration */}
+							<div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-50 to-emerald-50 dark:from-blue-950/20 dark:to-emerald-950/20 rounded-full blur-3xl opacity-60"></div>
+						</motion.div>
+					</div>
 				</div>
 			</section>
 
 			{/* Problem Stats */}
 			<section className="py-24 bg-muted/30 border-y border-border/50">
-				<div className="container mx-auto px-4">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="grid md:grid-cols-3 gap-12 text-center">
 						<div>
 							<h3 className="text-5xl font-display font-bold mb-2 text-primary">
@@ -255,7 +261,7 @@ export default function LandingPage() {
 
 			{/* Features */}
 			<section className="py-32" id="features">
-				<div className="container mx-auto px-4">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center max-w-3xl mx-auto mb-20">
 						<h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
 							One dashboard to clean it all.
@@ -324,7 +330,7 @@ export default function LandingPage() {
 
 			{/* Pricing Section */}
 			<section className="py-32 bg-secondary/20" id="pricing">
-				<div className="container mx-auto px-4">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center max-w-3xl mx-auto mb-20">
 						<h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
 							Simple, predictable pricing.
@@ -493,29 +499,31 @@ export default function LandingPage() {
 				</div>
 			</section>
 
-			{/* CTA */}
+			{/* Final CTA */}
 			<section className="py-24 bg-primary text-primary-foreground text-center">
-				<div className="container mx-auto px-4 max-w-4xl">
-					<h2 className="text-4xl md:text-6xl font-display font-bold mb-8">
-						Stop drowning in digital trash.
-					</h2>
-					<p className="text-xl text-primary-foreground/80 mb-12 max-w-2xl mx-auto">
-						Get your free audit today. No credit card required.
-						We&apos;ll show you exactly how much money you&apos;re
-						wasting.
-					</p>
-					<Button
-						size="lg"
-						variant="secondary"
-						className="h-16 px-10 text-xl font-bold"
-						onClick={() => router.push("/dashboard")}
-					>
-						Start Free Audit
-						<ArrowRight className="ml-2 h-6 w-6" />
-					</Button>
-					<p className="mt-6 text-sm opacity-60">
-						Soc2 Type II Certified · Read-only Initial Access
-					</p>
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="max-w-4xl mx-auto">
+						<h2 className="text-4xl md:text-6xl font-display font-bold mb-8">
+							Stop drowning in digital trash.
+						</h2>
+						<p className="text-xl text-primary-foreground/80 mb-12 max-w-2xl mx-auto">
+							Get your free audit today. No credit card required.
+							We&apos;ll show you exactly how much money
+							you&apos;re wasting.
+						</p>
+						<Button
+							size="lg"
+							variant="secondary"
+							className="h-16 px-10 text-xl font-bold"
+							onClick={() => router.push("/dashboard")}
+						>
+							Start Free Audit
+							<ArrowRight className="ml-2 h-6 w-6" />
+						</Button>
+						<p className="mt-6 text-sm opacity-60">
+							Soc2 Type II Certified · Read-only Initial Access
+						</p>
+					</div>
 				</div>
 			</section>
 		</div>
