@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
 	Form,
 	FormControl,
+	FormDescription,
 	FormField,
 	FormItem,
 	FormLabel,
@@ -23,8 +24,14 @@ import { useOrganizationStore } from "@/zustand/providers/organization-store-pro
 import { Organization } from "@/types";
 
 const formSchema = z.object({
-	name: z.string().min(2).max(50),
-	slug: z.string().min(2).max(50),
+	name: z
+		.string()
+		.min(2, "Name must be at least 2 characters")
+		.max(50, "Name must be at most 50 characters"),
+	targetScore: z
+		.number()
+		.min(0, "Target score must be at least 0")
+		.max(100, "Target score must be at most 100"),
 });
 
 export function CreateOrganizationForm() {
@@ -38,22 +45,31 @@ export function CreateOrganizationForm() {
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			name: "",
-			slug: "",
+			targetScore: 75,
 		},
 	});
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
-			toast.loading("Creating Tenant...");
+			toast.loading("Creating Organization...");
 			setIsLoading(true);
 
-			if (!user) return;
+			if (!user) {
+				toast.dismiss();
+				toast.error("User not authenticated");
+				return;
+			}
 
-			const { data, success } = await createOrganization(user.id, values);
+			const { data, success, error } = await createOrganization(
+				user.id,
+				values
+			);
 
 			if (!data || !success) {
 				toast.dismiss();
-				toast.error("Failed to create tenant");
+				toast.error(
+					(error as string) || "Failed to create organization"
+				);
 				return;
 			}
 
@@ -63,7 +79,7 @@ export function CreateOrganizationForm() {
 		} catch (error) {
 			console.error(error);
 			toast.dismiss();
-			toast.error("Failed to create tenant");
+			toast.error("Failed to create organization");
 		} finally {
 			setIsLoading(false);
 		}
@@ -79,8 +95,14 @@ export function CreateOrganizationForm() {
 						<FormItem>
 							<FormLabel>Name</FormLabel>
 							<FormControl>
-								<Input placeholder="My Tenant" {...field} />
+								<Input
+									placeholder="My Organization"
+									{...field}
+								/>
 							</FormControl>
+							<FormDescription>
+								A unique slug will be generated from this name
+							</FormDescription>
 							<FormMessage />
 						</FormItem>
 					)}
@@ -88,13 +110,27 @@ export function CreateOrganizationForm() {
 
 				<FormField
 					control={form.control}
-					name="slug"
+					name="targetScore"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Slug</FormLabel>
+							<FormLabel>Target Score</FormLabel>
 							<FormControl>
-								<Input placeholder="my-tenant" {...field} />
+								<Input
+									type="number"
+									min="0"
+									max="100"
+									placeholder="75"
+									{...field}
+									onChange={(e) =>
+										field.onChange(
+											parseInt(e.target.value) || 0
+										)
+									}
+								/>
 							</FormControl>
+							<FormDescription>
+								Set your workspace&apos;s target score (0-100)
+							</FormDescription>
 							<FormMessage />
 						</FormItem>
 					)}
@@ -102,9 +138,9 @@ export function CreateOrganizationForm() {
 
 				<DialogFooter>
 					<Button disabled={isLoading} type="submit">
-						Create Tenant
+						Create Workspace
 						{isLoading && (
-							<Loader2 className="size-4 animate-spin" />
+							<Loader2 className="size-4 animate-spin ml-2" />
 						)}
 					</Button>
 				</DialogFooter>

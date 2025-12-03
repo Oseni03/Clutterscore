@@ -102,7 +102,12 @@ export async function getOrganizationById(orgId: string) {
 
 export async function updateOrganization(
 	organizationId: string,
-	data: { name: string; slug?: string }
+	data: {
+		name: string;
+		slug?: string;
+		targetScore?: number;
+		subscriptionTier?: string;
+	}
 ) {
 	try {
 		const result = await auth.api.updateOrganization({
@@ -145,16 +150,79 @@ export async function deleteOrganization(organizationId: string) {
 	}
 }
 
+function generateSlug(name: string): string {
+	return name
+		.toLowerCase()
+		.trim()
+		.replace(/[^\w\s-]/g, "") // Remove special characters
+		.replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
+		.replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+}
+
+async function findAvailableSlug(baseSlug: string): Promise<string> {
+	let slug = baseSlug;
+	let counter = 1;
+
+	while (true) {
+		try {
+			// Check slug availability using BetterAuth API
+			const result = await auth.api.checkOrganizationSlug({
+				body: {
+					slug: slug,
+				},
+			});
+
+			// If slug is available, return it
+			if (result && !result.status) {
+				return slug;
+			}
+
+			// If taken, append counter and try again
+			slug = `${baseSlug}-${counter}`;
+			counter++;
+		} catch (error) {
+			console.error("Error checking slug availability:", error);
+			// Fallback to appending counter
+			slug = `${baseSlug}-${counter}`;
+			counter++;
+
+			// Safety limit to prevent infinite loops
+			if (counter > 100) {
+				throw new Error("Unable to generate unique slug");
+			}
+		}
+	}
+}
+
 export async function createOrganization(
 	userId: string,
-	data: { name: string; slug: string }
+	data: {
+		name: string;
+		targetScore?: number;
+		subscriptionTier?: string;
+	}
 ) {
 	try {
-		// Direct database creation bypassing auth API
+		// Generate base slug from name
+		const baseSlug = generateSlug(data.name);
+
+		if (!baseSlug) {
+			return {
+				success: false,
+				error: "Invalid organization name - unable to workspace slug",
+			};
+		}
+
+		// Find available slug
+		const slug = await findAvailableSlug(baseSlug);
+
+		// Create organization with generated slug
 		const organization = await prisma.organization.create({
 			data: {
 				name: data.name,
-				slug: data.slug,
+				slug: slug,
+				targetScore: data.targetScore || 75,
+				subscriptionTier: data.subscriptionTier || "free",
 				createdAt: new Date(),
 				members: {
 					create: {
@@ -170,8 +238,14 @@ export async function createOrganization(
 
 		return { data: organization, success: true };
 	} catch (error) {
-		console.error("Error creating organization: ", error);
-		return { success: false, error };
+		console.error("Error creating organization:", error);
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: "Failed to create workspace",
+		};
 	}
 }
 

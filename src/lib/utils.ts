@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { Building2, Zap } from "lucide-react";
+import { Building2, DollarSign, Zap } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -8,36 +8,55 @@ export function cn(...inputs: ClassValue[]) {
 
 export const SUBSCRIPTION_PLANS = [
 	{
-		id: "solo",
-		name: "Solo",
-		description: "Perfect for solopreneurs and freelancers",
-		price: "$20",
+		id: "free",
+		name: "Free",
+		description: "Audit + report only (viral hook)",
+		price: "$0",
 		period: "/month",
-		icon: Building2,
-		features: ["3 users", "50 notes"],
+		icon: DollarSign,
+		features: [
+			"Instant audit with Clutterscore (1-100)",
+			"Breakdown of waste, risks, and duplicates",
+			"Watermarked PDF report export",
+			"Limited integrations (up to 3 tools)",
+		],
 		popular: false,
 		productId: process.env.POLAR_SOLO_PLAN_ID || "",
 	},
 	{
-		id: "entrepreneur",
-		name: "Entrepreneur",
-		description: "Advanced features for entrepreneurs",
-		price: "$60",
-		period: "/month",
+		id: "pro",
+		name: "Pro",
+		description: "Automated cleanups + dashboard for growing teams",
+		price: "$29",
+		period: "/mo per 50 users",
 		icon: Zap,
-		features: ["Unlimited users", "Unlimited notes"],
+		features: [
+			"All Free features",
+			"Unlimited integrations",
+			"One-click cleanup playbooks with preview/approval",
+			"Ongoing dashboard with trends, leaderboards, and gamification",
+			"Recurring automated audits",
+			"Undo actions (30 days)",
+		],
 		popular: true,
 		productId: process.env.POLAR_ENTREPRENEUR_PLAN_ID || "",
 	},
 	{
-		id: "multipreneur",
-		name: "Multipreneur",
-		description: "Advanced features for multipreneurs and serial builders",
-		price: "$120",
-		period: "/month",
-		icon: Zap,
-		features: ["Unlimited users", "Unlimited notes"],
-		popular: true,
+		id: "enterprise",
+		name: "Enterprise",
+		description: "Expert support for larger organizations",
+		price: "$99",
+		period: "/mo per 50 users",
+		icon: Building2,
+		features: [
+			"All Pro features",
+			"Quarterly human expert review",
+			"Priority support",
+			"Custom playbooks",
+			"API access for integrations",
+			"White-label options",
+		],
+		popular: false,
 		productId: process.env.POLAR_MULTIPRENEUR_PLAN_ID || "",
 	},
 ];

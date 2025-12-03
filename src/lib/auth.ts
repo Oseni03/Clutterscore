@@ -89,6 +89,24 @@ export const auth = betterAuth({
 				admin,
 				member,
 			},
+			schema: {
+				organization: {
+					additionalFields: {
+						tagetScore: {
+							type: "number",
+							input: true,
+							required: false,
+							defaultValue: 75,
+						},
+						subscriptionTier: {
+							type: "string",
+							input: true,
+							required: false,
+							defaultValue: "free",
+						},
+					},
+				},
+			},
 		}),
 		nextCookies(),
 		customSession(async ({ user, session }) => {

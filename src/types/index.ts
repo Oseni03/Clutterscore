@@ -1,4 +1,8 @@
 import { Subscription } from "@prisma/client";
+import {
+	Organization as BaseOrganization,
+	Member as BaseMember,
+} from "better-auth/plugins";
 
 export interface User {
 	role?: string;
@@ -17,46 +21,11 @@ export interface MemberUser {
 	image?: string;
 }
 
-export interface Member {
-	id: string;
-	organizationId: string;
-	userId: string;
-	role: string;
-	createdAt: Date;
+export interface Member extends BaseMember {
 	user: MemberUser;
 }
-export interface Organization {
-	id: string;
-	name: string;
-	slug: string;
+export interface Organization extends BaseOrganization {
 	subscription?: Subscription;
-	createdAt: Date;
-	logo?: string | null;
-	// metadata?: any;
-}
-
-export interface Note {
-	id: string;
-	title: string;
-	content: string;
-	authorId: string;
-	tenantId: string;
-	tags: string[];
-	isPublic: boolean;
-	createdAt: Date;
-	updatedAt: Date;
-	author: User;
-}
-
-export interface InvitationData {
-	id: string;
-	email: string;
-	role: string;
-	organizationId: string;
-	teamId?: string;
-	status: "pending" | "accepted" | "rejected" | "cancelled";
-	createdAt: string;
-	expiresAt: string;
 }
 
 // export interface Subscription {

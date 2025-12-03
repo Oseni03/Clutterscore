@@ -26,7 +26,7 @@ export default function LandingPage() {
 		<div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-primary-foreground">
 			{/* Navigation – full-width background, content centered */}
 			<nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-				<div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between w-full">
 					<div className="flex items-center gap-3">
 						<Image
 							src="/generated_images/logo.png"
@@ -91,8 +91,8 @@ export default function LandingPage() {
 
 			{/* Hero Section – Perfectly centered */}
 			<section className="relative pt-24 pb-32 overflow-hidden">
-				<div className="max-w-7xl mx-auto px-6 lg:px-8">
-					<div className="grid lg:grid-cols-2 gap-16 items-center">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="grid lg:grid-cols-2 gap-16 items-center justify-items-center mx-auto">
 						{/* Text */}
 						<motion.div
 							initial={{ opacity: 0, y: 30 }}
@@ -221,8 +221,8 @@ export default function LandingPage() {
 
 			{/* Stats – Centered */}
 			<section className="py-24 bg-muted/30 border-y">
-				<div className="max-w-7xl mx-auto px-6 lg:px-8">
-					<div className="grid md:grid-cols-3 gap-12 text-center">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="grid md:grid-cols-3 gap-12 text-center mx-auto">
 						<div>
 							<h3 className="text-6xl font-display font-black mb-3 text-primary">
 								68%
@@ -262,7 +262,7 @@ export default function LandingPage() {
 
 			{/* Features – Centered */}
 			<section className="py-32" id="features">
-				<div className="max-w-7xl mx-auto px-6 lg:px-8">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center max-w-3xl mx-auto mb-20">
 						<h2 className="text-4xl md:text-6xl font-display font-black mb-6">
 							One dashboard to clean it all.
@@ -273,7 +273,7 @@ export default function LandingPage() {
 						</p>
 					</div>
 
-					<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+					<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mx-auto">
 						{/* Your 6 feature cards – unchanged content */}
 						{[
 							{
@@ -332,7 +332,7 @@ export default function LandingPage() {
 
 			{/* Pricing – Centered */}
 			<section className="py-32 bg-secondary/20" id="pricing">
-				<div className="max-w-7xl mx-auto px-6 lg:px-8">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center max-w-3xl mx-auto mb-20">
 						<h2 className="text-4xl md:text-6xl font-display font-black mb-6">
 							Simple, predictable pricing.
@@ -343,7 +343,7 @@ export default function LandingPage() {
 						</p>
 					</div>
 
-					<div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+					<div className="grid md:grid-cols-3 gap-8 mx-auto">
 						<Card className="border-border/60 flex flex-col">
 							<CardHeader>
 								<h3 className="text-2xl font-display font-bold">
@@ -502,7 +502,7 @@ export default function LandingPage() {
 
 			{/* Final CTA – Perfectly centered */}
 			<section className="py-28 bg-primary text-primary-foreground">
-				<div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
+				<div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 					<div className="max-w-4xl mx-auto">
 						<h2 className="text-5xl md:text-7xl font-display font-black mb-8 leading-tight">
 							Stop drowning in digital trash.

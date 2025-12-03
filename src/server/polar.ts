@@ -9,6 +9,22 @@ function safeParseDate(dateString: string | null | undefined): Date | null {
 	return isNaN(date.getTime()) ? null : date;
 }
 
+// Helper function to update organization subscription tier
+async function updateOrganizationTier(organizationId: string, planId: string) {
+	try {
+		await prisma.organization.update({
+			where: { id: organizationId },
+			data: { subscriptionTier: planId },
+		});
+		console.log(
+			`✅ Updated organization ${organizationId} to ${planId} tier`
+		);
+	} catch (error) {
+		console.error("💥 Error updating organization tier:", error);
+		// Don't throw - this shouldn't fail the webhook
+	}
+}
+
 export async function handleSubscriptionUpdated(payload: any) {
 	console.log(
 		"🎯 Processing subscription created/updated: ",
@@ -25,7 +41,7 @@ export async function handleSubscriptionUpdated(payload: any) {
 	// Get the plan details
 	const plan = getPlanByProductId(payload.data.product?.id || "");
 	if (!plan) {
-		console.error("❌ Invalid plan iD: ", payload.data.product?.name);
+		console.error("❌ Invalid plan ID: ", payload.data.product?.name);
 		return;
 	}
 
@@ -43,7 +59,7 @@ export async function handleSubscriptionUpdated(payload: any) {
 			return;
 		}
 
-		console.log(`📦 Creating subscription with plan: ${plan.id}`);
+		console.log(`📦 Updating subscription with plan: ${plan.id}`);
 		await prisma.subscription.update({
 			where: { organizationId },
 			data: {
@@ -81,9 +97,12 @@ export async function handleSubscriptionUpdated(payload: any) {
 			},
 		});
 
-		console.log("✅ Created subscription:", payload.data.id);
+		// Update organization subscription tier
+		await updateOrganizationTier(organizationId, plan.id);
+
+		console.log("✅ Updated subscription:", payload.data.id);
 	} catch (error) {
-		console.error("💥 Error creating subscription:", error);
+		console.error("💥 Error updating subscription:", error);
 		// Don't throw - let webhook succeed to avoid retries
 	}
 }
@@ -130,6 +149,12 @@ export async function handleSubscriptionCanceled(payload: any) {
 			},
 		});
 
+		// When subscription is canceled, keep tier until period ends
+		// Only downgrade to free if cancelAtPeriodEnd and period has ended
+		if (payload.data.endedAt) {
+			await updateOrganizationTier(organizationId, "free");
+		}
+
 		console.log("✅ Canceled subscription:", payload.data.id);
 	} catch (error) {
 		console.error("💥 Error canceling subscription:", error);
@@ -170,6 +195,9 @@ export async function handleSubscriptionRevoked(payload: any) {
 			},
 		});
 
+		// Immediately downgrade to free tier when revoked
+		await updateOrganizationTier(organizationId, "free");
+
 		console.log("✅ Revoked subscription:", payload.data.id);
 	} catch (error) {
 		console.error("💥 Error revoking subscription:", error);
@@ -186,6 +214,14 @@ export async function handleSubscriptionUncanceled(payload: any) {
 			console.error("❌ No referenceId found in metadata");
 			return;
 		}
+
+		// Get the plan details to restore the tier
+		const plan = getPlanByProductId(payload.data.product?.id || "");
+		if (!plan) {
+			console.error("❌ Invalid plan ID: ", payload.data.product?.name);
+			return;
+		}
+
 		// Check if subscription exists
 		const existingSubscription = await prisma.subscription.findUnique({
 			where: { organizationId },
@@ -215,6 +251,9 @@ export async function handleSubscriptionUncanceled(payload: any) {
 			},
 		});
 
+		// Restore organization tier when uncanceled
+		await updateOrganizationTier(organizationId, plan.id);
+
 		console.log("✅ Uncanceled subscription:", payload.data.id);
 	} catch (error) {
 		console.error("💥 Error uncanceling subscription:", error);
@@ -234,7 +273,7 @@ export async function handleSubscriptionActive(payload: any) {
 	// Get the plan details for the activated subscription
 	const plan = getPlanByProductId(payload.data.product?.id || "");
 	if (!plan) {
-		console.error("❌ Invalid plan iD: ", payload.data.product?.name);
+		console.error("❌ Invalid plan ID: ", payload.data.product?.name);
 		return;
 	}
 
@@ -262,6 +301,9 @@ export async function handleSubscriptionActive(payload: any) {
 				startedAt: safeParseDate(payload.data.startedAt) || new Date(),
 			},
 		});
+
+		// Update organization tier when subscription becomes active
+		await updateOrganizationTier(organizationId, plan.id);
 
 		console.log("✅ Activated subscription:", payload.data.id);
 	} catch (error) {
