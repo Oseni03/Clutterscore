@@ -9,7 +9,7 @@ export async function sendEmail(data: {
 }) {
 	try {
 		const { data: result, error } = await resend.emails.send({
-			from: "Noteapp <organization@resend.dev>",
+			from: "Clusterscore <organization@resend.dev>",
 			to: data.to,
 			subject: data.subject,
 			react: data.react,

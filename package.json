@@ -58,6 +58,7 @@
 		"dropbox": "^10.34.0",
 		"embla-carousel-react": "^8.6.0",
 		"googleapis": "^166.0.0",
+		"inngest": "^3.46.0",
 		"input-otp": "^1.4.2",
 		"jira.js": "^5.2.2",
 		"lucide-react": "^0.544.0",

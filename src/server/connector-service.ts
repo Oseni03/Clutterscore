@@ -543,7 +543,7 @@ export class ConnectorService {
 		}
 	}
 
-	private async performPlaybookActions(
+	async performPlaybookActions(
 		playbook: PlaybookWithItems
 	): Promise<{ processed: number; failed: number }> {
 		// Fetch integration and create connector for the playbook's source
