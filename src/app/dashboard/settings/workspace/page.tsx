@@ -51,7 +51,7 @@ const getSubscriptionBadge = (planTier: string) => {
 	);
 };
 
-export default function OrganizationPage() {
+export default function WorkspacePage() {
 	const {
 		activeOrganization,
 		isAdmin,

@@ -73,8 +73,8 @@ const dashboardItems = {
 					icon: Plug,
 				},
 				{
-					title: "Organization",
-					url: "/dashboard/settings/organization",
+					title: "Workspace",
+					url: "/dashboard/settings/workspace",
 					icon: Building2,
 				},
 				{
