@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Building2, Loader2, Target } from "lucide-react";
-import { Organization } from "@/types";
+import { Organization } from "@prisma/client";
 import { DialogFooter } from "../ui/dialog";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { updateOrganization } from "@/server/organizations";

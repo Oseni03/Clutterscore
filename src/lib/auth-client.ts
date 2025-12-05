@@ -1,6 +1,7 @@
 import {
 	customSessionClient,
 	organizationClient,
+	inferOrgAdditionalFields,
 	magicLinkClient,
 } from "better-auth/client/plugins";
 import { polarClient } from "@polar-sh/better-auth";
@@ -9,7 +10,9 @@ import { auth } from "./auth";
 
 export const authClient = createAuthClient({
 	plugins: [
-		organizationClient(),
+		organizationClient({
+			schema: inferOrgAdditionalFields<typeof auth>(),
+		}),
 		customSessionClient<typeof auth>(),
 		polarClient(),
 		magicLinkClient(),

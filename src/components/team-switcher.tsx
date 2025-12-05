@@ -29,8 +29,9 @@ import {
 } from "./ui/dialog";
 import { CreateOrganizationForm } from "./forms/create-organization-form";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
-import { getPlanByProductId } from "@/lib/utils";
-import { Member, Organization } from "@/types";
+import { getPlanByTier } from "@/lib/utils";
+import { Member } from "@/types";
+import { Organization } from "@prisma/client";
 import Logo from "./logo";
 
 export function TeamSwitcher() {
@@ -86,9 +87,7 @@ export function TeamSwitcher() {
 		}
 	}, [activeOrganization, organizations]);
 
-	const plan = getPlanByProductId(
-		activeOrganization?.subscription?.productId || ""
-	);
+	const plan = getPlanByTier(activeOrganization?.subscriptionTier || "free");
 
 	return (
 		<Dialog onOpenChange={setDialogOpen} open={dialogOpen}>

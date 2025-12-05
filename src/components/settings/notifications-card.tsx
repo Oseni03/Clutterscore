@@ -10,7 +10,6 @@ import { toast } from "sonner";
 
 export const NotificationsCard = () => {
 	const { activeOrganization } = useOrganizationStore((s) => s);
-	const [loading, setLoading] = useState(false);
 	const [prefs, setPrefs] = useState({
 		weeklyReport: true,
 		criticalAlerts: true,
@@ -20,7 +19,6 @@ export const NotificationsCard = () => {
 	useEffect(() => {
 		const load = async () => {
 			if (!activeOrganization) return;
-			setLoading(true);
 			try {
 				const res = await fetch(
 					`/api/organizations/${activeOrganization.id}/preferences`
@@ -31,8 +29,6 @@ export const NotificationsCard = () => {
 			} catch (err) {
 				console.error(err);
 				toast.error("Failed to load notification preferences");
-			} finally {
-				setLoading(false);
 			}
 		};
 

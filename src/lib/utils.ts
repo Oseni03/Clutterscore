@@ -85,6 +85,10 @@ export const getPlanByProductId = (productId: string) => {
 	);
 };
 
+export const getPlanByTier = (tier: string) => {
+	return SUBSCRIPTION_PLANS.find((plan) => plan.id === tier) || FREE_PLAN;
+};
+
 export const FILE_TYPE_ICONS = {
 	DOCUMENT: FileText,
 	IMAGE: ImageIcon,

@@ -1,8 +1,5 @@
-import { Subscription } from "@prisma/client";
-import {
-	Organization as BaseOrganization,
-	Member as BaseMember,
-} from "better-auth/plugins";
+import { Prisma } from "@prisma/client";
+import { Member as BaseMember } from "better-auth/plugins";
 
 export interface User {
 	role?: string;
@@ -24,11 +21,9 @@ export interface MemberUser {
 export interface Member extends BaseMember {
 	user: MemberUser;
 }
-export interface Organization extends BaseOrganization {
-	targetScore: number;
-	subscriptionTier: string;
-	subscription?: Subscription;
-}
+export type Organization = Prisma.OrganizationGetPayload<{
+	include: { subscription: true };
+}>;
 
 // export interface Subscription {
 // 	id: string;

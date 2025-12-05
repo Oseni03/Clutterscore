@@ -92,13 +92,19 @@ export const auth = betterAuth({
 			schema: {
 				organization: {
 					additionalFields: {
-						tagetScore: {
+						targetScore: {
 							type: "number",
 							input: true,
-							required: false,
+							required: true,
 							defaultValue: 75,
 						},
 						subscriptionTier: {
+							type: "string",
+							input: true,
+							required: true,
+							defaultValue: "free",
+						},
+						polarCustomerId: {
 							type: "string",
 							input: true,
 							required: false,

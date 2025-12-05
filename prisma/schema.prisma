@@ -111,8 +111,8 @@ model Organization {
   activities   Activity[]
   feedbacks    Feedback[]
 
-  targetScore      Int?    @default(75)
-  subscriptionTier String? @default("free")
+  targetScore      Int    @default(75)
+  subscriptionTier String @default("free")
 
   @@unique([slug])
   @@map("organization")

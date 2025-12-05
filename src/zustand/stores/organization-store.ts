@@ -1,8 +1,8 @@
 import { authClient } from "@/lib/auth-client";
 import { getOrganizationById } from "@/server/organizations";
 import { getCurrentUser } from "@/server/users";
-import { Member, Organization } from "@/types";
-import { Invitation, Subscription } from "@prisma/client";
+import { Member } from "@/types";
+import { Invitation, Organization, Subscription } from "@prisma/client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

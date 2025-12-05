@@ -21,7 +21,7 @@ import { DialogFooter } from "../ui/dialog";
 import { createOrganization } from "@/server/organizations";
 import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
-import { Organization } from "@/types";
+import { Organization } from "@prisma/client";
 
 const formSchema = z.object({
 	name: z

@@ -1,17 +1,17 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "./users";
 import { isAdmin } from "./permissions";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { Organization } from "@prisma/client";
 
-export async function getOrganizations() {
-	const { currentUser } = await getCurrentUser();
-
+export async function getOrganizations(
+	userId: string
+): Promise<Organization[]> {
 	const members = await prisma.member.findMany({
 		where: {
-			userId: currentUser.id,
+			userId,
 		},
 	});
 

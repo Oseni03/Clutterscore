@@ -1,15 +1,17 @@
 // Layout page
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
-import { Member, Organization } from "@/types";
+import { Member } from "@/types";
 import { DashboardStoreProvider } from "@/zustand/providers/dashboard-store-provider";
 import { useRouter } from "next/navigation";
+import { getOrganizations } from "@/server/organizations";
+import { Organization } from "@prisma/client";
 
 export default function Page({
 	children,
@@ -25,7 +27,24 @@ export default function Page({
 		updateSubscription,
 	} = useOrganizationStore((state) => state);
 	const { data: session } = authClient.useSession();
-	const { data: organizations } = authClient.useListOrganizations();
+	const [organizations, setLocalOrganizations] = useState<Organization[]>([]);
+
+	useEffect(() => {
+		const fetchOrgs = async () => {
+			try {
+				if (!session?.user.id) return;
+				const organizations = await getOrganizations(session?.user.id);
+				if (organizations) {
+					setLocalOrganizations(organizations);
+					setOrganizations(organizations);
+				}
+			} catch (error) {
+				console.log("Error fetching organizations", error);
+			}
+		};
+
+		fetchOrgs();
+	}, [session?.user.id, setOrganizations]);
 
 	// Move the state update to useEffect to avoid calling it during render
 	useEffect(() => {

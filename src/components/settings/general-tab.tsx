@@ -28,8 +28,8 @@ import {
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UpdateOrganizationForm } from "../forms/update-organization-form";
-import { Organization } from "@/types";
-import { getPlanByProductId } from "@/lib/utils";
+import { Organization } from "@prisma/client";
+import { getPlanByTier } from "@/lib/utils";
 
 export default function GeneralTab() {
 	const { activeOrganization, isAdmin, isLoading } = useOrganizationStore(
@@ -59,9 +59,7 @@ export default function GeneralTab() {
 		);
 	}
 
-	const plan = getPlanByProductId(
-		activeOrganization.subscription?.productId || ""
-	);
+	const plan = getPlanByTier(activeOrganization.subscriptionTier || "free");
 
 	const subscriptionBadge = {
 		FREE: { variant: "secondary" as const, text: "Free Tier" },
