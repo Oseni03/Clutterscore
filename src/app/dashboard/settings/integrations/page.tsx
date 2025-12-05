@@ -1,4 +1,4 @@
-import IntegrationsTab from "@/components/integrations/integrations-tab";
+import IntegrationsTab from "@/components/settings/integrations-tab";
 
 export default function IntegrationsPage() {
 	return (

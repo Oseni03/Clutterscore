@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/collapsible";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { NavSecondary } from "./nav-secondary";
 
 const dashboardItems = {
 	navMain: [
@@ -213,6 +214,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				</SidebarGroup>
 			</SidebarContent>
 			<SidebarFooter>
+				<NavSecondary items={[]} />
 				<NavUser />
 			</SidebarFooter>
 			<SidebarRail />
