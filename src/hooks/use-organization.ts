@@ -6,13 +6,14 @@ import { deleteOrganization } from "@/server/organizations";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useOrganization() {
-	const { activeOrganization, organizations, isAdmin, removeOrganization } =
-		useOrganizationStore((state) => ({
-			activeOrganization: state.activeOrganization,
-			isAdmin: state.isAdmin,
-			removeOrganization: state.removeOrganization,
-			organizations: state.organizations,
-		}));
+	const activeOrganization = useOrganizationStore(
+		(state) => state.activeOrganization
+	);
+	const organizations = useOrganizationStore((state) => state.organizations);
+	const isAdmin = useOrganizationStore((state) => state.isAdmin);
+	const removeOrganization = useOrganizationStore(
+		(state) => state.removeOrganization
+	);
 
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -46,6 +47,7 @@ export function useOrganization() {
 				toast.info("You can't delete your only workspace!", {
 					id: toastId,
 				});
+				setIsLoading(false);
 				return;
 			}
 			const { success } = await deleteOrganization(activeOrganization.id);
@@ -54,21 +56,22 @@ export function useOrganization() {
 
 			if (!success) {
 				toast.error("Failed to delete workspace", { id: toastId });
+				setIsLoading(false);
 				return;
 			}
 
 			removeOrganization(activeOrganization.id);
 			toast.success("Workspace deleted successfully", { id: toastId });
 			setDeleteDialogOpen(false);
+			setIsLoading(false);
 		} catch (error) {
 			if (isMountedRef.current) {
 				console.error(error);
 				toast.error("Failed to delete workspace", { id: toastId });
+				setIsLoading(false);
 			}
-		} finally {
-			if (isMountedRef.current) setIsLoading(false);
 		}
-	}, [activeOrganization, removeOrganization, organizations.length]);
+	}, [activeOrganization, organizations.length, removeOrganization]);
 
 	const handleResetData = useCallback(async () => {
 		if (!activeOrganization) return;
@@ -86,13 +89,13 @@ export function useOrganization() {
 				id: toastId,
 			});
 			setResetDialogOpen(false);
+			setIsLoading(false);
 		} catch (error) {
 			if (isMountedRef.current) {
 				console.error(error);
 				toast.error("Failed to reset data", { id: toastId });
+				setIsLoading(false);
 			}
-		} finally {
-			if (isMountedRef.current) setIsLoading(false);
 		}
 	}, [activeOrganization]);
 
