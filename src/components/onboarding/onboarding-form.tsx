@@ -150,7 +150,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 
 			toast.dismiss();
 			toast.success("Workspace created successfully!");
-			router.push(`/${data.slug}`);
+			router.push(`/dashboard/settings/integrations`);
 			router.refresh();
 		} catch (error) {
 			console.error("Error creating workspace:", error);
