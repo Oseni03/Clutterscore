@@ -47,6 +47,10 @@ const formSchema = z.object({
 		.enum(["free", "pro", "enterprise"])
 		.default("free")
 		.catch("free"),
+	billingInterval: z
+		.enum(["monthly", "yearly"])
+		.default("yearly")
+		.catch("yearly"),
 });
 
 interface OnboardingFormProps {
@@ -69,10 +73,12 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 			name: user.name || user.email.split("@")[0],
 			targetScore: 75,
 			subscriptionTier: "free",
+			billingInterval: "yearly",
 		},
 	});
 
 	const selectedPlan = form.watch("subscriptionTier");
+	const billingInterval = form.watch("billingInterval");
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
@@ -92,7 +98,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 				return;
 			}
 
-			// If not free plan, redirect to Polar checkout
+			// If not free plan, redirect to checkout
 			if (values.subscriptionTier !== "free") {
 				const plan = SUBSCRIPTION_PLANS.find(
 					(p) => p.id === values.subscriptionTier
@@ -104,7 +110,10 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 					return;
 				}
 
-				if (!plan.productId) {
+				// Get the correct product ID based on billing interval
+				const productId = plan.plans[values.billingInterval].productId;
+
+				if (!productId) {
 					toast.dismiss();
 					toast.error(
 						"Product ID not configured. Please contact support."
@@ -117,7 +126,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 
 				const { data: checkoutData, error: checkoutError } =
 					await authClient.checkout({
-						products: [plan.productId],
+						products: [productId],
 						referenceId: data.id,
 						allowDiscountCodes: true,
 					});
@@ -195,9 +204,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 											</div>
 										</FormControl>
 										<FormDescription>
-											{`This is your workspace's display
-											name. A unique URL will be generated
-											automatically.`}
+											{`This is your workspace's display name. A unique URL will be generated automatically.`}
 										</FormDescription>
 										<FormMessage />
 									</FormItem>
@@ -231,8 +238,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 											</div>
 										</FormControl>
 										<FormDescription>
-											{`Set your organization's target score
-											(0-100)`}
+											{`Set your organization's target score (0-100)`}
 										</FormDescription>
 										<FormMessage />
 									</FormItem>
@@ -250,108 +256,209 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 										Choose Your Plan
 									</FormLabel>
 									<FormControl>
-										<div className="grid gap-4 md:grid-cols-3 mt-4">
-											{SUBSCRIPTION_PLANS.map((plan) => {
-												const Icon = plan.icon;
-												const isSelected =
-													field.value === plan.id;
-
-												return (
-													<Card
-														key={plan.id}
-														className={cn(
-															"relative cursor-pointer transition-all hover:shadow-md",
-															isSelected
-																? "border-primary ring-2 ring-primary ring-offset-2"
-																: "border-border hover:border-primary/50"
-														)}
-														onClick={() =>
-															field.onChange(
-																plan.id
-															)
-														}
-													>
-														{plan.popular && (
-															<Badge
-																className="absolute -top-2 left-1/2 -translate-x-1/2"
-																variant="default"
-															>
-																Most Popular
-															</Badge>
-														)}
-
-														<CardHeader className="pb-4">
-															<div className="flex items-center justify-between">
-																<div
+										<div className="space-y-4 mt-4">
+											{/* Billing Interval Toggle - Only show if not free */}
+											{field.value !== "free" && (
+												<div className="flex justify-center">
+													<FormField
+														control={form.control}
+														name="billingInterval"
+														render={({
+															field: intervalField,
+														}) => (
+															<div className="inline-flex items-center gap-2 p-1 bg-secondary rounded-lg">
+																<button
+																	type="button"
+																	onClick={() =>
+																		intervalField.onChange(
+																			"monthly"
+																		)
+																	}
 																	className={cn(
-																		"p-2 rounded-lg",
-																		isSelected
-																			? "bg-primary/10"
-																			: "bg-muted"
+																		"px-6 py-2 rounded-md text-sm font-medium transition-all",
+																		intervalField.value ===
+																			"monthly"
+																			? "bg-background shadow-sm text-foreground"
+																			: "text-muted-foreground hover:text-foreground"
 																	)}
 																>
-																	<Icon
-																		className={cn(
-																			"h-5 w-5",
-																			isSelected
-																				? "text-primary"
-																				: "text-muted-foreground"
-																		)}
-																	/>
-																</div>
-																{isSelected && (
-																	<div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-																		<Check className="h-4 w-4 text-primary-foreground" />
-																	</div>
-																)}
-															</div>
-															<CardTitle className="text-xl mt-4">
-																{plan.name}
-															</CardTitle>
-															<CardDescription className="text-sm">
-																{
-																	plan.description
-																}
-															</CardDescription>
-															<div className="mt-4">
-																<span className="text-3xl font-bold">
-																	{plan.price}
-																</span>
-																<span className="text-sm text-muted-foreground">
-																	{
-																		plan.period
+																	Monthly
+																</button>
+																<button
+																	type="button"
+																	onClick={() =>
+																		intervalField.onChange(
+																			"yearly"
+																		)
 																	}
-																</span>
+																	className={cn(
+																		"px-6 py-2 rounded-md text-sm font-medium transition-all",
+																		intervalField.value ===
+																			"yearly"
+																			? "bg-background shadow-sm text-foreground"
+																			: "text-muted-foreground hover:text-foreground"
+																	)}
+																>
+																	Yearly
+																	<Badge
+																		variant="secondary"
+																		className="ml-2 bg-primary/10 text-primary border-0 text-xs"
+																	>
+																		Save 17%
+																	</Badge>
+																</button>
 															</div>
-														</CardHeader>
+														)}
+													/>
+												</div>
+											)}
 
-														<CardContent className="pt-0">
-															<ul className="space-y-2">
-																{plan.features.map(
-																	(
-																		feature,
-																		idx
-																	) => (
-																		<li
-																			key={
-																				idx
-																			}
-																			className="flex items-start gap-2 text-sm"
-																		>
-																			<Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-																			<span className="text-muted-foreground">
-																				{
-																					feature
-																				}
-																			</span>
-																		</li>
-																	)
+											{/* Plans Grid */}
+											<div className="grid gap-4 md:grid-cols-3">
+												{SUBSCRIPTION_PLANS.map(
+													(plan) => {
+														const Icon = plan.icon;
+														const isSelected =
+															field.value ===
+															plan.id;
+														const pricing =
+															plan.plans[
+																billingInterval
+															];
+
+														return (
+															<Card
+																key={plan.id}
+																className={cn(
+																	"relative cursor-pointer transition-all hover:shadow-md",
+																	isSelected
+																		? "border-primary ring-2 ring-primary ring-offset-2"
+																		: "border-border hover:border-primary/50"
 																)}
-															</ul>
-														</CardContent>
-													</Card>
-												);
-											})}
+																onClick={() =>
+																	field.onChange(
+																		plan.id
+																	)
+																}
+															>
+																{plan.popular && (
+																	<Badge
+																		className="absolute -top-2 left-1/2 -translate-x-1/2"
+																		variant="default"
+																	>
+																		Most
+																		Popular
+																	</Badge>
+																)}
+
+																<CardHeader className="pb-4">
+																	<div className="flex items-center justify-between">
+																		<div
+																			className={cn(
+																				"p-2 rounded-lg",
+																				isSelected
+																					? "bg-primary/10"
+																					: "bg-muted"
+																			)}
+																		>
+																			<Icon
+																				className={cn(
+																					"h-5 w-5",
+																					isSelected
+																						? "text-primary"
+																						: "text-muted-foreground"
+																				)}
+																			/>
+																		</div>
+																		{isSelected && (
+																			<div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+																				<Check className="h-4 w-4 text-primary-foreground" />
+																			</div>
+																		)}
+																	</div>
+																	<CardTitle className="text-xl mt-4">
+																		{
+																			plan.name
+																		}
+																	</CardTitle>
+																	<CardDescription className="text-sm min-h-[40px]">
+																		{
+																			plan.description
+																		}
+																	</CardDescription>
+																	<div className="mt-4">
+																		<span className="text-3xl font-bold">
+																			{
+																				pricing.price
+																			}
+																		</span>
+																		<span className="text-sm text-muted-foreground">
+																			{
+																				pricing.period
+																			}
+																		</span>
+																		{billingInterval ===
+																			"yearly" &&
+																			plan.id !==
+																				"free" &&
+																			pricing.savings && (
+																				<p className="text-xs text-primary font-medium mt-1">
+																					{
+																						pricing.savings
+																					}
+																				</p>
+																			)}
+																	</div>
+																</CardHeader>
+
+																<CardContent className="pt-0">
+																	<ul className="space-y-2">
+																		{plan.features
+																			.slice(
+																				0,
+																				4
+																			)
+																			.map(
+																				(
+																					feature,
+																					idx
+																				) => (
+																					<li
+																						key={
+																							idx
+																						}
+																						className="flex items-start gap-2 text-sm"
+																					>
+																						<Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+																						<span className="text-muted-foreground">
+																							{
+																								feature
+																							}
+																						</span>
+																					</li>
+																				)
+																			)}
+																		{plan
+																			.features
+																			.length >
+																			4 && (
+																			<li className="text-xs text-muted-foreground italic">
+																				+
+																				{plan
+																					.features
+																					.length -
+																					4}{" "}
+																				more
+																				features
+																			</li>
+																		)}
+																	</ul>
+																</CardContent>
+															</Card>
+														);
+													}
+												)}
+											</div>
 										</div>
 									</FormControl>
 									<FormMessage />
@@ -366,10 +473,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 									{`What's a workspace?`}
 								</p>
 								<p className="mt-2 text-muted-foreground">
-									{`A workspace is where your team collaborates.
-									You can invite members, connect
-									integrations, and manage all your SaaS tools
-									in one place.`}
+									{`A workspace is where your team collaborates. You can invite members, connect integrations, and manage all your SaaS tools in one place.`}
 								</p>
 							</div>
 							<div>
@@ -377,20 +481,19 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 									{`What's a target score?`}
 								</p>
 								<p className="mt-2 text-muted-foreground">
-									{`Your target score represents the benchmark
-									your organization aims to achieve. You can
-									adjust this later in settings.`}
+									{`Your target score represents the benchmark your organization aims to achieve. You can adjust this later in settings.`}
 								</p>
 							</div>
 							{selectedPlan !== "free" && (
 								<div>
 									<p className="font-semibold text-foreground">
-										💳 Payment
+										💳 Payment & Billing
 									</p>
 									<p className="mt-2 text-muted-foreground">
-										{`You'll be redirected to complete your
-										payment after creating your workspace.
-										You can cancel anytime.`}
+										{billingInterval === "yearly"
+											? `You'll be billed annually and save 17% compared to monthly billing. `
+											: `You'll be billed monthly. Switch to yearly anytime to save 17%. `}
+										{`You can cancel anytime and manage your subscription in settings.`}
 									</p>
 								</div>
 							)}
@@ -410,7 +513,11 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 							) : selectedPlan === "free" ? (
 								"Create Free Workspace"
 							) : (
-								"Continue to Checkout"
+								`Continue to ${
+									billingInterval === "yearly"
+										? "Yearly"
+										: "Monthly"
+								} Checkout`
 							)}
 						</Button>
 

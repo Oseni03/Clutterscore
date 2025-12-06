@@ -133,10 +133,16 @@ export const auth = betterAuth({
 			createCustomerOnSignUp: true,
 			use: [
 				checkout({
-					products: SUBSCRIPTION_PLANS.map((plan) => ({
-						productId: plan.productId,
-						slug: plan.id,
-					})),
+					products: SUBSCRIPTION_PLANS.flatMap((plan) => [
+						{
+							productId: plan.plans.monthly.productId,
+							slug: `${plan.id}-monthly`,
+						},
+						{
+							productId: plan.plans.yearly.productId,
+							slug: `${plan.id}-yearly`,
+						},
+					]).filter((product) => product.productId),
 					successUrl:
 						"/dashboard/settings?tab=subscription&checkout_id={CHECKOUT_ID}",
 					authenticatedUsersOnly: true,
