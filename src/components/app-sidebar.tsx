@@ -147,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 													)}
 												>
 													{item.icon && (
-														<item.icon className="h-5 w-5" />
+														<item.icon className="h-5 w-5 mr-2" />
 													)}
 													<span>{item.title}</span>
 													<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
