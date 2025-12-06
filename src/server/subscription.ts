@@ -23,7 +23,8 @@ export async function createFreeSubscription(organizationId: string) {
 			cancelAtPeriodEnd: false,
 			startedAt: now,
 			customerId: `free_${organizationId}`,
-			productId: freePlan.productId,
+			productId:
+				freePlan.plans.yearly.productId || `free_${organizationId}`,
 			checkoutId: `free_${organizationId}`,
 			createdAt: now,
 		},
