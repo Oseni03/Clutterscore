@@ -8,6 +8,7 @@ import { PlaybookStatus, ImpactType, ToolSource } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { showUpgradeToast } from "@/components/upgrade-toast";
+import { useJobPolling } from "./use-job-polling";
 
 export function usePlaybooks() {
 	const router = useRouter();
@@ -23,15 +24,35 @@ export function usePlaybooks() {
 	);
 	const setFilters = usePlaybooksStore((state) => state.setFilters);
 
-	// Get subscription tier
 	const activeOrganization = useOrganizationStore(
 		(state) => state.activeOrganization
 	);
 	const subscriptionTier = activeOrganization?.subscriptionTier || "free";
 
 	const [isLoading, setIsLoading] = useState(true);
-	const [isExecuting, setIsExecuting] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+
+	// Job polling state
+	const [executionJobId, setExecutionJobId] = useState<string | null>(null);
+	const [executingPlaybookId, setExecutingPlaybookId] = useState<
+		string | null
+	>(null);
+
+	// Poll execution job
+	const { status: executionStatus } = useJobPolling(executionJobId, {
+		onComplete: () => {
+			toast.success("Playbook executed successfully!");
+			setExecutionJobId(null);
+			setExecutingPlaybookId(null);
+			loadPlaybooks();
+		},
+		onError: (error) => {
+			toast.error(`Execution failed: ${error}`);
+			setExecutionJobId(null);
+			setExecutingPlaybookId(null);
+			loadPlaybooks();
+		},
+	});
 
 	const fetchPlaybooks = useCallback(
 		async (
@@ -148,7 +169,8 @@ export function usePlaybooks() {
 				throw new Error("Subscription upgrade required");
 			}
 
-			setIsExecuting(playbookId);
+			setExecutingPlaybookId(playbookId);
+
 			try {
 				const response = await fetch(
 					`/api/playbooks/${playbookId}/execute`,
@@ -163,40 +185,38 @@ export function usePlaybooks() {
 					throw new Error(data.error || "Failed to execute playbook");
 				}
 
-				toast.success("Playbook executed successfully");
-				await loadPlaybooks();
+				setExecutionJobId(data.jobId);
+				toast.info(
+					data.message || "Executing playbook in background..."
+				);
 			} catch (err) {
 				const errorMessage =
 					(err as Error).message || "Failed to execute playbook";
+
+				setExecutingPlaybookId(null);
 
 				if (!errorMessage.includes("Subscription upgrade required")) {
 					toast.error(errorMessage);
 				}
 				throw err;
-			} finally {
-				setIsExecuting(null);
 			}
 		},
-		[loadPlaybooks, subscriptionTier, router]
+		[subscriptionTier, router]
 	);
 
 	const getFilteredPlaybooks = useCallback(() => {
-		// Ensure playbooks is an array
 		if (!Array.isArray(playbooks)) {
 			return [];
 		}
 
-		// Safely get search term
 		const searchTerm =
 			typeof filters?.search === "string"
 				? filters.search.trim().toLowerCase()
 				: "";
 
 		return playbooks.filter((playbook) => {
-			// Safely check if playbook exists
 			if (!playbook) return false;
 
-			// Match search with null-safe checks
 			const title = (playbook.title || "").toLowerCase();
 			const description = (playbook.description || "").toLowerCase();
 			const matchesSearch =
@@ -204,13 +224,11 @@ export function usePlaybooks() {
 				title.includes(searchTerm) ||
 				description.includes(searchTerm);
 
-			// Match status
 			const matchesStatus =
 				!filters?.status ||
 				filters.status === "all" ||
 				playbook.status === filters.status;
 
-			// Match impact type
 			const matchesImpactType =
 				!filters?.impactType ||
 				filters.impactType === "all" ||
@@ -256,7 +274,8 @@ export function usePlaybooks() {
 		selectedPlaybook,
 		filters: filters || { search: "", status: "all", impactType: "all" },
 		isLoading,
-		isExecuting,
+		isExecuting: executingPlaybookId,
+		executionStatus,
 		error,
 		subscriptionTier,
 

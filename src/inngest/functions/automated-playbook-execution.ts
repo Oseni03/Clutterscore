@@ -2,6 +2,7 @@ import { inngest } from "@/inngest/client";
 import { prisma } from "@/lib/prisma";
 import { ConnectorService } from "@/server/connector-service";
 import { PlaybookWithItems } from "@/types/audit";
+import { mapImpactTypeToActionType } from "./execute-playbook";
 
 /**
  * Automated Playbook Execution Function
@@ -26,7 +27,7 @@ export const automatedPlaybookExecution = inngest.createFunction(
 		},
 	},
 	{ cron: "0 3 * * 0" }, // Weekly on Sunday at 3 AM
-	async ({ event, step }) => {
+	async ({ step }) => {
 		const executionResults = {
 			organizations: 0,
 			playbooksExecuted: 0,
@@ -139,7 +140,7 @@ export const automatedPlaybookExecution = inngest.createFunction(
 								data: {
 									organizationId: org.id,
 									playbookId: playbook.id,
-									actionType: mapImpactToActionType(
+									actionType: mapImpactTypeToActionType(
 										playbook.impactType
 									),
 									target: playbook.title,
@@ -397,24 +398,6 @@ function shouldAutoApprovePlaybook(playbook: PlaybookWithItems): boolean {
 }
 
 /**
- * Map ImpactType to AuditLogActionType
- */
-function mapImpactToActionType(
-	impactType: string
-): "REVOKE_ACCESS" | "DELETE_FILE" | "ARCHIVE_CHANNEL" | "OTHER" {
-	switch (impactType) {
-		case "SECURITY":
-			return "REVOKE_ACCESS";
-		case "SAVINGS":
-			return "DELETE_FILE";
-		case "EFFICIENCY":
-			return "ARCHIVE_CHANNEL";
-		default:
-			return "OTHER";
-	}
-}
-
-/**
  * Manual Playbook Execution Trigger
  * Can be invoked manually for specific playbooks
  */
@@ -468,7 +451,7 @@ export const manualPlaybookExecution = inngest.createFunction(
 					organizationId: playbook.organizationId,
 					playbookId: playbook.id,
 					userId,
-					actionType: mapImpactToActionType(playbook.impactType),
+					actionType: mapImpactTypeToActionType(playbook.impactType),
 					target: playbook.title,
 					targetType: "Playbook",
 					executor: userId ? "Admin (Manual)" : "System",

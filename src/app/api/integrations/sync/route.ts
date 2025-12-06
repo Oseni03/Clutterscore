@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ConnectorService } from "@/server/connector-service";
 import { ToolSource } from "@prisma/client";
 import { withAuth } from "@/lib/middleware";
-
-const connectorService = new ConnectorService();
+import { inngest } from "@/inngest/client";
 
 export async function POST(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
 		try {
 			const { source } = await req.json();
 
+			// Validate source if provided
 			if (source && !Object.values(ToolSource).includes(source)) {
 				return NextResponse.json(
 					{ error: "Invalid source" },
@@ -17,28 +16,27 @@ export async function POST(req: NextRequest) {
 				);
 			}
 
-			let results;
+			// Trigger background job
+			const { ids } = await inngest.send({
+				name: "integrations/sync",
+				data: {
+					organizationId: user.organizationId,
+					userId: user.id,
+					source: source || null,
+				},
+			});
 
-			if (source) {
-				// Sync specific integration
-				const data = await connectorService.syncIntegration(
-					user.organizationId,
-					source
-				);
-				results = { [source]: data };
-			} else {
-				// Sync all integrations
-				const data = await connectorService.syncAllIntegrations(
-					user.organizationId
-				);
-				results = Object.fromEntries(data);
-			}
-
-			return NextResponse.json({ success: true, results });
+			return NextResponse.json({
+				success: true,
+				jobId: ids[0],
+				message: source
+					? `Syncing ${source} in background...`
+					: "Syncing all integrations in background...",
+			});
 		} catch (error) {
-			console.error("Sync error:", error);
+			console.error("Failed to start sync:", error);
 			return NextResponse.json(
-				{ error: (error as Error).message || "Failed to sync" },
+				{ error: "Failed to start sync job" },
 				{ status: 500 }
 			);
 		}

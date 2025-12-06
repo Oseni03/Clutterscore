@@ -30,8 +30,7 @@ export default function PlaybooksPage() {
 
 	const handleRunAudit = async () => {
 		try {
-			await runAudit();
-			await refresh();
+			await runAudit(refresh);
 		} catch (err) {
 			// Error already handled by hook
 			console.error("Failed to run audit:", err);

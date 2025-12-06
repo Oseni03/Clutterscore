@@ -1,30 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ConnectorService } from "@/server/connector-service";
 import { withAuth } from "@/lib/middleware";
-
-const connectorService = new ConnectorService();
+import { inngest } from "@/inngest/client";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id } = await params;
+
 	return withAuth(req, async (req, user) => {
 		try {
-			await connectorService.executePlaybook(id, user.id);
+			// Validate playbook exists and belongs to user's org
+			const playbook = await prisma.playbook.findUnique({
+				where: { id },
+				select: {
+					id: true,
+					organizationId: true,
+					status: true,
+					title: true,
+				},
+			});
+
+			if (!playbook) {
+				return NextResponse.json(
+					{ error: "Playbook not found" },
+					{ status: 404 }
+				);
+			}
+
+			if (playbook.organizationId !== user.organizationId) {
+				return NextResponse.json(
+					{ error: "Forbidden" },
+					{ status: 403 }
+				);
+			}
+
+			if (
+				playbook.status !== "PENDING" &&
+				playbook.status !== "APPROVED"
+			) {
+				return NextResponse.json(
+					{
+						error: `Cannot execute playbook with status: ${playbook.status}`,
+					},
+					{ status: 400 }
+				);
+			}
+
+			// Trigger background job
+			const { ids } = await inngest.send({
+				name: "playbook/execute",
+				data: {
+					playbookId: id,
+					userId: user.id,
+					organizationId: user.organizationId,
+				},
+			});
 
 			return NextResponse.json({
 				success: true,
-				message: "Playbook executed successfully",
+				jobId: ids[0],
+				message: `Executing "${playbook.title}" in background...`,
 			});
 		} catch (error) {
-			console.error("Playbook execution error:", { error });
+			console.error("Failed to start playbook execution:", error);
 			return NextResponse.json(
-				{
-					error:
-						(error as Error).message ||
-						"Failed to execute playbook",
-				},
+				{ error: "Failed to start execution" },
 				{ status: 500 }
 			);
 		}

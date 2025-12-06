@@ -1,26 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ConnectorService } from "@/server/connector-service";
 import { withAuth } from "@/lib/middleware";
-
-const connectorService = new ConnectorService();
+import { inngest } from "@/inngest/client";
 
 export async function POST(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
 		try {
-			// Run complete audit
-			const auditResultId = await connectorService.runAudit(
-				user.organizationId
-			);
+			// Trigger background job
+			const { ids } = await inngest.send({
+				name: "audit/run",
+				data: {
+					organizationId: user.organizationId,
+					userId: user.id,
+				},
+			});
 
 			return NextResponse.json({
 				success: true,
-				auditResultId,
-				message: "Audit completed successfully",
+				jobId: ids[0],
+				message: "Audit started in background",
 			});
 		} catch (error) {
-			console.error("Audit error:", error);
+			console.error("Failed to start audit:", error);
 			return NextResponse.json(
-				{ error: (error as Error).message || "Audit failed" },
+				{ error: "Failed to start audit" },
 				{ status: 500 }
 			);
 		}

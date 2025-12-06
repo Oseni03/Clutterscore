@@ -10,6 +10,7 @@ import {
 	ScoreTrendsResponse,
 } from "@/types/audit";
 import { toast } from "sonner";
+import { useAudit } from "./use-audit";
 
 export function useDashboard() {
 	const auditData = useDashboardStore((state) => state.auditData);
@@ -29,6 +30,9 @@ export function useDashboard() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	// Use audit hook with job polling
+	const { runAudit: triggerAudit, isRunning: isAuditRunning } = useAudit();
 
 	const fetchLatestAudit =
 		useCallback(async (): Promise<DashboardAuditData> => {
@@ -73,7 +77,6 @@ export function useDashboard() {
 				(err as Error).message || "Failed to load dashboard data";
 			setError(errorMsg);
 
-			// Don't show toast on initial 404 (no audit yet)
 			if (!(err as Error).message?.includes("No audit results found")) {
 				toast.error(errorMsg);
 			}
@@ -88,32 +91,15 @@ export function useDashboard() {
 
 	const runAudit = useCallback(async () => {
 		try {
-			setIsRefreshing(true);
-			setError(null);
-
-			const response = await fetch("/api/audit/run", {
-				method: "POST",
+			await triggerAudit(async () => {
+				// Reload dashboard data after audit completes
+				await loadDashboardData();
 			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || "Audit failed");
-			}
-
-			toast.success("Audit completed successfully");
-
-			// Reload dashboard data
-			await loadDashboardData();
 		} catch (err) {
-			const errorMsg = (err as Error).message || "Failed to run audit";
-			setError(errorMsg);
-			toast.error(errorMsg);
+			// Error already handled by useAudit hook
 			throw err;
-		} finally {
-			setIsRefreshing(false);
 		}
-	}, [loadDashboardData]);
+	}, [triggerAudit, loadDashboardData]);
 
 	const refresh = useCallback(async () => {
 		setIsRefreshing(true);
@@ -150,7 +136,7 @@ export function useDashboard() {
 			if (diff > fiveMinutes) {
 				refresh();
 			}
-		}, 60 * 1000); // Check every minute
+		}, 60 * 1000);
 
 		return () => clearInterval(interval);
 	}, [lastRefresh, refresh]);
@@ -178,7 +164,7 @@ export function useDashboard() {
 		selectedTrendPeriod,
 		lastRefresh,
 		isLoading,
-		isRefreshing,
+		isRefreshing: isRefreshing || isAuditRunning,
 		error,
 
 		// Actions
