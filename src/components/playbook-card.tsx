@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, DollarSign, Shield, Zap } from "lucide-react";
 import { ImpactType, ToolSource } from "@prisma/client";
+import Image from "next/image";
+import { SOURCE_ICONS } from "@/lib/utils";
 
 interface PlaybookCardProps {
 	title: string;
@@ -16,17 +18,6 @@ interface PlaybookCardProps {
 	itemsCount: number;
 	onAction?: () => void;
 }
-
-const SOURCE_ICONS: Record<string, string> = {
-	slack: "💬",
-	google: "🔍",
-	microsoft: "🪟",
-	notion: "📝",
-	dropbox: "📦",
-	figma: "🎨",
-	linear: "📐",
-	jira: "🔷",
-};
 
 const IMPACT_CONFIG = {
 	security: {
@@ -65,7 +56,12 @@ export function PlaybookCard({
 			<div className="flex items-start justify-between mb-4">
 				<div className="flex items-start gap-3 flex-1">
 					<div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xl flex-shrink-0">
-						{SOURCE_ICONS[source] || "❓"}
+						<Image
+							src={SOURCE_ICONS[source as ToolSource]}
+							alt={`${source} icon`}
+							width={20}
+							height={20}
+						/>
 					</div>
 					<div className="flex-1 min-w-0">
 						<h3 className="font-semibold text-base mb-1 text-foreground">

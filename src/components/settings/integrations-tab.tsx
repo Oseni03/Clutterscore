@@ -77,7 +77,7 @@ const SOURCE_DESCRIPTIONS: Record<ToolSource, string> = {
 const AVAILABLE_SOURCES: ToolSource[] = [
 	"GOOGLE",
 	"SLACK",
-	"MICROSOFT",
+	// "MICROSOFT",
 	"DROPBOX",
 	"NOTION",
 	"FIGMA",
