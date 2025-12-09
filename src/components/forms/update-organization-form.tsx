@@ -21,6 +21,7 @@ import { Organization } from "@prisma/client";
 import { DialogFooter } from "../ui/dialog";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { updateOrganization } from "@/server/organizations";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	name: z
@@ -70,7 +71,7 @@ export function UpdateOrganizationForm({
 			toast.dismiss();
 			toast.success("Workspace updated successfully");
 		} catch (error) {
-			console.error(error);
+			logger.error("Failed to update workspace", error);
 			toast.dismiss();
 			toast.error("Failed to update workspace");
 		} finally {

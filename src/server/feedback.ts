@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramMessage } from "@/lib/telegram";
 
@@ -62,7 +63,7 @@ export async function submitFeedback(
 
 		return { success: true };
 	} catch (error) {
-		console.error("Feedback submission error:", error);
+		logger.error("Feedback submission error:", error);
 		return {
 			success: false,
 			error: "Failed to submit feedback",

@@ -22,6 +22,7 @@ import {
 } from "../ui/form";
 import { Skeleton } from "../ui/skeleton";
 import Logo from "../logo";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	email: z.email("Please enter a valid email address"),
@@ -50,7 +51,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 			});
 			toast.success("Redirecting to Google sign-in...");
 		} catch (error) {
-			console.error("Error during Google sign-in:", error);
+			logger.error("Error during Google sign-in:", error as Error);
 			toast.error("Failed to sign in with Google");
 		} finally {
 			setGoogleLoading(false);
@@ -70,7 +71,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 			toast.success("Magic link sent! Check your email.");
 		} catch (error) {
 			toast.error("Failed to send magic link");
-			console.error("Magic link sign-in error:", error);
+			logger.error("Magic link sign-in error:", error as Error);
 		} finally {
 			setIsLoading(false);
 		}

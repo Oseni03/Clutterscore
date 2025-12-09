@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { inngest } from "@/inngest/client";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 				message: "Audit started in background",
 			});
 		} catch (error) {
-			console.error("Failed to start audit:", error);
+			logger.error("Failed to start audit:", error as Error);
 			return NextResponse.json(
 				{ error: "Failed to start audit" },
 				{ status: 500 }

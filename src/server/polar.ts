@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getPlanByProductId } from "@/lib/utils";
 
@@ -16,17 +17,17 @@ async function updateOrganizationTier(organizationId: string, planId: string) {
 			where: { id: organizationId },
 			data: { subscriptionTier: planId },
 		});
-		console.log(
+		logger.info(
 			`✅ Updated organization ${organizationId} to ${planId} tier`
 		);
 	} catch (error) {
-		console.error("💥 Error updating organization tier:", error);
+		logger.error("UPDATE_ORG_TIER_ERROR:", error);
 		// Don't throw - this shouldn't fail the webhook
 	}
 }
 
 export async function handleSubscriptionUpdated(payload: any) {
-	console.log(
+	logger.info(
 		"🎯 Processing subscription created/updated: ",
 		payload.data.id
 	);
@@ -34,14 +35,17 @@ export async function handleSubscriptionUpdated(payload: any) {
 	// Extract organization ID from customer data
 	const organizationId = payload.data.metadata?.referenceId;
 	if (!organizationId) {
-		console.error("❌ No referenceId found in metadata");
+		logger.error("WEBHOOK_SUB_UPDATED: No referenceId found in metadata");
 		return;
 	}
 
 	// Get the plan details
 	const plan = getPlanByProductId(payload.data.product?.id || "");
 	if (!plan) {
-		console.error("❌ Invalid plan ID: ", payload.data.product?.name);
+		logger.error(
+			"WEBHOOK_SUB_UPDATED: Invalid plan ID",
+			payload.data.product?.name
+		);
 		return;
 	}
 
@@ -52,14 +56,16 @@ export async function handleSubscriptionUpdated(payload: any) {
 		});
 
 		if (!existingSubscription) {
-			console.error(
-				"❌ No local subscription found for organization:",
+			logger.error(
+				"WEBHOOK_SUB_UPDATED: No local subscription found for organization",
 				organizationId
 			);
 			return;
 		}
 
-		console.log(`📦 Updating subscription with plan: ${plan.id}`);
+		logger.info(
+			`WEBHOOK_SUB_UPDATED: Updating subscription with plan: ${plan.id}`
+		);
 		await prisma.subscription.update({
 			where: { organizationId },
 			data: {
@@ -100,21 +106,32 @@ export async function handleSubscriptionUpdated(payload: any) {
 		// Update organization subscription tier
 		await updateOrganizationTier(organizationId, plan.id);
 
-		console.log("✅ Updated subscription:", payload.data.id);
+		logger.success(
+			"WEBHOOK_SUB_UPDATED - Updated subscription:",
+			payload.data.id
+		);
 	} catch (error) {
-		console.error("💥 Error updating subscription:", error);
+		logger.error(
+			"WEBHOOK_SUB_UPDATED - Error updating subscription:",
+			error
+		);
 		// Don't throw - let webhook succeed to avoid retries
 	}
 }
 
 export async function handleSubscriptionCanceled(payload: any) {
-	console.log("🎯 Processing subscription.canceled:", payload.data.id);
+	logger.info(
+		"WEBHOOK_SUB_CANCELED - Processing subscription.canceled:",
+		payload.data.id
+	);
 
 	try {
 		// Extract organization ID from customer data
 		const organizationId = payload.data.metadata?.referenceId;
 		if (!organizationId) {
-			console.error("❌ No referenceId found in metadata");
+			logger.error(
+				"WEBHOOK_SUB_CANCELED - No referenceId found in metadata"
+			);
 			return;
 		}
 
@@ -124,7 +141,7 @@ export async function handleSubscriptionCanceled(payload: any) {
 		});
 
 		if (!existingSubscription) {
-			console.log("⚠️ Subscription not found for cancellation");
+			logger.warn("⚠️ Subscription not found for cancellation");
 			return;
 		}
 
@@ -155,20 +172,31 @@ export async function handleSubscriptionCanceled(payload: any) {
 			await updateOrganizationTier(organizationId, "free");
 		}
 
-		console.log("✅ Canceled subscription:", payload.data.id);
+		logger.success(
+			"WEBHOOK_SUB_CANCELED - Canceled subscription:",
+			payload.data.id
+		);
 	} catch (error) {
-		console.error("💥 Error canceling subscription:", error);
+		logger.error(
+			"WEBHOOK_SUB_CANCELED - Error canceling subscription:",
+			error
+		);
 		// Don't throw - let webhook succeed to avoid retries
 	}
 }
 
 export async function handleSubscriptionRevoked(payload: any) {
-	console.log("🎯 Processing subscription.revoked:", payload.data.id);
+	logger.info(
+		"WEBHOOK_SUB_REVOKED - Processing subscription.revoked:",
+		payload.data.id
+	);
 
 	try {
 		const organizationId = payload.data.metadata?.referenceId;
 		if (!organizationId) {
-			console.error("❌ No referenceId found in metadata");
+			logger.error(
+				"WEBHOOK_SUB_REVOKED - No referenceId found in metadata"
+			);
 			return;
 		}
 		// Check if subscription exists
@@ -177,7 +205,9 @@ export async function handleSubscriptionRevoked(payload: any) {
 		});
 
 		if (!existingSubscription) {
-			console.log("⚠️ Subscription not found for revocation");
+			logger.warn(
+				"WEBHOOK_SUB_REVOKED - Subscription not found for revocation"
+			);
 			return;
 		}
 
@@ -198,27 +228,41 @@ export async function handleSubscriptionRevoked(payload: any) {
 		// Immediately downgrade to free tier when revoked
 		await updateOrganizationTier(organizationId, "free");
 
-		console.log("✅ Revoked subscription:", payload.data.id);
+		logger.success(
+			"WEBHOOK_SUB_REVOKED - Revoked subscription:",
+			payload.data.id
+		);
 	} catch (error) {
-		console.error("💥 Error revoking subscription:", error);
+		logger.error(
+			"WEBHOOK_SUB_REVOKED - Error revoking subscription:",
+			error
+		);
 		// Don't throw - let webhook succeed to avoid retries
 	}
 }
 
 export async function handleSubscriptionUncanceled(payload: any) {
-	console.log("🎯 Processing subscription.uncanceled:", payload.data.id);
+	logger.info(
+		"WEBHOOK_SUB_UNCANCELED - Processing subscription.uncanceled:",
+		payload.data.id
+	);
 
 	try {
 		const organizationId = payload.data.metadata?.referenceId;
 		if (!organizationId) {
-			console.error("❌ No referenceId found in metadata");
+			logger.error(
+				"WEBHOOK_SUB_UNCANCELED - No referenceId found in metadata"
+			);
 			return;
 		}
 
 		// Get the plan details to restore the tier
 		const plan = getPlanByProductId(payload.data.product?.id || "");
 		if (!plan) {
-			console.error("❌ Invalid plan ID: ", payload.data.product?.name);
+			logger.error(
+				"WEBHOOK_SUB_UNCANCELED - Invalid plan ID: ",
+				payload.data.product?.name
+			);
 			return;
 		}
 
@@ -228,7 +272,9 @@ export async function handleSubscriptionUncanceled(payload: any) {
 		});
 
 		if (!existingSubscription) {
-			console.log("⚠️ Subscription not found for uncancellation");
+			logger.info(
+				"WEBHOOK_SUB_UNCANCELED - Subscription not found for uncancellation"
+			);
 			return;
 		}
 
@@ -254,26 +300,38 @@ export async function handleSubscriptionUncanceled(payload: any) {
 		// Restore organization tier when uncanceled
 		await updateOrganizationTier(organizationId, plan.id);
 
-		console.log("✅ Uncanceled subscription:", payload.data.id);
+		logger.success(
+			"WEBHOOK_SUB_UNCANCELED - Uncanceled subscription:",
+			payload.data.id
+		);
 	} catch (error) {
-		console.error("💥 Error uncanceling subscription:", error);
+		logger.error(
+			"WEBHOOK_SUB_UNCANCELED - Error uncanceling subscription:",
+			error
+		);
 		// Don't throw - let webhook succeed to avoid retries
 	}
 }
 
 export async function handleSubscriptionActive(payload: any) {
-	console.log("🎯 Processing subscription.active:", payload.data.id);
+	logger.info(
+		"WEBHOOK_SUB_ACTIVE - Processing subscription.active:",
+		payload.data.id
+	);
 
 	const organizationId = payload.data.metadata?.referenceId;
 	if (!organizationId) {
-		console.error("❌ No referenceId found in metadata");
+		logger.error("WEBHOOK_SUB_ACTIVE - No referenceId found in metadata");
 		return;
 	}
 
 	// Get the plan details for the activated subscription
 	const plan = getPlanByProductId(payload.data.product?.id || "");
 	if (!plan) {
-		console.error("❌ Invalid plan ID: ", payload.data.product?.name);
+		logger.error(
+			"WEBHOOK_SUB_ACTIVE - Invalid plan ID: ",
+			payload.data.product?.name
+		);
 		return;
 	}
 
@@ -284,7 +342,9 @@ export async function handleSubscriptionActive(payload: any) {
 		});
 
 		if (!existingSubscription) {
-			console.log("⚠️ Subscription not found, creating new one");
+			logger.warn(
+				"WEBHOOK_SUB_ACTIVE - Subscription not found, creating new one"
+			);
 			return;
 		}
 
@@ -305,9 +365,15 @@ export async function handleSubscriptionActive(payload: any) {
 		// Update organization tier when subscription becomes active
 		await updateOrganizationTier(organizationId, plan.id);
 
-		console.log("✅ Activated subscription:", payload.data.id);
+		logger.success(
+			"WEBHOOK_SUB_ACTIVE - Activated subscription:",
+			payload.data.id
+		);
 	} catch (error) {
-		console.error("💥 Error activating subscription:", error);
+		logger.error(
+			"WEBHOOK_SUB_ACTIVE - Error activating subscription:",
+			error
+		);
 		// Don't throw - let webhook succeed to avoid retries
 	}
 }
@@ -336,6 +402,8 @@ export async function handleSubscriptionWebhook(payload: any) {
 			return handleSubscriptionActive(payload);
 
 		default:
-			console.log(`🤷‍♂️ Unhandled subscription event: ${type}`);
+			logger.warn(
+				`🤷WEBHOOK_SUB_UNHANDLED - Unhandled subscription event: ${type}`
+			);
 	}
 }

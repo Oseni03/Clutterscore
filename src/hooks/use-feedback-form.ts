@@ -7,6 +7,7 @@ import { submitFeedback } from "@/server/feedback";
 import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { APP_NAME } from "@/lib/config";
+import { logger } from "@/lib/logger";
 
 export type FeedbackFormValues = {
 	title: string;
@@ -55,7 +56,7 @@ export function useFeedbackForm() {
 				toast.error(result.error || "Failed to submit feedback.");
 			}
 		} catch (error) {
-			console.error("Feedback error:", error);
+			logger.error("Feedback error:", error);
 			toast.error("Something went wrong while submitting your feedback.");
 		} finally {
 			setLoading(false);

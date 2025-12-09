@@ -8,6 +8,7 @@ import {
 	UserData,
 } from "./types";
 import crypto from "crypto";
+import { logger } from "../logger";
 
 export class SlackConnector extends BaseConnector {
 	private client: WebClient;
@@ -23,7 +24,7 @@ export class SlackConnector extends BaseConnector {
 			const response = await this.client.auth.test();
 			return !!response.ok;
 		} catch (error) {
-			console.error("Slack connection test failed:", error);
+			logger.error("Slack connection test failed:", error);
 			return false;
 		}
 	}
@@ -148,7 +149,7 @@ export class SlackConnector extends BaseConnector {
 				page = current + 1;
 			}
 		} catch (error) {
-			console.error("Error fetching Slack files:", error);
+			logger.error("Error fetching Slack files:", error);
 		}
 
 		// Mark duplicates after all files are collected
@@ -206,7 +207,7 @@ export class SlackConnector extends BaseConnector {
 				cursor = response.response_metadata?.next_cursor;
 			} while (cursor);
 		} catch (error) {
-			console.error("Error fetching Slack users:", error);
+			logger.error("Error fetching Slack users:", error);
 		}
 
 		return users;
@@ -270,7 +271,7 @@ export class SlackConnector extends BaseConnector {
 				cursor = response.response_metadata?.next_cursor;
 			} while (cursor);
 		} catch (error) {
-			console.error("Error fetching Slack channels:", error);
+			logger.error("Error fetching Slack channels:", error);
 		}
 
 		return channels;

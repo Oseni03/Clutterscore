@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { deleteOrganization } from "@/server/organizations";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/logger";
 
 export function useOrganization() {
 	const activeOrganization = useOrganizationStore(
@@ -66,7 +67,7 @@ export function useOrganization() {
 			setIsLoading(false);
 		} catch (error) {
 			if (isMountedRef.current) {
-				console.error(error);
+				logger.error("Failed to delete workspace", error);
 				toast.error("Failed to delete workspace", { id: toastId });
 				setIsLoading(false);
 			}
@@ -92,8 +93,8 @@ export function useOrganization() {
 			setIsLoading(false);
 		} catch (error) {
 			if (isMountedRef.current) {
-				console.error(error);
-				toast.error("Failed to reset data", { id: toastId });
+				logger.error("Failed to reset data", error);
+				toast.error("Failed to reset data");
 				setIsLoading(false);
 			}
 		}

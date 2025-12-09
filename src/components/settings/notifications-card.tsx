@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export const NotificationsCard = () => {
 	const { activeOrganization } = useOrganizationStore((s) => s);
@@ -27,7 +28,7 @@ export const NotificationsCard = () => {
 				const json = await res.json();
 				if (json?.data) setPrefs(json.data);
 			} catch (err) {
-				console.error(err);
+				logger.error("Error loading user preference:", err);
 				toast.error("Failed to load notification preferences");
 			}
 		};
@@ -51,7 +52,7 @@ export const NotificationsCard = () => {
 			if (!res.ok) throw new Error("Failed to update preferences");
 			toast.success("Preferences updated");
 		} catch (err) {
-			console.error(err);
+			logger.error("Error toggling: ", err);
 			toast.error("Failed to update preferences");
 		}
 	};

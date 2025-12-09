@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { inngest } from "@/inngest/client";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function POST(
 	req: NextRequest,
@@ -64,7 +65,7 @@ export async function POST(
 				message: `Executing "${playbook.title}" in background...`,
 			});
 		} catch (error) {
-			console.error("Failed to start playbook execution:", error);
+			logger.error("Failed to start playbook execution:", error as Error);
 			return NextResponse.json(
 				{ error: "Failed to start execution" },
 				{ status: 500 }

@@ -33,6 +33,7 @@ import { getPlanByTier } from "@/lib/utils";
 import { Member } from "@/types";
 import { Organization } from "@prisma/client";
 import Logo from "./logo";
+import { logger } from "@/lib/logger";
 
 export function TeamSwitcher() {
 	const { isMobile } = useSidebar();
@@ -53,7 +54,7 @@ export function TeamSwitcher() {
 			});
 
 			if (error) {
-				console.error(error);
+				logger.error("Error changing active org:", error);
 				toast.error("Failed to switch organization");
 				return;
 			}
@@ -76,7 +77,7 @@ export function TeamSwitcher() {
 
 			toast.success("Organization switched successfully");
 		} catch (error) {
-			console.error(error);
+			logger.error("Failed to switch organization:", error);
 			toast.error("Failed to switch organization");
 		}
 	};

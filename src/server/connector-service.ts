@@ -11,6 +11,7 @@ import {
 	UserData,
 } from "@/lib/connectors/types";
 import { PlaybookWithItems } from "@/types/audit";
+import { logger } from "@/lib/logger";
 
 export class ConnectorService {
 	/**
@@ -98,7 +99,7 @@ export class ConnectorService {
 					);
 					results.set(integration.source, data);
 				} catch (error) {
-					console.error(
+					logger.error(
 						`Failed to sync ${integration.source}:`,
 						error
 					);
@@ -454,7 +455,7 @@ export class ConnectorService {
 					metadata: integration.metadata as Record<string, any>,
 				});
 			} catch (err) {
-				console.warn("Connector creation failed for execution:", err);
+				logger.warn(`Connector creation failed for execution: ${err}`);
 				connector = null;
 			}
 		}
@@ -475,7 +476,7 @@ export class ConnectorService {
 			try {
 				if (!connector) {
 					// No connector available; log and treat as best-effort processed
-					console.info(
+					logger.info(
 						`No integration connector found for organization ${playbook.organizationId} source ${playbook.source}. Marking item as processed (best-effort).`
 					);
 					processed += 1;
@@ -522,14 +523,14 @@ export class ConnectorService {
 
 					default:
 						// Unknown action type; log and mark as processed
-						console.info(
+						logger.info(
 							`Unknown action type ${actionType} for playbook, skipping execution`
 						);
 				}
 
 				processed += 1;
 			} catch (err: any) {
-				console.error("Playbook item action failed:", {
+				logger.error("Playbook item action failed:", {
 					item,
 					err,
 					actionType,

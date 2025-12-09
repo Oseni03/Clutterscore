@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function PATCH(
 	req: NextRequest,
@@ -61,7 +62,7 @@ export async function PATCH(
 				message: "Items updated successfully",
 			});
 		} catch (error) {
-			console.error("Failed to update items:", error);
+			logger.error("Failed to update items:", error as Error);
 			return NextResponse.json(
 				{ error: (error as Error).message || "Failed to update items" },
 				{ status: 500 }

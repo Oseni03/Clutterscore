@@ -1,5 +1,6 @@
 "use client";
 
+import { logger } from "@/lib/logger";
 import { useEffect, useRef, useState } from "react";
 
 interface UseJobPollingOptions {
@@ -65,7 +66,7 @@ export function useJobPolling(
 					onError?.(data.error || "Job failed");
 				}
 			} catch (error) {
-				console.error("Failed to check job status:", error);
+				logger.error("Failed to check job status:", error);
 			}
 		};
 

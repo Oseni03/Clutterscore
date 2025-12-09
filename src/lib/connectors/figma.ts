@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { logger } from "../logger";
 import {
 	BaseConnector,
 	ConnectorConfig,
@@ -26,7 +27,7 @@ export class FigmaConnector extends BaseConnector {
 			const response = await this.makeRequest("/me");
 			return !!response.id;
 		} catch (error) {
-			console.error("Figma connection test failed:", error);
+			logger.error("Figma connection test failed:", error);
 			return false;
 		}
 	}
@@ -104,7 +105,7 @@ export class FigmaConnector extends BaseConnector {
 				}
 			}
 		} catch (error) {
-			console.error("Error fetching Figma files:", error);
+			logger.error("Error fetching Figma files:", error);
 		}
 
 		// Mark duplicates after all files are collected
@@ -136,7 +137,7 @@ export class FigmaConnector extends BaseConnector {
 			);
 			return response.projects || [];
 		} catch (error) {
-			console.error("Error fetching Figma team projects:", error);
+			logger.error("Error fetching Figma team projects:", error);
 			return [];
 		}
 	}
@@ -173,7 +174,7 @@ export class FigmaConnector extends BaseConnector {
 				},
 			];
 		} catch (error) {
-			console.error("Error fetching Figma users:", error);
+			logger.error("Error fetching Figma users:", error);
 			return [];
 		}
 	}

@@ -3,6 +3,7 @@ import { getOAuthConfig } from "@/lib/oauth/config";
 import { OAuthStateManager } from "@/lib/oauth/state-manager";
 import { ToolSource } from "@prisma/client";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function GET(
 	req: NextRequest,
@@ -102,14 +103,13 @@ export async function GET(
 					}
 			}
 
-			console.log(
-				`[OAuth] Redirecting to ${source}:`,
-				authUrl.toString()
+			logger.debug(
+				`[OAuth] Redirecting to ${source}: ${authUrl.toString()}`
 			);
 
 			return NextResponse.redirect(authUrl.toString());
 		} catch (error) {
-			console.error("OAuth authorization error:", error);
+			logger.error("OAuth authorization error:", error as Error);
 			const errorMessage =
 				error instanceof Error ? error.message : "Unknown error";
 

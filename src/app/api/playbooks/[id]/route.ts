@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function GET(
 	req: NextRequest,
@@ -35,7 +36,7 @@ export async function GET(
 				playbook,
 			});
 		} catch (error) {
-			console.error("Failed to fetch playbook:", error);
+			logger.error("Failed to fetch playbook:", error as Error);
 			return NextResponse.json(
 				{
 					error:

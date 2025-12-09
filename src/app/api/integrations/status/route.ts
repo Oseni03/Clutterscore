@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 
 			return NextResponse.json({ success: true, status });
 		} catch (error) {
-			console.error("Failed to fetch status:", error);
+			logger.error("Failed to fetch status:", error as Error);
 			return NextResponse.json(
 				{ error: (error as Error).message },
 				{ status: 500 }

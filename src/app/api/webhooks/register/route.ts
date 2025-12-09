@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ToolIntegration, ToolSource } from "@prisma/client";
 import { withAuth } from "@/lib/middleware";
 import { google } from "googleapis";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
 				message: "Webhook registered successfully",
 			});
 		} catch (error) {
-			console.error("Webhook registration error:", error);
+			logger.error("Webhook registration error:", error as Error);
 			return NextResponse.json(
 				{ error: (error as Error).message },
 				{ status: 500 }

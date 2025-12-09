@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { WebhookRegistry } from "@/lib/webhooks/register";
 import { ToolSource } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function POST(
 	req: NextRequest,
@@ -71,7 +72,7 @@ export async function POST(
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
-		console.error("Webhook error:", error);
+		logger.error("Webhook error:", error as Error);
 		return NextResponse.json(
 			{ error: (error as Error).message },
 			{ status: 500 }

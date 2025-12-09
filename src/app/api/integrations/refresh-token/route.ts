@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ToolSource } from "@prisma/client";
 import { ConnectorFactory } from "@/lib/connectors/factory";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 				throw error;
 			}
 		} catch (error) {
-			console.error("Token refresh error:", error);
+			logger.error("Token refresh error:", error as Error);
 			return NextResponse.json(
 				{ error: (error as Error).message },
 				{ status: 500 }

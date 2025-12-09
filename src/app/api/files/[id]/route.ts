@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { ConnectorFactory } from "@/lib/connectors/factory";
 import { ConnectorConfig } from "@/lib/connectors/types";
+import { logger } from "@/lib/logger";
 
 /**
  * DELETE /api/files/[id]
@@ -122,9 +123,9 @@ export async function DELETE(
 					updatedExpiresAt = connectorConfig.expiresAt;
 				}
 			} catch (error) {
-				console.error(
+				logger.error(
 					`Failed to delete file from ${file.source}:`,
-					error
+					error as Error
 				);
 				externalError =
 					error instanceof Error ? error.message : "Unknown error";
@@ -152,7 +153,7 @@ export async function DELETE(
 					);
 				}
 
-				console.warn(
+				logger.warn(
 					`File deletion not supported for ${file.source}, proceeding with local soft delete only`
 				);
 			}
@@ -252,7 +253,7 @@ export async function DELETE(
 				externalError: externalError || undefined,
 			});
 		} catch (error) {
-			console.error("Failed to delete file:", error);
+			logger.error("Failed to delete file:", error as Error);
 
 			const errorMessage =
 				error instanceof Error ? error.message : "Unknown error";
@@ -265,7 +266,7 @@ export async function DELETE(
 				null,
 				errorMessage
 			).catch((logError) => {
-				console.error("Failed to create audit log:", logError);
+				logger.error("Failed to create audit log:", logError);
 			});
 
 			return NextResponse.json(
@@ -306,6 +307,6 @@ async function logFailedDeletion(
 			},
 		});
 	} catch (logError) {
-		console.error("Failed to log failed deletion:", logError);
+		logger.error("Failed to log failed deletion:", logError as Error);
 	}
 }

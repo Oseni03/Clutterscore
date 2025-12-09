@@ -33,6 +33,7 @@ import { createOrganization } from "@/server/organizations";
 import { authClient } from "@/lib/auth-client";
 import { SUBSCRIPTION_PLANS } from "@/lib/utils";
 import { APP_NAME } from "@/lib/config";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	name: z
@@ -153,7 +154,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 			router.push(`/dashboard/settings/integrations`);
 			router.refresh();
 		} catch (error) {
-			console.error("Error creating workspace:", error);
+			logger.error("Error creating workspace:", error);
 			toast.dismiss();
 			toast.error(
 				error instanceof Error

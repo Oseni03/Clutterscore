@@ -22,6 +22,7 @@ import { createOrganization } from "@/server/organizations";
 import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { Organization } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	name: z
@@ -77,7 +78,7 @@ export function CreateOrganizationForm() {
 			toast.dismiss();
 			toast.success("Organization created successfully");
 		} catch (error) {
-			console.error(error);
+			logger.error("Error submitting organization form", error as Error);
 			toast.dismiss();
 			toast.error("Failed to create organization");
 		} finally {

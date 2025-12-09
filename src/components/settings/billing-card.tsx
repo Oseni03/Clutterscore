@@ -23,6 +23,7 @@ import {
 } from "@/lib/utils";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { logger } from "@/lib/logger";
 
 function BillingCard() {
 	const { activeOrganization, subscription, loadSubscription, isAdmin } =
@@ -34,7 +35,7 @@ function BillingCard() {
 	useEffect(() => {
 		if (activeOrganization?.id) {
 			loadSubscription(activeOrganization.id).catch((err) => {
-				console.error("Failed to load subscription:", err);
+				logger.error("Failed to load subscription:", err);
 			});
 		}
 	}, [activeOrganization?.id, loadSubscription]);
@@ -100,7 +101,7 @@ function BillingCard() {
 				window.location.href = data.url;
 			}
 		} catch (error) {
-			console.error("Error creating checkout session:", error);
+			logger.error("Error creating checkout session:", error);
 			toast.dismiss();
 			toast.error("Failed to create checkout session");
 		} finally {
@@ -142,7 +143,7 @@ function BillingCard() {
 				window.location.href = url;
 			}
 		} catch (error) {
-			console.error("Error opening billing portal:", error);
+			logger.error("Error opening billing portal:", error);
 			toast.dismiss();
 			toast.error("Failed to open billing portal");
 		}

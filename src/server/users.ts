@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from "better-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -97,7 +98,7 @@ export const getUsers = async (organizationId: string) => {
 
 		return users;
 	} catch (error) {
-		console.error(error);
+		logger.error("GET_USERS_ERROR", error);
 		return [];
 	}
 };
@@ -110,7 +111,7 @@ export const getUser = async (userId: string) => {
 
 		return { success: true, data: user };
 	} catch (error) {
-		console.error(error);
+		logger.error("GET_USER_ERROR", error);
 		return { success: false, error };
 	}
 };

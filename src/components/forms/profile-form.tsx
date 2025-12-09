@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	name: z.string().min(2, "Name must be at least 2 characters").max(50),
@@ -63,7 +64,7 @@ export function ProfileForm({
 				);
 			}
 		} catch (error) {
-			console.log("Error updating profile: ", error);
+			logger.error("UPDATE_PROFILE_ERROR: ", error);
 			toast.error("Failed to update profile");
 		} finally {
 			setIsLoading(false);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET(
 	req: NextRequest,
@@ -60,7 +61,7 @@ export async function GET(
 				jobId: id,
 			});
 		} catch (error) {
-			console.error("Failed to check job status:", error);
+			logger.error("Failed to check job status:", error as Error);
 			return NextResponse.json(
 				{ error: "Failed to check status" },
 				{ status: 500 }

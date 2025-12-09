@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { logger } from "../logger";
 import {
 	BaseConnector,
 	ConnectorConfig,
@@ -27,7 +28,7 @@ export class JiraConnector extends BaseConnector {
 			const response = await this.makeRequest("/rest/api/3/myself");
 			return !!response.accountId;
 		} catch (error) {
-			console.error("Jira connection test failed:", error);
+			logger.error("Jira connection test failed:", error);
 			return false;
 		}
 	}
@@ -148,7 +149,7 @@ export class JiraConnector extends BaseConnector {
 				startAt += maxResults;
 			} while (startAt < total);
 		} catch (error) {
-			console.error("Error fetching Jira attachments:", error);
+			logger.error("Error fetching Jira attachments:", error);
 			throw error;
 		}
 
@@ -190,7 +191,7 @@ export class JiraConnector extends BaseConnector {
 				});
 			}
 		} catch (error) {
-			console.error("Error fetching Jira users:", error);
+			logger.error("Error fetching Jira users:", error);
 			throw error;
 		}
 
@@ -271,7 +272,7 @@ export class JiraConnector extends BaseConnector {
 				});
 			}
 		} catch (error) {
-			console.error("Error identifying stale Jira issues:", error);
+			logger.error("Error identifying stale Jira issues:", error);
 		}
 
 		return staleIssues;

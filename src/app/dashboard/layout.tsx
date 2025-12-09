@@ -4,7 +4,11 @@
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+	SidebarInset,
+	SidebarProvider,
+	SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { Member } from "@/types";
@@ -12,6 +16,7 @@ import { DashboardStoreProvider } from "@/zustand/providers/dashboard-store-prov
 import { useRouter } from "next/navigation";
 import { getOrganizations } from "@/server/organizations";
 import { Organization } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export default function Page({
 	children,
@@ -39,7 +44,7 @@ export default function Page({
 					setOrganizations(organizations);
 				}
 			} catch (error) {
-				console.log("Error fetching organizations", error);
+				logger.debug("Error fetching organizations", error as Error);
 			}
 		};
 
@@ -53,7 +58,7 @@ export default function Page({
 				await authClient.organization.getFullOrganization();
 
 			if (error) {
-				console.error("Error fetching active organization:", error);
+				logger.error("FETCH_ACTIVE_ORG_ERROR:", error);
 				return;
 			}
 			if (data) {

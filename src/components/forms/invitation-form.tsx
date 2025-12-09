@@ -30,6 +30,7 @@ import { useOrganizationStore } from "@/zustand/providers/organization-store-pro
 import { Invitation } from "better-auth/plugins";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	email: z.email("Please enter a valid email address"),
@@ -117,7 +118,7 @@ export function InvitationForm({ onSuccess }: { onSuccess: () => void }) {
 			});
 
 			if (error) {
-				console.error("Error creating invite:", error);
+				logger.error("Error creating invite:", error);
 				toast.dismiss();
 				toast.error(error.message || "Failed to create invitation");
 				return;
@@ -136,7 +137,7 @@ export function InvitationForm({ onSuccess }: { onSuccess: () => void }) {
 			form.reset();
 			onSuccess();
 		} catch (error) {
-			console.error(error);
+			logger.error("Failed to create invitation", error);
 			toast.dismiss();
 			toast.error("Failed to create invitation");
 		} finally {

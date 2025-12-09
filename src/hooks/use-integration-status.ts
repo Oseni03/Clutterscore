@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ToolSource, IntegrationSyncStatus } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 interface IntegrationStatus {
 	source: ToolSource;
@@ -31,7 +32,7 @@ export function useIntegrationStatus(pollInterval: number = 5000) {
 				setStatus(data.status);
 			}
 		} catch (err) {
-			console.error("Failed to fetch status:", err);
+			logger.error("Failed to fetch status:", err);
 		} finally {
 			setIsLoading(false);
 		}

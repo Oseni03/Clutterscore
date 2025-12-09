@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { headers } from "next/headers";
 
 export const addMember = async (
@@ -18,7 +19,7 @@ export const addMember = async (
 		});
 		return { success: true, data };
 	} catch (error) {
-		console.error(error);
+		logger.error("ERROR_ADDING_MEMBER", error);
 		return { success: false, error };
 	}
 };
@@ -41,7 +42,7 @@ export const removeMember = async (
 			data,
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error("ERROR_REMOVING_MEMBER", error);
 		return {
 			success: false,
 			error,
@@ -65,7 +66,7 @@ export async function updateMemberRole(
 		});
 		return { data: result, success: true };
 	} catch (error) {
-		console.error("Error creating organization: ", error);
+		logger.error("ERROR_UPDATING_ROLE: ", error);
 		return { success: false, error };
 	}
 }

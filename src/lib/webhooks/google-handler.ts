@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { logger } from "../logger";
 import { WebhookEvent, WebhookHandler } from "./types";
 import { prisma } from "@/lib/prisma";
 
@@ -25,7 +26,9 @@ export class GoogleWebhookHandler implements WebhookHandler {
 				break;
 
 			default:
-				console.log(`Unhandled Google event: ${eventType}`);
+				logger.warn(
+					`GOOGLE_WEBHOOK_HANDLER - Unhandled Google event: ${eventType}`
+				);
 		}
 	}
 

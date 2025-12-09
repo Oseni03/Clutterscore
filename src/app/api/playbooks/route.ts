@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
 import { PlaybookStatus, ToolSource } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
 			return NextResponse.json({ success: true, playbooks });
 		} catch (error) {
-			console.error("Failed to fetch playbooks:", error);
+			logger.error("FETCH_PLAYBOOKS_ERROR:", error);
 			return NextResponse.json(
 				{ error: (error as Error).message },
 				{ status: 500 }

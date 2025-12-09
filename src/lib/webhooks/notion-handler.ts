@@ -2,6 +2,7 @@
 import { WebhookEvent, WebhookHandler } from "./types";
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
+import { logger } from "../logger";
 
 export class NotionWebhookHandler implements WebhookHandler {
 	async verify(req: Request): Promise<boolean> {
@@ -11,7 +12,7 @@ export class NotionWebhookHandler implements WebhookHandler {
 
 		const webhookSecret = process.env.NOTION_WEBHOOK_SECRET;
 		if (!webhookSecret) {
-			console.error("NOTION_WEBHOOK_SECRET not configured");
+			logger.error("NOTION_WEBHOOK_SECRET not configured");
 			return false;
 		}
 
@@ -29,7 +30,9 @@ export class NotionWebhookHandler implements WebhookHandler {
 			const requestTime = parseInt(timestamp || "0");
 			const currentTime = Math.floor(Date.now() / 1000);
 			if (Math.abs(currentTime - requestTime) > 300) {
-				console.error("Notion webhook timestamp too old");
+				logger.error(
+					"NOTION_WEBHOOK_HANDLER - Notion webhook timestamp too old"
+				);
 				return false;
 			}
 
@@ -39,7 +42,10 @@ export class NotionWebhookHandler implements WebhookHandler {
 				Buffer.from(expectedSignature)
 			);
 		} catch (error) {
-			console.error("Notion webhook verification failed:", error);
+			logger.error(
+				"NOTION_WEBHOOK_HANDLER - Notion webhook verification failed:",
+				error
+			);
 			return false;
 		}
 	}
@@ -69,7 +75,9 @@ export class NotionWebhookHandler implements WebhookHandler {
 				break;
 
 			default:
-				console.log(`Unhandled Notion event: ${eventType}`);
+				logger.warn(
+					`NOTION_WEBHOOK_HANDLER - Unhandled Notion event: ${eventType}`
+				);
 		}
 	}
 

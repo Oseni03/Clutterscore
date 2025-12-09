@@ -9,6 +9,7 @@ import {
 } from "./types";
 import crypto from "crypto";
 import { ToolSource } from "@prisma/client";
+import { logger } from "../logger";
 
 export class DropboxConnector extends BaseConnector {
 	private client: Dropbox;
@@ -28,7 +29,7 @@ export class DropboxConnector extends BaseConnector {
 			await this.client.usersGetCurrentAccount();
 			return true;
 		} catch (error) {
-			console.error("Dropbox connection test failed:", error);
+			logger.error("Dropbox connection test failed:", error);
 			return false;
 		}
 	}
@@ -157,7 +158,7 @@ export class DropboxConnector extends BaseConnector {
 						? response.result.cursor
 						: undefined;
 				} catch (error) {
-					console.error("Error listing Dropbox files:", error);
+					logger.error("Error listing Dropbox files:", error);
 					throw error;
 				}
 			} while (cursor);
@@ -246,7 +247,7 @@ export class DropboxConnector extends BaseConnector {
 					},
 				];
 			} catch (innerError) {
-				console.error("Error fetching Dropbox user:", innerError);
+				logger.error("Error fetching Dropbox user:", innerError);
 				return [];
 			}
 		}

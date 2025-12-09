@@ -2,6 +2,7 @@
 import { WebhookEvent, WebhookHandler } from "./types";
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
+import { logger } from "../logger";
 
 export class LinearWebhookHandler implements WebhookHandler {
 	async verify(req: Request): Promise<boolean> {
@@ -11,7 +12,7 @@ export class LinearWebhookHandler implements WebhookHandler {
 
 		const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET;
 		if (!webhookSecret) {
-			console.error("LINEAR_WEBHOOK_SECRET not configured");
+			logger.error("LINEAR_WEBHOOK_SECRET not configured");
 			return false;
 		}
 
@@ -27,7 +28,7 @@ export class LinearWebhookHandler implements WebhookHandler {
 				Buffer.from(expectedSignature)
 			);
 		} catch (error) {
-			console.error("Linear webhook verification failed:", error);
+			logger.error("Linear webhook verification failed:", error);
 			return false;
 		}
 	}
@@ -57,7 +58,7 @@ export class LinearWebhookHandler implements WebhookHandler {
 				break;
 
 			default:
-				console.log(`Unhandled Linear event: ${eventType}`);
+				logger.info(`Unhandled Linear event: ${eventType}`);
 		}
 	}
 

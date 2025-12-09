@@ -30,6 +30,7 @@ import { useOrganizationStore } from "@/zustand/providers/organization-store-pro
 import { getUser } from "@/server/users";
 import { MemberUser } from "@/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
 	email: z.string().email("Please enter a valid email address"),
@@ -91,7 +92,7 @@ export function UpdateMemberRoleForm({
 			);
 
 			if (!success) {
-				console.error("Error:", error);
+				logger.error("Error updating member role:", error);
 				toast.dismiss();
 				toast.error(
 					(error as string) || "Failed to update member role"
@@ -118,7 +119,7 @@ export function UpdateMemberRoleForm({
 
 			onSuccess();
 		} catch (error) {
-			console.error(error);
+			logger.error("Failed to update member role", error);
 			toast.dismiss();
 			toast.error("Failed to update member role");
 		} finally {

@@ -5,6 +5,7 @@ import { isAdmin } from "./permissions";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { Organization } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function getOrganizations(
 	userId: string
@@ -73,7 +74,7 @@ export async function getOrganizationBySlug(slug: string) {
 
 		return organizationBySlug;
 	} catch (error) {
-		console.error(error);
+		logger.error("GET_ORG_BY_SLUG_ERROR", error);
 		return null;
 	}
 }
@@ -95,7 +96,7 @@ export async function getOrganizationById(orgId: string) {
 
 		return { data: organization, success: true };
 	} catch (error) {
-		console.error(error);
+		logger.error("GET_ORG_BY_ID_ERROR", error);
 		return { success: false, error };
 	}
 }
@@ -120,7 +121,7 @@ export async function updateOrganization(
 		});
 		return { data: result, success: true };
 	} catch (error) {
-		console.error("Error updating organization: ", error);
+		logger.error("UPDATE_ORG_ERROR: ", error);
 		return {
 			success: false,
 			error: "Failed to upgrade organization",
@@ -145,7 +146,7 @@ export async function deleteOrganization(organizationId: string) {
 		});
 		return { success: true, data: result };
 	} catch (error) {
-		console.error(error);
+		logger.error("DELETE_ORG_ERROR", error);
 		return { success: false, error };
 	}
 }
@@ -181,7 +182,7 @@ async function findAvailableSlug(baseSlug: string): Promise<string> {
 			slug = `${baseSlug}-${counter}`;
 			counter++;
 		} catch (error) {
-			console.error("Error checking slug availability:", error);
+			logger.error("SLUG_AVAILABILITY_ERROR:", error);
 			// Fallback to appending counter
 			slug = `${baseSlug}-${counter}`;
 			counter++;
@@ -238,7 +239,7 @@ export async function createOrganization(
 
 		return { data: organization, success: true };
 	} catch (error) {
-		console.error("Error creating organization:", error);
+		logger.error("CREATE_ORG_ERROR:", error);
 		return {
 			success: false,
 			error:
@@ -258,10 +259,9 @@ export async function setActiveOrganization(organizationId: string) {
 			// This endpoint requires session cookies.
 			headers: await headers(),
 		});
-		console.log("Set active organization result:", result);
 		return { data: result, success: true };
 	} catch (error) {
-		console.error("Error creating organization: ", error);
+		logger.error("SET_ACTIVE_ORG_ERROR: ", error);
 		return { success: false, error };
 	}
 }

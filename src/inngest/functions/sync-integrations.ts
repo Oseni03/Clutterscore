@@ -3,6 +3,7 @@ import { ConnectorService } from "@/server/connector-service";
 import { prisma } from "@/lib/prisma";
 import { ToolSource } from "@prisma/client";
 import { AuditData } from "@/lib/connectors/types";
+import { logger } from "@/lib/logger";
 
 const connectorService = new ConnectorService();
 
@@ -34,7 +35,7 @@ export const syncIntegrationsJob = inngest.createFunction(
 					);
 					return { source, success: true, data };
 				} catch (error) {
-					console.error(`Failed to sync ${source}:`, error);
+					logger.error(`Failed to sync ${source}:`, error);
 					return {
 						source,
 						success: false,
@@ -112,7 +113,7 @@ export const syncIntegrationsJob = inngest.createFunction(
 								data,
 							};
 						} catch (error) {
-							console.error(
+							logger.error(
 								`Failed to sync ${integration.source}:`,
 								error
 							);

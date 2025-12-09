@@ -8,6 +8,7 @@ import {
 	UserData,
 } from "./types";
 import crypto from "crypto";
+import { logger } from "../logger";
 
 export class GoogleConnector extends BaseConnector {
 	private auth: any;
@@ -33,7 +34,7 @@ export class GoogleConnector extends BaseConnector {
 			await this.drive.about.get({ fields: "user" });
 			return true;
 		} catch (error) {
-			console.error("Google connection test failed:", error);
+			logger.error("Google connection test failed:", error);
 			return false;
 		}
 	}
@@ -144,7 +145,7 @@ export class GoogleConnector extends BaseConnector {
 
 				pageToken = response.data.nextPageToken || undefined;
 			} catch (error) {
-				console.error("Error fetching Google Drive files:", error);
+				logger.error("Error fetching Google Drive files:", error);
 				throw error;
 			}
 		} while (pageToken);
@@ -196,7 +197,7 @@ export class GoogleConnector extends BaseConnector {
 				pageToken = response.data.nextPageToken || undefined;
 			} while (pageToken);
 		} catch (error) {
-			console.error("Error fetching Google Workspace users:", error);
+			logger.error("Error fetching Google Workspace users:", error);
 			// If admin API fails, return empty array (might not have admin access)
 			return [];
 		}

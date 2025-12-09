@@ -1,4 +1,5 @@
 import { authClient } from "@/lib/auth-client";
+import { logger } from "@/lib/logger";
 import { getOrganizationById } from "@/server/organizations";
 import { getCurrentUser } from "@/server/users";
 import { Member } from "@/types";
@@ -116,7 +117,10 @@ export const createOrganizationStore = (
 							get().setLoading(false);
 						}
 					} catch (error) {
-						console.error("Error fetching organization:", error);
+						logger.error(
+							"ORGANIZATION_STORE - Error fetching organization:",
+							error
+						);
 						get().setLoading(false);
 					}
 				},
@@ -212,7 +216,10 @@ export const createOrganizationStore = (
 							isLoading: false,
 						}));
 					} catch (error) {
-						console.error("Error loading subscription:", error);
+						logger.error(
+							"ORGANIZATION_STORE - Error loading subscription:",
+							error
+						);
 						set((state) => ({
 							...state,
 							error:
@@ -247,7 +254,10 @@ export const createOrganizationStore = (
 						if (data?.url) window.location.href = data.url;
 						// Note: subscription will be updated via webhook after successful checkout
 					} catch (error) {
-						console.error("Error creating checkout:", error);
+						logger.error(
+							"ORGANIZATION_STORE - Error creating checkout:",
+							error
+						);
 						set((state) => ({
 							...state,
 							error:
@@ -267,7 +277,10 @@ export const createOrganizationStore = (
 						await authClient.customer.portal();
 						set({ isLoading: false });
 					} catch (error) {
-						console.error("Error opening customer portal:", error);
+						logger.error(
+							"ORGANIZATION_STORE - Error opening customer portal:",
+							error
+						);
 						set((state) => ({
 							...state,
 							error:

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { authClient } from "@/lib/auth-client";
 import { Subscription } from "@prisma/client";
+import { logger } from "better-auth";
 
 export interface SubscriptionState {
 	subscription: Subscription | null;
@@ -65,7 +66,10 @@ export const createSubscriptionStore = (
 							loading: false,
 						}));
 					} catch (error) {
-						console.error("Error loading subscription:", error);
+						logger.error(
+							"SUBSCRIPTION_STORE - Error loading subscription:",
+							error
+						);
 						set((state) => ({
 							...state,
 							error:
@@ -95,7 +99,10 @@ export const createSubscriptionStore = (
 						});
 						// Note: subscription will be updated via webhook after successful checkout
 					} catch (error) {
-						console.error("Error creating checkout:", error);
+						logger.error(
+							"SUBSCRIPTION_STORE - Error creating checkout:",
+							error
+						);
 						set((state) => ({
 							...state,
 							error:
@@ -115,7 +122,10 @@ export const createSubscriptionStore = (
 						await authClient.customer.portal();
 						set({ loading: false });
 					} catch (error) {
-						console.error("Error opening customer portal:", error);
+						logger.error(
+							"SUBSCRIPTION_STORE - Error opening customer portal:",
+							error
+						);
 						set((state) => ({
 							...state,
 							error:

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createFreeSubscription } from "@/server/subscription";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const createOrgSchema = z.object({
 	name: z.string().min(2).max(50),
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
 			{ status: 201 }
 		);
 	} catch (error) {
-		console.error("Error creating organization:", error);
+		logger.error("Error creating organization:", error as Error);
 
 		if (error instanceof Error) {
 			return NextResponse.json({ error: error.message }, { status: 500 });

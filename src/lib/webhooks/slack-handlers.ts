@@ -2,6 +2,7 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { WebhookEvent, WebhookHandler } from "./types";
+import { logger } from "../logger";
 
 export class SlackWebhookHandler implements WebhookHandler {
 	private signingSecret: string;
@@ -62,7 +63,7 @@ export class SlackWebhookHandler implements WebhookHandler {
 				break;
 
 			default:
-				console.log(`Unhandled Slack event: ${eventType}`);
+				logger.warn(`Unhandled Slack event: ${eventType}`);
 		}
 	}
 
@@ -95,7 +96,7 @@ export class SlackWebhookHandler implements WebhookHandler {
 
 		for (const integration of integrations) {
 			// Queue sync job (use job queue in production)
-			console.log(
+			logger.info(
 				`Queuing incremental sync for ${type} in org ${integration.organizationId}`
 			);
 

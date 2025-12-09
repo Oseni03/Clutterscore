@@ -27,6 +27,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 export function NavUser() {
 	const { user } = authClient.useSession().data || {};
@@ -41,7 +42,7 @@ export function NavUser() {
 			toast.success("Signed out");
 			router.push("/");
 		} catch (error) {
-			console.log("Error signing out: ", error);
+			logger.error("SIGN_OUT_ERROR: ", error);
 			toast.dismiss();
 			toast.error("Error signing out");
 		}

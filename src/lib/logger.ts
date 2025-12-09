@@ -6,7 +6,7 @@ import { APP_NAME } from "@/lib/config";
 const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = process.env.NODE_ENV === "development";
 
-type LogLevel = "error" | "warn" | "info" | "debug";
+// type LogLevel = "error" | "warn" | "info" | "debug";
 
 interface LogContext {
 	userId?: string;
@@ -25,7 +25,7 @@ class Logger {
 	/**
 	 * Log error - Console in dev, Telegram in prod
 	 */
-	async error(message: string, error?: Error, context?: LogContext) {
+	async error(message: string, error?: any, context?: LogContext) {
 		if (isDevelopment) {
 			console.error(`🔴 [ERROR] ${message}`, {
 				error: error?.message,

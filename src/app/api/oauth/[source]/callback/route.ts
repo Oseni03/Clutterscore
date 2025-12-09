@@ -3,6 +3,7 @@ import { getOAuthConfig, OAuthConfig } from "@/lib/oauth/config";
 import { OAuthStateManager } from "@/lib/oauth/state-manager";
 import { prisma } from "@/lib/prisma";
 import { ToolSource } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function GET(
 	req: NextRequest,
@@ -111,7 +112,7 @@ export async function GET(
 			)
 		);
 	} catch (error) {
-		console.error("OAuth callback error:", error);
+		logger.error("OAuth callback error:", error as Error);
 		return NextResponse.redirect(
 			new URL(
 				`/dashboard/integrations?error=${encodeURIComponent((error as Error).message)}`,

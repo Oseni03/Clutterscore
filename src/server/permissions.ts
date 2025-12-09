@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { headers } from "next/headers";
 
 export const isAdmin = async () => {
@@ -24,7 +25,7 @@ export const isAdmin = async () => {
 
 		return { success };
 	} catch (error) {
-		console.error(error);
+		logger.error("ISADMIN_ERROR", error);
 		return {
 			success: false,
 			error: error || "Failed to check permissions",

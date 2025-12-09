@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,17 +10,16 @@ export async function GET(
 	const { invitationId } = await params;
 
 	try {
-		const data = await auth.api.rejectInvitation({
+		await auth.api.rejectInvitation({
 			body: {
 				invitationId,
 			},
 			headers: await headers(),
 		});
 
-		console.log(data);
 		return NextResponse.redirect(new URL("/dashboard", request.url));
 	} catch (error) {
-		console.error(error);
+		logger.error(error as string);
 		return NextResponse.redirect(new URL("/dashboard", request.url));
 	}
 }

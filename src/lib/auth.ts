@@ -13,6 +13,7 @@ import { sendEmail } from "./resend";
 import OrganizationInvitationEmail from "@/components/emails/organization-invitation-email";
 import MagicLinkEmail from "@/components/emails/magic-link-email";
 import { APP_NAME } from "./config";
+import { logger } from "./logger";
 
 const polarClient = new Polar({
 	accessToken: process.env.POLAR_ACCESS_TOKEN!,
@@ -44,7 +45,7 @@ export const auth = betterAuth({
 	onAPIError: {
 		throw: true,
 		onError: (error) => {
-			console.error("Auth error:", error);
+			logger.error("Auth error:", error);
 		},
 		errorURL: "/auth/error",
 	},
@@ -83,7 +84,7 @@ export const auth = betterAuth({
 				});
 
 				if (!success) {
-					console.error("Error sending invitation email:", error);
+					logger.error("Error sending invitation email:", error);
 				}
 			},
 			roles: {
@@ -151,7 +152,7 @@ export const auth = betterAuth({
 				webhooks({
 					secret: process.env.POLAR_WEBHOOK_SECRET!,
 					onPayload: async (payload) => {
-						console.log("Received Polar webhook:", payload);
+						logger.debug("Received Polar webhook:", payload);
 						await handleSubscriptionWebhook(payload);
 					},
 				}),

@@ -33,6 +33,7 @@ import { useOrganizationStore } from "@/zustand/providers/organization-store-pro
 import { removeMember } from "@/server/members";
 import { cancelInvitation } from "@/server/invitations";
 import { authClient } from "@/lib/auth-client";
+import { logger } from "@/lib/logger";
 
 export default function MembersCard() {
 	const {
@@ -69,7 +70,7 @@ export default function MembersCard() {
 			}
 
 			if (error) {
-				console.error("Error:", error);
+				logger.error("Error removing member:", error);
 				toast.dismiss();
 				toast.error("Unable to remove member");
 			} else {
@@ -77,7 +78,7 @@ export default function MembersCard() {
 				toast.success("Member remove successfully");
 			}
 		} catch (error) {
-			console.error(error);
+			logger.error("Failed to remove member", error);
 			toast.dismiss();
 			toast.error("Failed to remove member");
 		}
@@ -97,7 +98,7 @@ export default function MembersCard() {
 			}
 
 			if (!success) {
-				console.error("Error canceling Invite:", error);
+				logger.error("Error canceling Invite:", error);
 				toast.dismiss();
 				toast.error("Failed to can invite");
 				return;
@@ -106,7 +107,7 @@ export default function MembersCard() {
 			toast.dismiss();
 			toast.success("Invite canceled successfully");
 		} catch (error) {
-			console.error(error);
+			logger.error("Error handling invitation cancelation:", error);
 			toast.dismiss();
 			toast.error("Failed to cancel invite");
 		}

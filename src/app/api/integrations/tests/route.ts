@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ConnectorService } from "@/server/connector-service";
 import { ToolSource } from "@prisma/client";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 const connectorService = new ConnectorService();
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
 
 			return NextResponse.json({ success: true, isConnected });
 		} catch (error) {
-			console.error("Connection test error:", error);
+			logger.error("Connection test error:", error as Error);
 			return NextResponse.json(
 				{ error: (error as Error).message || "Connection test failed" },
 				{ status: 500 }

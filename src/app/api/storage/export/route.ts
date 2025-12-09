@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
 				},
 			});
 		} catch (error) {
-			console.error("Failed to export storage report:", error);
+			logger.error("Failed to export storage report:", error as Error);
 			return NextResponse.json(
 				{
 					error:

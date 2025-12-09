@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isAdmin } from "./permissions";
+import { logger } from "@/lib/logger";
 
 export const createInvitation = async (
 	organizationId: string,
@@ -20,7 +21,7 @@ export const createInvitation = async (
 		});
 		return { success: true, data };
 	} catch (error) {
-		console.error(error);
+		logger.error("Error creating invitaton", error);
 		return { success: false, error };
 	}
 };
@@ -48,7 +49,7 @@ export const cancelInvitation = async (invitationId: string) => {
 			data,
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error("Error canceling invitation", error);
 		return {
 			success: false,
 			error,
@@ -70,7 +71,7 @@ export const acceptInvitation = async (invitationId: string) => {
 			data,
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error("Error accepting invitation", error);
 		return {
 			success: false,
 			error,
@@ -91,7 +92,7 @@ export const rejectInvitation = async (invitationId: string) => {
 			data,
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error("Error rejecting invitation", error);
 		return {
 			success: false,
 			error,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
+import { logger } from "@/lib/logger";
 
 export async function POST(
 	req: NextRequest,
@@ -37,7 +38,7 @@ export async function POST(
 				message: "Playbook dismissed",
 			});
 		} catch (error) {
-			console.error("Playbook dismissal error:", error);
+			logger.error("Playbook dismissal error:", error as Error);
 			return NextResponse.json(
 				{
 					error:
