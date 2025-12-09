@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,7 +29,10 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import Logo from "@/components/logo";
-import { createOrganization } from "@/server/organizations";
+import {
+	createOrganization,
+	setActiveOrganization,
+} from "@/server/organizations";
 import { authClient } from "@/lib/auth-client";
 import { SUBSCRIPTION_PLANS } from "@/lib/utils";
 import { APP_NAME } from "@/lib/config";
@@ -62,16 +65,19 @@ interface OnboardingFormProps {
 	};
 }
 
-export function OnboardingForm({ user }: OnboardingFormProps) {
+export function OnboardingFormContent({ user }: OnboardingFormProps) {
 	const router = useRouter();
+	const params = useSearchParams();
 	const [isLoading, setIsLoading] = useState(false);
+
+	const coupon = params.get("coupon");
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema) as unknown as Resolver<
 			z.infer<typeof formSchema>
 		>,
 		defaultValues: {
-			name: user.name || user.email.split("@")[0],
+			name: "New Project",
 			targetScore: 75,
 			subscriptionTier: "free",
 			billingInterval: "yearly",
@@ -98,6 +104,8 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 				toast.error(error || "Failed to create workspace");
 				return;
 			}
+
+			await setActiveOrganization(data.id);
 
 			// If not free plan, redirect to checkout
 			if (values.subscriptionTier !== "free") {
@@ -130,6 +138,7 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 						products: [productId],
 						referenceId: data.id,
 						allowDiscountCodes: true,
+						discountId: coupon || undefined,
 					});
 
 				if (checkoutError) {
@@ -530,5 +539,13 @@ export function OnboardingForm({ user }: OnboardingFormProps) {
 				</Form>
 			</CardContent>
 		</Card>
+	);
+}
+
+export function OnboardingForm({ user }: OnboardingFormProps) {
+	return (
+		<Suspense fallback={"loading..."}>
+			<OnboardingFormContent user={user} />
+		</Suspense>
 	);
 }

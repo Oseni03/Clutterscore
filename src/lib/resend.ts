@@ -25,3 +25,28 @@ export async function sendEmail(data: {
 		return { error, success: false };
 	}
 }
+
+export async function sendBulkEmail(data: {
+	to: string[];
+	subject: string;
+	react: React.ReactNode;
+}) {
+	try {
+		const { data: result, error } = await resend.batch.send(
+			data.to.map((user) => ({
+				from: `${APP_NAME} <${APP_NAME.toLowerCase()}@resend.dev>`,
+				to: user,
+				subject: data.subject,
+				react: data.react,
+			}))
+		);
+
+		if (error) {
+			return { error, success: false };
+		}
+
+		return { data: result, success: true };
+	} catch (error) {
+		return { error, success: false };
+	}
+}

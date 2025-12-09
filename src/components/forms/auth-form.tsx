@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,9 +30,11 @@ const formSchema = z.object({
 
 const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 	const pathname = usePathname();
+	const params = useSearchParams();
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [googleLoading, setGoogleLoading] = useState<boolean>(false);
 
+	const coupon = params.get("coupon");
 	const isLogin = pathname === "/login";
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -47,7 +49,11 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 			setGoogleLoading(true);
 			await authClient.signIn.social({
 				provider: "google",
-				callbackURL: isLogin ? "/dashboard" : "/onboarding",
+				callbackURL: isLogin
+					? "/dashboard"
+					: coupon
+						? `/onboarding?coupon=${coupon}`
+						: "/onboarding",
 			});
 			toast.success("Redirecting to Google sign-in...");
 		} catch (error) {
@@ -64,8 +70,14 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 
 			await authClient.signIn.magicLink({
 				email: values.email,
-				callbackURL: isLogin ? "/dashboard" : undefined,
-				newUserCallbackURL: "/onboarding",
+				callbackURL: isLogin
+					? "/dashboard"
+					: coupon
+						? `/onboarding?coupon=${coupon}`
+						: "/onboarding",
+				newUserCallbackURL: coupon
+					? `/onboarding?coupon=${coupon}`
+					: "/onboarding",
 			});
 
 			toast.success("Magic link sent! Check your email.");
