@@ -145,7 +145,7 @@ export const auth = betterAuth({
 						},
 					]).filter((product) => product.productId),
 					successUrl:
-						"/dashboard/settings?tab=subscription&checkout_id={CHECKOUT_ID}",
+						"/dashboard/settings/billing?checkout_id={CHECKOUT_ID}",
 					authenticatedUsersOnly: true,
 				}),
 				portal(),

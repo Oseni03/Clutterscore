@@ -1,5 +1,3 @@
-// app/dashboard/settings/layout.tsx
-
 import { ReactNode } from "react";
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {

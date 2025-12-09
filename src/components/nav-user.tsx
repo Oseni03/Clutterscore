@@ -119,17 +119,15 @@ export function NavUser() {
 						<DropdownMenuGroup>
 							<DropdownMenuItem
 								onClick={() =>
-									router.push("/dashboard/settings")
+									router.push("/dashboard/settings/workspace")
 								}
 							>
 								<Sparkles />
-								Organization Settings
+								Workspace Settings
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() =>
-									router.push(
-										"/dashboard/settings?tab=subscription"
-									)
+									router.push("/dashboard/settings/billing")
 								}
 							>
 								<CreditCard />

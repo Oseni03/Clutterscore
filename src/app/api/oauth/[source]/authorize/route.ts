@@ -115,7 +115,7 @@ export async function GET(
 
 			return NextResponse.redirect(
 				new URL(
-					`/dashboard/settings?tab=integrations&error=${encodeURIComponent(errorMessage)}`,
+					`/dashboard/settings/integrations?error=${encodeURIComponent(errorMessage)}`,
 					process.env.NEXT_PUBLIC_APP_URL || req.url
 				)
 			);
