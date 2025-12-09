@@ -5,6 +5,9 @@ import {
 	runAuditJob,
 	syncIntegrationsJob,
 	executePlaybookJob,
+	sendEmailJob,
+	sendTelegramMessageJob,
+	webhookHandler,
 } from "@/inngest/functions";
 
 // Create an API that serves zero functions
@@ -16,5 +19,8 @@ export const { GET, POST, PUT } = serve({
 		runAuditJob,
 		syncIntegrationsJob,
 		executePlaybookJob,
+		sendEmailJob,
+		sendTelegramMessageJob,
+		webhookHandler,
 	],
 });

@@ -9,11 +9,11 @@ import { polar, checkout, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { handleSubscriptionWebhook } from "@/server/polar";
 import { SUBSCRIPTION_PLANS } from "./utils";
-import { sendEmail } from "./resend";
 import OrganizationInvitationEmail from "@/components/emails/organization-invitation-email";
 import MagicLinkEmail from "@/components/emails/magic-link-email";
 import { APP_NAME } from "./config";
 import { logger } from "./logger";
+import { inngest } from "@/inngest/client";
 
 const polarClient = new Polar({
 	accessToken: process.env.POLAR_ACCESS_TOKEN!,
@@ -71,21 +71,20 @@ export const auth = betterAuth({
 		organization({
 			creatorRole: "admin",
 			async sendInvitationEmail(data) {
-				const { success, error } = await sendEmail({
-					to: data.email,
-					subject: `Invitation to join ${data.organization.name} on ${APP_NAME}`,
-					react: OrganizationInvitationEmail({
-						organizationName: data.organization.name,
-						inviterName: data.inviter.user.name || "Someone",
-						inviteeEmail: data.email,
-						invitationId: data.id,
-						role: data.role,
-					}),
+				await inngest.send({
+					name: "email/send",
+					data: {
+						to: data.email,
+						subject: `Invitation to join ${data.organization.name} on ${APP_NAME}`,
+						body: OrganizationInvitationEmail({
+							organizationName: data.organization.name,
+							inviterName: data.inviter.user.name || "Someone",
+							inviteeEmail: data.email,
+							invitationId: data.id,
+							role: data.role,
+						}),
+					},
 				});
-
-				if (!success) {
-					logger.error("Error sending invitation email:", error);
-				}
 			},
 			roles: {
 				admin,
@@ -161,10 +160,13 @@ export const auth = betterAuth({
 		magicLink({
 			expiresIn: 60 * 5, // 5 minutes
 			sendMagicLink: async ({ email, url }) => {
-				await sendEmail({
-					to: email,
-					subject: "Your Magic Link is Here!",
-					react: MagicLinkEmail({ email, magicLink: url }),
+				await inngest.send({
+					name: "email/send",
+					data: {
+						to: email,
+						subject: "Your Magic Link is Here!",
+						body: MagicLinkEmail({ email, magicLink: url }),
+					},
 				});
 			},
 		}),

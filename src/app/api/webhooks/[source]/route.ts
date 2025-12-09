@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { WebhookRegistry } from "@/lib/webhooks/register";
 import { ToolSource } from "@prisma/client";
 import { logger } from "@/lib/logger";
+import { inngest } from "@/inngest/client";
 
 export async function POST(
 	req: NextRequest,
@@ -61,13 +62,17 @@ export async function POST(
 			});
 		}
 
-		// Process webhook event
-		await handler.handle({
-			source,
-			eventType:
-				body.type || body.event?.type || body.changeType || "unknown",
-			data: body.event || body,
-			timestamp: new Date(),
+		await inngest.send({
+			name: "handler/webhook",
+			data: {
+				source,
+				eventType:
+					body.type ||
+					body.event?.type ||
+					body.changeType ||
+					"unknown",
+				data: body.event || body,
+			},
 		});
 
 		return NextResponse.json({ success: true });

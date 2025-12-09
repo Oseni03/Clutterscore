@@ -1,3 +1,5 @@
+import { inngest } from "@/inngest/client";
+
 type LogSeverity = "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "SUCCESS";
 
 export function formatTelegramMessage(
@@ -41,33 +43,21 @@ export async function sendTelegramMessage(text: string) {
 	}
 
 	try {
-		const response = await fetch(
-			`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					chat_id: CHAT_ID,
-					text,
-					parse_mode: "HTML",
-				}),
-			}
-		);
-
-		// Issue #2: Check if the request was successful
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			throw new Error(
-				`Telegram API error: ${response.status} - ${JSON.stringify(errorData)}`
-			);
-		}
+		const { ids } = await inngest.send({
+			name: "telegram/send-message",
+			data: {
+				bot_token: BOT_TOKEN,
+				chat_id: CHAT_ID,
+				text,
+			},
+		});
 
 		// Issue #3: Return success indicator
-		return { success: true };
+		return { success: true, ids };
 	} catch (err) {
 		console.error("Telegram send error:", err);
 		// Issue #4: Re-throw or return error for caller to handle
-		throw err;
+		return { success: false, error: err };
 	}
 }
 
