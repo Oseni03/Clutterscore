@@ -4,7 +4,6 @@ import { SlackWebhookHandler } from "./slack-handlers";
 import { GoogleWebhookHandler } from "./google-handler";
 import { MicrosoftWebhookHandler } from "./microsoft-handler";
 import { DropboxWebhookHandler } from "./dropbox-handler";
-import { LinearWebhookHandler } from "./linear-handler";
 import { NotionWebhookHandler } from "./notion-handler";
 
 export class WebhookRegistry {
@@ -13,7 +12,6 @@ export class WebhookRegistry {
 		["GOOGLE", new GoogleWebhookHandler()],
 		["MICROSOFT", new MicrosoftWebhookHandler()],
 		["DROPBOX", new DropboxWebhookHandler()],
-		["LINEAR", new LinearWebhookHandler()],
 		["NOTION", new NotionWebhookHandler()],
 	]);
 

@@ -220,6 +220,5 @@ export const SOURCE_ICONS: Record<ToolSource, string> = {
 	DROPBOX:
 		"https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/dropbox.svg",
 	FIGMA: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/figma.svg",
-	LINEAR: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linear.svg",
 	JIRA: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/jira.svg",
 };

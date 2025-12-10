@@ -59,7 +59,7 @@ const SOURCE_NAMES: Record<ToolSource, string> = {
 	NOTION: "Notion",
 	DROPBOX: "Dropbox",
 	FIGMA: "Figma",
-	LINEAR: "Linear",
+	// LINEAR: "Linear",
 	JIRA: "Jira",
 };
 
@@ -70,7 +70,7 @@ const SOURCE_DESCRIPTIONS: Record<ToolSource, string> = {
 	NOTION: "Pages and workspace members",
 	DROPBOX: "Files and team members",
 	FIGMA: "Design files and projects",
-	LINEAR: "Users and teams",
+	// LINEAR: "Users and teams",
 	JIRA: "Users and projects",
 };
 

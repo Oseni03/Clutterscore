@@ -189,7 +189,6 @@ enum ToolSource {
   NOTION
   DROPBOX
   FIGMA
-  LINEAR
   JIRA
 }
 

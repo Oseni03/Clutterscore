@@ -117,18 +117,6 @@ export const OAUTH_CONFIGS: Record<ToolSource, OAuthConfig> = {
 		redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/figma/callback`,
 	},
 
-	LINEAR: {
-		authorizationUrl: "https://linear.app/oauth/authorize",
-		tokenUrl: "https://api.linear.app/oauth/token",
-		clientId: process.env.LINEAR_CLIENT_ID!,
-		clientSecret: process.env.LINEAR_CLIENT_SECRET!,
-		scopes: [
-			"read", // Read all data
-			"write", // Manage issues/projects (optional)
-		],
-		redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/linear/callback`,
-	},
-
 	JIRA: {
 		authorizationUrl: "https://auth.atlassian.com/authorize",
 		tokenUrl: "https://auth.atlassian.com/oauth/token",

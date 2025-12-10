@@ -6,7 +6,6 @@ import { MicrosoftConnector } from "./microsoft";
 import { NotionConnector } from "./notion";
 import { DropboxConnector } from "./dropbox";
 import { FigmaConnector } from "./figma";
-import { LinearConnector } from "./linear";
 import { JiraConnector } from "./jira";
 
 export class ConnectorFactory {
@@ -24,8 +23,6 @@ export class ConnectorFactory {
 				return new DropboxConnector(config);
 			case "FIGMA":
 				return new FigmaConnector(config);
-			case "LINEAR":
-				return new LinearConnector(config);
 			case "JIRA":
 				// Validate Jira-specific metadata before creating connector
 				if (!config.metadata?.cloudId) {

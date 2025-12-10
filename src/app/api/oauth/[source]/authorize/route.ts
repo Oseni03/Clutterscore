@@ -75,12 +75,12 @@ export async function GET(
 					authUrl.searchParams.set("response_type", "code");
 					break;
 
-				case "LINEAR":
-					authUrl.searchParams.set("scope", config.scopes.join(","));
-					authUrl.searchParams.set("prompt", "consent");
-					// Linear uses actor=application for OAuth apps
-					authUrl.searchParams.set("actor", "application");
-					break;
+				// case "LINEAR":
+				// 	authUrl.searchParams.set("scope", config.scopes.join(","));
+				// 	authUrl.searchParams.set("prompt", "consent");
+				// 	// Linear uses actor=application for OAuth apps
+				// 	authUrl.searchParams.set("actor", "application");
+				// 	break;
 
 				case "JIRA":
 					authUrl.searchParams.set("scope", config.scopes.join(" "));

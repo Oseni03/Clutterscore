@@ -13,7 +13,6 @@
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",
-		"@linear/sdk": "^65.0.0",
 		"@microsoft/microsoft-graph-client": "^3.0.7",
 		"@notionhq/client": "^5.4.0",
 		"@polar-sh/better-auth": "^1.1.4",
@@ -57,7 +56,6 @@
 		"date-fns": "^4.1.0",
 		"dropbox": "^10.34.0",
 		"embla-carousel-react": "^8.6.0",
-		"encoding": "^0.1.13",
 		"googleapis": "^166.0.0",
 		"inngest": "^3.46.0",
 		"input-otp": "^1.4.2",
