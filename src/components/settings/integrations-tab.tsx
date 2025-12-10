@@ -80,9 +80,9 @@ const AVAILABLE_SOURCES: ToolSource[] = [
 	// "MICROSOFT",
 	"DROPBOX",
 	"NOTION",
-	"FIGMA",
-	"LINEAR",
-	"JIRA",
+	// "FIGMA",
+	// "LINEAR",
+	// "JIRA",
 ];
 
 export default function IntegrationsTab() {
