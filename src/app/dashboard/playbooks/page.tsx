@@ -12,7 +12,6 @@ import { usePlaybooks } from "@/hooks/use-playbooks";
 import { useAudit } from "@/hooks/use-audit";
 import { useRouter } from "next/navigation";
 import { ImpactType } from "@prisma/client";
-import { logger } from "@/lib/logger";
 
 export default function PlaybooksPage() {
 	const router = useRouter();
@@ -32,9 +31,8 @@ export default function PlaybooksPage() {
 	const handleRunAudit = async () => {
 		try {
 			await runAudit(refresh);
-		} catch (err) {
+		} catch {
 			// Error already handled by hook
-			logger.error("Failed to run audit:", err as Error);
 		}
 	};
 

@@ -35,7 +35,6 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { SOURCE_ICONS } from "@/lib/utils";
 import { ToolSource } from "@prisma/client";
-import { logger } from "@/lib/logger";
 
 const IMPACT_CONFIG = {
 	SECURITY: {
@@ -115,8 +114,7 @@ export default function PlaybookDetailPage() {
 			await executePlaybook(playbook.id);
 			setShowExecuteDialog(false);
 			router.push("/dashboard/playbooks");
-		} catch (err) {
-			logger.error("Execution error:", err as Error);
+		} catch {
 			// Error handled by hook
 		}
 	};
@@ -128,8 +126,7 @@ export default function PlaybookDetailPage() {
 			await dismissPlaybook(playbook.id);
 			setShowDismissDialog(false);
 			router.push("/dashboard/playbooks");
-		} catch (err) {
-			logger.error("Dismiss error:", err as Error);
+		} catch {
 			// Error handled by hook
 		}
 	};

@@ -1,3 +1,5 @@
+"use server";
+
 import { inngest } from "@/inngest/client";
 
 type LogSeverity = "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "SUCCESS";
