@@ -222,3 +222,28 @@ export const SOURCE_ICONS: Record<ToolSource, string> = {
 	FIGMA: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/figma.svg",
 	JIRA: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/jira.svg",
 };
+
+type LogSeverity = "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "SUCCESS";
+
+export function formatTelegramMessage(
+	appName: string,
+	message: string,
+	severity: LogSeverity
+) {
+	const severityMap: Record<LogSeverity, string> = {
+		INFO: "ℹ️ <b>INFO</b>",
+		WARNING: "⚠️ <b>WARNING</b>",
+		ERROR: "❌ <b>ERROR</b>",
+		CRITICAL: "🔥 <b>CRITICAL</b>",
+		SUCCESS: "✅ <b>SUCCESS</b>",
+	};
+
+	const header = severityMap[severity] ?? "ℹ️ <b>INFO</b>";
+
+	return `
+<b>🚀 ${appName}</b>
+${header}
+
+<pre>${message}</pre>
+  `;
+}
