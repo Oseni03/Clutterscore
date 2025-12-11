@@ -43,7 +43,7 @@ import { AuditLogActionType, AuditLogStatus } from "@prisma/client";
 
 const ACTION_ICONS = {
 	REVOKE_ACCESS: UserX,
-	DELETE_FILE: Trash2,
+	ARCGIVE_FILE: Trash2,
 	ARCHIVE_CHANNEL: Archive,
 	ARCHIVE_PAGE: Archive,
 	REMOVE_GUEST: UserX,
@@ -54,7 +54,7 @@ const ACTION_ICONS = {
 
 const ACTION_COLORS = {
 	REVOKE_ACCESS: "bg-orange-100 text-orange-600 dark:bg-orange-900/30",
-	DELETE_FILE: "bg-red-100 text-red-600 dark:bg-red-900/30",
+	ARCHIVE_FILE: "bg-red-100 text-red-600 dark:bg-red-900/30",
 	ARCHIVE_CHANNEL: "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
 	ARCHIVE_PAGE: "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
 	REMOVE_GUEST: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30",

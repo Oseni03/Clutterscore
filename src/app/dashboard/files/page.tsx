@@ -66,7 +66,7 @@ export default function FilesPage() {
 		error,
 		setFilters,
 		setPagination,
-		deleteFile,
+		archiveFile,
 		exportFiles,
 		refresh,
 		getTotalSize,
@@ -74,9 +74,9 @@ export default function FilesPage() {
 		getPublicFilesCount,
 	} = useFiles();
 
-	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-	const [fileToDelete, setFileToDelete] = useState<string | null>(null);
-	const [isDeleting, setIsDeleting] = useState(false);
+	const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+	const [fileToArchive, setFileToArchive] = useState<string | null>(null);
+	const [isArchiving, setIsArchiving] = useState(false);
 	const [isExporting, setIsExporting] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -88,16 +88,16 @@ export default function FilesPage() {
 		setPagination({ page: newPage });
 	};
 
-	const handleDelete = async () => {
-		if (!fileToDelete) return;
+	const handleArchive = async () => {
+		if (!fileToArchive) return;
 
-		setIsDeleting(true);
+		setIsArchiving(true);
 		try {
-			await deleteFile(fileToDelete);
-			setShowDeleteDialog(false);
-			setFileToDelete(null);
+			await archiveFile(fileToArchive);
+			setShowArchiveDialog(false);
+			setFileToArchive(null);
 		} finally {
-			setIsDeleting(false);
+			setIsArchiving(false);
 		}
 	};
 
@@ -521,16 +521,16 @@ export default function FilesPage() {
 															<DropdownMenuItem
 																className="text-destructive"
 																onClick={() => {
-																	setFileToDelete(
+																	setFileToArchive(
 																		file.id
 																	);
-																	setShowDeleteDialog(
+																	setShowArchiveDialog(
 																		true
 																	);
 																}}
 															>
 																<Trash2 className="mr-2 h-4 w-4" />
-																Delete File
+																Archive File
 															</DropdownMenuItem>
 														</DropdownMenuContent>
 													</DropdownMenu>
@@ -605,14 +605,14 @@ export default function FilesPage() {
 				</CardContent>
 			</Card>
 
-			{/* Delete Confirmation Dialog */}
+			{/* Archive Confirmation Dialog */}
 			<AlertDialog
-				open={showDeleteDialog}
-				onOpenChange={setShowDeleteDialog}
+				open={showArchiveDialog}
+				onOpenChange={setShowArchiveDialog}
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Delete File?</AlertDialogTitle>
+						<AlertDialogTitle>Archive File?</AlertDialogTitle>
 						<AlertDialogDescription>
 							This will permanently delete this file from the
 							source system. This action cannot be undone.
@@ -621,17 +621,17 @@ export default function FilesPage() {
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
-							onClick={handleDelete}
+							onClick={handleArchive}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							disabled={isDeleting}
+							disabled={isArchiving}
 						>
-							{isDeleting ? (
+							{isArchiving ? (
 								<>
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Deleting...
+									Processing...
 								</>
 							) : (
-								"Delete"
+								"Archive"
 							)}
 						</AlertDialogAction>
 					</AlertDialogFooter>

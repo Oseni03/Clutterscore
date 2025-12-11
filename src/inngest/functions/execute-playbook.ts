@@ -53,7 +53,8 @@ export const executePlaybookJob = inngest.createFunction(
 		const executionResult = await step.run("execute-actions", async () => {
 			try {
 				return await connectorService.performPlaybookActions(
-					playbook as unknown as PlaybookWithItems
+					playbook as unknown as PlaybookWithItems,
+					userId
 				);
 			} catch (error) {
 				// If execution fails, mark as failed
@@ -155,7 +156,7 @@ export function mapImpactTypeToActionType(
 		case "SECURITY":
 			return "REVOKE_ACCESS";
 		case "SAVINGS":
-			return "DELETE_FILE";
+			return "ARCHIVE_FILE";
 		case "EFFICIENCY":
 			return "ARCHIVE_CHANNEL";
 		default:

@@ -236,14 +236,14 @@ export class FigmaConnector extends BaseConnector {
 	 * Note: Figma API doesn't support file deletion via API
 	 * This would need to be done manually or through browser automation
 	 */
-	async deleteFile(
+	async archiveFile(
 		externalId: string,
 		_metadata: Record<string, any>
 	): Promise<void> {
 		void externalId;
 		void _metadata;
 		throw new Error(
-			"Figma API does not support file deletion. Files must be deleted manually through the Figma interface."
+			"Figma API does not support file archival. Files must be archived/deleted manually through the Figma interface."
 		);
 	}
 

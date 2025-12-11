@@ -275,9 +275,10 @@ export class GoogleConnector extends BaseConnector {
 	// ============================================================================
 
 	/**
-	 * Delete a file permanently from Google Drive
+	 * Archive a file in Google Drive by moving it to an "Archived" folder
+	 * This is safer than permanent deletion and allows for recovery
 	 */
-	async deleteFile(
+	async archiveFile(
 		externalId: string,
 		_metadata: Record<string, unknown>
 	): Promise<void> {
@@ -285,13 +286,56 @@ export class GoogleConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
-			await this.drive.files.delete({
-				fileId: externalId,
+			// Get or create "Archived" folder
+			const archiveFolderName = "Archived";
+			let archiveFolderId: string;
+
+			// Search for existing archive folder
+			const folderSearch = await this.drive.files.list({
+				q: `name='${archiveFolderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+				fields: "files(id, name)",
 				supportsAllDrives: true,
 			});
+
+			if (folderSearch.data.files && folderSearch.data.files.length > 0) {
+				archiveFolderId = folderSearch.data.files[0].id!;
+			} else {
+				// Create archive folder if it doesn't exist
+				const folder = await this.drive.files.create({
+					requestBody: {
+						name: archiveFolderName,
+						mimeType: "application/vnd.google-apps.folder",
+					},
+					fields: "id",
+				});
+				archiveFolderId = folder.data.id!;
+			}
+
+			// Get file info to preserve the name
+			const file = await this.drive.files.get({
+				fileId: externalId,
+				fields: "name, parents",
+				supportsAllDrives: true,
+			});
+
+			const fileName = file.data.name || "Untitled";
+			const previousParents = file.data.parents?.join(",");
+
+			// Move file to archive folder
+			await this.drive.files.update({
+				fileId: externalId,
+				addParents: archiveFolderId,
+				removeParents: previousParents,
+				supportsAllDrives: true,
+				fields: "id, parents",
+			});
+
+			logger.info(
+				`Archived Google Drive file "${fileName}" (${externalId})`
+			);
 		} catch (error) {
 			throw new Error(
-				`Failed to delete Google Drive file ${externalId}: ${(error as Error).message}`
+				`Failed to archive Google Drive file ${externalId}: ${(error as Error).message}`
 			);
 		}
 	}

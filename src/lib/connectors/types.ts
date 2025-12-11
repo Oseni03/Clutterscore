@@ -87,27 +87,44 @@ export abstract class BaseConnector {
 	abstract refreshToken(): Promise<string>;
 
 	// ============================================================================
-	// OPTIONAL EXECUTION METHODS - Override as needed per connector
+	// EXECUTION METHODS - Override as needed per connector
 	// ============================================================================
 
 	/**
-	 * Delete a file from the service.
+	 * Archive a file (safer than permanent deletion)
+	 * Implementations should move files to an archive folder or mark them as archived
+	 *
 	 * @param externalId File ID in the external service
 	 * @param metadata Additional file metadata (path, name, etc.)
 	 */
-	async deleteFile(
+	async archiveFile(
 		_externalId: string,
 		_metadata: Record<string, any>
 	): Promise<void> {
 		void _externalId;
 		void _metadata;
 		throw new Error(
-			`File deletion is not supported for ${this.source}. Please contact support if you need this feature.`
+			`File archival is not supported for ${this.source}. Please contact support if you need this feature.`
 		);
 	}
 
 	/**
-	 * Update permissions on a file (typically restricting access).
+	 * Delete a file permanently (DEPRECATED - use archiveFile instead)
+	 * This method is kept for backwards compatibility but should call archiveFile
+	 *
+	 * @param externalId File ID in the external service
+	 * @param metadata Additional file metadata
+	 */
+	async deleteFile(
+		externalId: string,
+		metadata: Record<string, any>
+	): Promise<void> {
+		// Default implementation calls archiveFile for safety
+		return this.archiveFile(externalId, metadata);
+	}
+
+	/**
+	 * Update permissions on a file (typically restricting access)
 	 * @param externalId File ID in the external service
 	 * @param metadata File metadata including current sharing info
 	 */
@@ -123,7 +140,7 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Archive a channel or workspace.
+	 * Archive a channel or workspace
 	 * @param externalId Channel/workspace ID
 	 * @param metadata Channel metadata (name, member count, etc.)
 	 */
@@ -139,7 +156,7 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Remove a guest user from the workspace.
+	 * Remove a guest user from the workspace
 	 * @param externalId Guest user email or ID
 	 * @param metadata User metadata (name, role, etc.)
 	 */
@@ -155,7 +172,7 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Disable or suspend a user account.
+	 * Disable or suspend a user account
 	 * @param externalId User email or ID
 	 * @param metadata User metadata (name, role, last active, etc.)
 	 */
@@ -171,7 +188,7 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Revoke a specific access token or session.
+	 * Revoke a specific access token or session
 	 * @param externalId Token ID or session ID
 	 * @param metadata Token metadata (scopes, created date, etc.)
 	 */
@@ -187,7 +204,7 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Remove a license from a user.
+	 * Remove a license from a user
 	 * @param externalId User email or ID
 	 * @param metadata License metadata (type, cost, etc.)
 	 */

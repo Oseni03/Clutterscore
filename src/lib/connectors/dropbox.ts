@@ -288,9 +288,10 @@ export class DropboxConnector extends BaseConnector {
 	// ============================================================================
 
 	/**
-	 * Delete a file permanently from Dropbox
+	 * Archive a file in Dropbox by moving it to an "Archived" folder
+	 * This is safer than permanent deletion and allows for recovery
 	 */
-	async deleteFile(
+	async archiveFile(
 		externalId: string,
 		_metadata: Record<string, any>
 	): Promise<void> {
@@ -298,10 +299,30 @@ export class DropboxConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
-			await this.client.filesDeleteV2({ path: externalId });
+			// Get the file info to construct the archive path
+			const fileInfo = await this.client.filesGetMetadata({
+				path: externalId,
+			});
+
+			if (fileInfo.result[".tag"] !== "file") {
+				throw new Error("Resource is not a file");
+			}
+
+			const file = fileInfo.result;
+			const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+			const archivePath = `/Archived/${timestamp}/${file.name}`;
+
+			// Move file to archive folder instead of deleting
+			await this.client.filesMoveV2({
+				from_path: externalId,
+				to_path: archivePath,
+				autorename: true, // Automatically rename if conflict exists
+			});
+
+			logger.info(`Archived Dropbox file ${file.name} to ${archivePath}`);
 		} catch (error) {
 			throw new Error(
-				`Failed to delete Dropbox file ${externalId}: ${(error as Error).message}`
+				`Failed to archive Dropbox file ${externalId}: ${(error as Error).message}`
 			);
 		}
 	}

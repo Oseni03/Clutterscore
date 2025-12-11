@@ -133,13 +133,13 @@ export function useFiles() {
 		return filtered;
 	}, [allFiles, filters]);
 
-	const deleteFile = useCallback(
+	const archiveFile = useCallback(
 		async (fileId: string) => {
-			// 🚨 SUBSCRIPTION CHECK: Free tier cannot delete files
+			// 🚨 SUBSCRIPTION CHECK: Free tier cannot archive files
 			if (subscriptionTier === "free") {
 				showUpgradeToast(
 					"Upgrade Required",
-					"File deletion is only available on Pro and Enterprise plans. Upgrade to unlock automated cleanups and one-click actions.",
+					"File archiving is only available on Pro and Enterprise plans. Upgrade to unlock automated cleanups and one-click actions.",
 					router
 				);
 				throw new Error("Subscription upgrade required");
@@ -153,7 +153,7 @@ export function useFiles() {
 				const data = await response.json();
 
 				if (!response.ok) {
-					throw new Error(data.error || "Failed to delete file");
+					throw new Error(data.error || "Failed to archive file");
 				}
 
 				// Optimistically update the state
@@ -169,12 +169,12 @@ export function useFiles() {
 
 				toast.success(
 					data.externalDeletionSuccess
-						? "File deleted from platform and database"
-						: data.message || "File deleted successfully"
+						? "File archived successfully"
+						: data.message || "File archived successfully"
 				);
 			} catch (err) {
 				const errorMessage =
-					(err as Error).message || "Failed to delete file";
+					(err as Error).message || "Failed to archive file";
 
 				// Don't show duplicate error toast if subscription check already showed one
 				if (!errorMessage.includes("Subscription upgrade required")) {
@@ -249,7 +249,7 @@ export function useFiles() {
 		// Actions
 		setFilters,
 		setPagination,
-		deleteFile,
+		archiveFile,
 		exportFiles,
 		refresh: fetchFiles,
 

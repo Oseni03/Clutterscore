@@ -8,6 +8,7 @@ import {
 	UserData,
 } from "./types";
 import crypto from "crypto";
+import { logger } from "../logger";
 
 export class NotionConnector extends BaseConnector {
 	private client: Client;
@@ -156,5 +157,97 @@ export class NotionConnector extends BaseConnector {
 			.createHash("sha256")
 			.update(`${name}-${size}`)
 			.digest("hex");
+	}
+
+	// ============================================================================
+	// ANALYSIS METHODS
+	// ============================================================================
+
+	async identifyDuplicateFiles(): Promise<FileData[]> {
+		const files = await this.fetchFiles();
+		return files.filter((f) => f.isDuplicate);
+	}
+
+	async identifyPublicFiles(): Promise<FileData[]> {
+		const files = await this.fetchFiles();
+		return files.filter((f) => f.isPubliclyShared);
+	}
+
+	async identifyOldFiles(daysOld: number = 365): Promise<FileData[]> {
+		const files = await this.fetchFiles();
+		const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+
+		return files.filter(
+			(f) => f.lastAccessed && f.lastAccessed < cutoffDate
+		);
+	}
+
+	// ============================================================================
+	// EXECUTION METHODS
+	// ============================================================================
+
+	/**
+	 * Archive a Notion page by moving it to the trash
+	 * Notion's API supports archiving pages by setting archived: true
+	 * This is safer than permanent deletion and allows for recovery
+	 */
+	async archiveFile(
+		externalId: string,
+		_metadata: Record<string, any>
+	): Promise<void> {
+		void _metadata;
+		try {
+			// Archive the page (Notion's soft delete)
+			await this.client.pages.update({
+				page_id: externalId,
+				archived: true,
+			});
+
+			logger.info(`Archived Notion page ${externalId}`);
+		} catch (error) {
+			throw new Error(
+				`Failed to archive Notion page ${externalId}: ${(error as Error).message}`
+			);
+		}
+	}
+
+	/**
+	 * Revoke public access to a Notion page
+	 */
+	async updatePermissions(
+		externalId: string,
+		_metadata: Record<string, any>
+	): Promise<void> {
+		void _metadata;
+
+		try {
+			// Update page to disable public access
+			await this.client.pages.update({
+				page_id: externalId,
+				// @ts-expect-error - public_url is not in the official types but works
+				public_url: null,
+			});
+
+			logger.info(`Revoked public access for Notion page ${externalId}`);
+		} catch (error) {
+			throw new Error(
+				`Failed to update permissions for Notion page ${externalId}: ${(error as Error).message}`
+			);
+		}
+	}
+
+	/**
+	 * Remove a guest user from Notion workspace
+	 * Note: Notion API doesn't support user management directly
+	 */
+	async removeGuest(
+		externalId: string,
+		_metadata: Record<string, any>
+	): Promise<void> {
+		void _metadata;
+
+		throw new Error(
+			"Notion API does not support removing users programmatically. Please remove users manually through the Notion workspace settings."
+		);
 	}
 }

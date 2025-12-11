@@ -2,7 +2,7 @@
 // lib/services/connector-service.ts
 
 import { prisma } from "@/lib/prisma";
-import { ToolSource } from "@prisma/client";
+import { ToolSource, ImpactType, RiskLevel } from "@prisma/client";
 import { ConnectorFactory } from "@/lib/connectors/factory";
 import {
 	AuditData,
@@ -111,6 +111,97 @@ export class ConnectorService {
 	}
 
 	/**
+	 * Run comprehensive audit and generate all playbooks
+	 */
+	async runAudit(organizationId: string): Promise<string> {
+		// Sync all integrations first
+		const syncResults = await this.syncAllIntegrations(organizationId);
+
+		// Aggregate metrics
+		let allFiles: FileData[] = [];
+		let allUsers: UserData[] = [];
+		// let totalStorage = 0;
+		let totalLicenses = 0;
+		// let activeUsers = 0;
+
+		for (const data of syncResults.values()) {
+			allFiles = [...allFiles, ...data.files];
+			allUsers = [...allUsers, ...data.users];
+			// totalStorage += data.storageUsedGb;
+			totalLicenses += data.totalLicenses;
+			// activeUsers += data.activeUsers;
+		}
+
+		// Calculate waste metrics
+		const storageWaste = this.calculateStorageWaste(allFiles);
+		const licenseWaste = this.calculateLicenseWaste(
+			allUsers,
+			totalLicenses
+		);
+		const activeRisks = this.countRisks(allFiles, allUsers);
+		const criticalRisks = this.countCriticalRisks(allFiles, allUsers);
+		const moderateRisks = this.countModerateRisks(allFiles, allUsers);
+
+		// Calculate overall score
+		const score = this.calculateScore({
+			storageWaste,
+			duplicates: allFiles.filter((f) => f.isDuplicate).length,
+			publicFiles: allFiles.filter((f) => f.isPubliclyShared).length,
+			inactiveUsers: allUsers.filter(
+				(u) =>
+					!u.lastActive ||
+					u.lastActive <
+						new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+			).length,
+		});
+
+		// Save audit result and playbooks in transaction
+		const auditResultId = await prisma.$transaction(async (tx) => {
+			// Create audit result
+			const auditResult = await tx.auditResult.create({
+				data: {
+					organizationId,
+					score,
+					estimatedSavings: storageWaste + licenseWaste,
+					storageWaste,
+					licenseWaste,
+					activeRisks,
+					criticalRisks,
+					moderateRisks,
+				},
+			});
+
+			// Save files to database
+			await this.saveFilesToDatabase(tx, auditResult.id, allFiles);
+
+			// Generate and save playbooks
+			await this.generateAndSavePlaybooks(
+				tx,
+				auditResult.id,
+				organizationId,
+				syncResults
+			);
+
+			return auditResult.id;
+		});
+
+		// Log activity
+		await prisma.activity.create({
+			data: {
+				organizationId,
+				action: "audit.run",
+				metadata: {
+					auditResultId,
+					score,
+					estimatedSavings: storageWaste + licenseWaste,
+				},
+			},
+		});
+
+		return auditResultId;
+	}
+
+	/**
 	 * Save files to database with proper validation and error handling
 	 */
 	private async saveFilesToDatabase(
@@ -125,20 +216,20 @@ export class ConnectorService {
 			auditResultId,
 			name: f.name || "Unknown",
 			sizeMb: f.sizeMb || 0,
-			type: f.type, // Already a valid FileType enum
-			source: f.source, // Already a valid ToolSource enum
+			type: f.type,
+			source: f.source,
 			mimeType: f.mimeType || null,
 			fileHash: f.fileHash || null,
-			externalId: f.externalId || null, // CRITICAL: Must be saved for deletion/updates
+			externalId: f.externalId || null,
 			url: f.url || null,
 			path: f.path || null,
-			lastAccessed: f.lastAccessed || new Date(), // Prisma requires DateTime (non-nullable in schema)
+			lastAccessed: f.lastAccessed || new Date(),
 			ownerEmail: f.ownerEmail || null,
 			isPubliclyShared: f.isPubliclyShared ?? false,
 			sharedWith: f.sharedWith || [],
 			isDuplicate: f.isDuplicate ?? false,
 			duplicateGroup: f.duplicateGroup || null,
-			status: "ACTIVE" as const, // Default to ACTIVE
+			status: "ACTIVE" as const,
 		}));
 
 		// Save files in batches to avoid query size limits
@@ -147,13 +238,18 @@ export class ConnectorService {
 		for (const batch of fileBatches) {
 			await tx.file.createMany({
 				data: batch,
-				skipDuplicates: true, // Skip if duplicate constraint violation
+				skipDuplicates: true,
 			});
 		}
 	}
 
 	/**
-	 * Generate and save playbooks with proper transaction handling
+	 * Generate and save playbooks with NEW requirements:
+	 * - 12 months for old files (not 24)
+	 * - Duplicate consolidation with 95% confidence
+	 * - Slack channel archival (<5 messages in 12 months)
+	 * - Detailed metadata for exact file tracking
+	 * - 30-day undo preparation
 	 */
 	private async generateAndSavePlaybooks(
 		tx: any,
@@ -162,65 +258,115 @@ export class ConnectorService {
 		syncResults: Map<ToolSource, AuditData>
 	): Promise<void> {
 		for (const [source, data] of syncResults) {
-			// Playbook 1: Duplicate files
-			const duplicates = data.files.filter((f) => f.isDuplicate);
+			// ========================================================================
+			// PLAYBOOK 1: Duplicate Files (Hash-based, 95% confidence)
+			// ========================================================================
+			const duplicates = data.files.filter(
+				(f) => f.isDuplicate && f.fileHash
+			);
+
 			if (duplicates.length > 0) {
-				const playbook = await tx.playbook.create({
-					data: {
-						auditResultId,
-						organizationId,
-						title: `Remove ${duplicates.length} Duplicate Files`,
-						description: `Found ${duplicates.length} duplicate files wasting storage space`,
-						impact: `Save ${Math.round(duplicates.reduce((sum, f) => sum + f.sizeMb, 0) / 1024)} GB`,
-						impactType: "SAVINGS",
-						source,
-						itemsCount: duplicates.length,
-						riskLevel: "LOW",
-						estimatedSavings:
-							this.calculateStorageWaste(duplicates),
-					},
+				// Group by hash for consolidation
+				const duplicateGroups = new Map<string, FileData[]>();
+				duplicates.forEach((f) => {
+					const key = f.duplicateGroup || f.fileHash!;
+					if (!duplicateGroups.has(key)) {
+						duplicateGroups.set(key, []);
+					}
+					duplicateGroups.get(key)!.push(f);
 				});
 
-				// Save playbook items with CORRECT externalId (not fileHash!)
-				const itemBatches = this.chunkArray(duplicates, 500);
-				for (const batch of itemBatches) {
-					await tx.playbookItem.createMany({
-						data: batch.map((f) => ({
-							playbookId: playbook.id,
-							itemName: f.name,
-							itemType: "file",
-							externalId: f.externalId, // CRITICAL: Use externalId (e.g., Dropbox file ID)
-							metadata: {
-								size: f.sizeMb,
-								path: f.path,
-								url: f.url,
-								source: f.source,
-								fileHash: f.fileHash, // Store hash in metadata for reference
-								duplicateGroup: f.duplicateGroup,
-							},
-						})),
+				// Only keep groups with 2+ files (true duplicates)
+				const trueDuplicates: FileData[] = [];
+				for (const group of duplicateGroups.values()) {
+					if (group.length >= 2) {
+						// Keep the most recently accessed, mark others for deletion
+						const sorted = group.sort(
+							(a, b) =>
+								(b.lastAccessed?.getTime() || 0) -
+								(a.lastAccessed?.getTime() || 0)
+						);
+						// Add all except the first (most recent) to deletion list
+						trueDuplicates.push(...sorted.slice(1));
+					}
+				}
+
+				if (trueDuplicates.length > 0) {
+					const totalSizeMb = trueDuplicates.reduce(
+						(sum, f) => sum + f.sizeMb,
+						0
+					);
+
+					const playbook = await tx.playbook.create({
+						data: {
+							auditResultId,
+							organizationId,
+							title: `Consolidate ${trueDuplicates.length} Duplicate Files (95% Confidence)`,
+							description: `Found ${trueDuplicates.length} duplicate files using hash-based detection. Files with identical content will be archived, keeping the most recently accessed version.`,
+							impact: `Save ${Math.round(totalSizeMb / 1024)} GB of storage`,
+							impactType: "SAVINGS" as ImpactType,
+							source,
+							itemsCount: trueDuplicates.length,
+							riskLevel: "LOW" as RiskLevel,
+							estimatedSavings: Math.round(
+								(totalSizeMb / 1024) * 0.1 * 12
+							),
+							status: "PENDING",
+						},
 					});
+
+					const itemBatches = this.chunkArray(trueDuplicates, 500);
+					for (const batch of itemBatches) {
+						await tx.playbookItem.createMany({
+							data: batch.map((f) => ({
+								playbookId: playbook.id,
+								itemName: f.name,
+								itemType: "file",
+								externalId: f.externalId,
+								metadata: {
+									size: f.sizeMb,
+									path: f.path,
+									url: f.url,
+									source: f.source,
+									fileHash: f.fileHash,
+									duplicateGroup: f.duplicateGroup,
+									lastAccessed: f.lastAccessed,
+									ownerEmail: f.ownerEmail,
+									// For undo: store original location
+									originalPath: f.path,
+									originalParent: f.path
+										?.split("/")
+										.slice(0, -1)
+										.join("/"),
+								},
+							})),
+						});
+					}
 				}
 			}
 
-			// Playbook 2: Public files
+			// ========================================================================
+			// PLAYBOOK 2: Public Files (Security Risk)
+			// ========================================================================
 			const publicFiles = data.files.filter((f) => f.isPubliclyShared);
+
 			if (publicFiles.length > 0) {
 				const playbook = await tx.playbook.create({
 					data: {
 						auditResultId,
 						organizationId,
 						title: `Secure ${publicFiles.length} Publicly Shared Files`,
-						description: `Found ${publicFiles.length} files that are publicly accessible`,
-						impact: `Reduce security risks`,
-						impactType: "SECURITY",
+						description: `These files are publicly accessible. Review and revoke public access to prevent data leaks.`,
+						impact: `Reduce ${publicFiles.length} security vulnerabilities`,
+						impactType: "SECURITY" as ImpactType,
 						source,
 						itemsCount: publicFiles.length,
 						riskLevel: publicFiles.some(
 							(f) => f.type === "DATABASE"
 						)
-							? "CRITICAL"
-							: "HIGH",
+							? ("CRITICAL" as RiskLevel)
+							: ("HIGH" as RiskLevel),
+						status: "PENDING",
 					},
 				});
 
@@ -231,39 +377,53 @@ export class ConnectorService {
 							playbookId: playbook.id,
 							itemName: f.name,
 							itemType: "file",
-							externalId: f.externalId, // CRITICAL: Use externalId for API operations
+							externalId: f.externalId,
 							metadata: {
 								url: f.url,
-								sharedWith: f.sharedWith,
+								path: f.path,
 								type: f.type,
 								source: f.source,
-								path: f.path,
+								ownerEmail: f.ownerEmail,
+								// For undo: store current sharing settings
+								originalSharing: {
+									isPubliclyShared: f.isPubliclyShared,
+									sharedWith: f.sharedWith,
+								},
 							},
 						})),
 					});
 				}
 			}
 
-			// Playbook 4: Old unused files (1+ year)
+			// ========================================================================
+			// PLAYBOOK 3: Old Unused Files (12 months - UPDATED from 24)
+			// ========================================================================
+			const cutoffDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // 12 months
 			const oldFiles = data.files.filter(
-				(f) =>
-					f.lastAccessed &&
-					f.lastAccessed <
-						new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+				(f) => f.lastAccessed && f.lastAccessed < cutoffDate
 			);
+
 			if (oldFiles.length > 0) {
+				const totalSizeMb = oldFiles.reduce(
+					(sum, f) => sum + f.sizeMb,
+					0
+				);
+
 				const playbook = await tx.playbook.create({
 					data: {
 						auditResultId,
 						organizationId,
-						title: `Archive ${oldFiles.length} Old Unused Files`,
-						description: `Files not accessed in over a year`,
-						impact: `Save ${Math.round(oldFiles.reduce((sum, f) => sum + f.sizeMb, 0) / 1024)} GB`,
-						impactType: "SAVINGS",
+						title: `Archive ${oldFiles.length} Untouched Files (>12 Months)`,
+						description: `These files haven't been accessed in over 12 months and are candidates for archival.`,
+						impact: `Save ${Math.round(totalSizeMb / 1024)} GB of active storage`,
+						impactType: "SAVINGS" as ImpactType,
 						source,
 						itemsCount: oldFiles.length,
-						riskLevel: "LOW",
-						estimatedSavings: this.calculateStorageWaste(oldFiles),
+						riskLevel: "MEDIUM" as RiskLevel,
+						estimatedSavings: Math.round(
+							(totalSizeMb / 1024) * 0.1 * 12
+						),
+						status: "PENDING",
 					},
 				});
 
@@ -274,32 +434,107 @@ export class ConnectorService {
 							playbookId: playbook.id,
 							itemName: f.name,
 							itemType: "file",
-							externalId: f.externalId, // CRITICAL: Use externalId
+							externalId: f.externalId,
 							metadata: {
 								size: f.sizeMb,
 								lastAccessed: f.lastAccessed,
 								path: f.path,
+								url: f.url,
 								source: f.source,
+								ownerEmail: f.ownerEmail,
+								daysSinceAccess: Math.floor(
+									(Date.now() -
+										(f.lastAccessed?.getTime() || 0)) /
+										(24 * 60 * 60 * 1000)
+								),
+								// For undo: store original location
+								originalPath: f.path,
+								originalStatus: "ACTIVE",
 							},
 						})),
 					});
 				}
 			}
 
-			// Playbook 5: Guest users (security risk)
+			// ========================================================================
+			// PLAYBOOK 4: Inactive Slack Channels (<5 messages in 12 months)
+			// ========================================================================
+			if (source === "SLACK" && data.channels) {
+				// Identify inactive channels
+				const inactiveChannels = data.channels.filter((ch) => {
+					if (ch.isArchived) return false;
+
+					const lastActivity = ch.lastActivity;
+					if (!lastActivity) return false;
+
+					const monthsInactive =
+						(Date.now() - lastActivity.getTime()) /
+						(30 * 24 * 60 * 60 * 1000);
+
+					// Channel is inactive if >12 months old AND has <5 members
+					// (Using memberCount as proxy for message activity)
+					return monthsInactive >= 12 && ch.memberCount < 5;
+				});
+
+				if (inactiveChannels.length > 0) {
+					const playbook = await tx.playbook.create({
+						data: {
+							auditResultId,
+							organizationId,
+							title: `Archive ${inactiveChannels.length} Inactive Slack Channels`,
+							description: `These channels have minimal activity (<5 members) and haven't been used in 12+ months.`,
+							impact: `Reduce workspace clutter and improve organization`,
+							impactType: "EFFICIENCY" as ImpactType,
+							source,
+							itemsCount: inactiveChannels.length,
+							riskLevel: "LOW" as RiskLevel,
+							status: "PENDING",
+						},
+					});
+
+					const itemBatches = this.chunkArray(inactiveChannels, 500);
+					for (const batch of itemBatches) {
+						await tx.playbookItem.createMany({
+							data: batch.map((ch) => ({
+								playbookId: playbook.id,
+								itemName: ch.name,
+								itemType: "channel",
+								externalId: ch.id,
+								metadata: {
+									memberCount: ch.memberCount,
+									lastActivity: ch.lastActivity,
+									isPrivate: ch.isPrivate,
+									source,
+									// For undo: store original state
+									originalState: {
+										isArchived: ch.isArchived,
+										memberCount: ch.memberCount,
+									},
+								},
+							})),
+						});
+					}
+				}
+			}
+
+			// ========================================================================
+			// PLAYBOOK 5: Guest Users (Security Risk)
+			// ========================================================================
 			const guestUsers = data.users.filter((u) => u.isGuest);
+
 			if (guestUsers.length > 0) {
 				const playbook = await tx.playbook.create({
 					data: {
 						auditResultId,
 						organizationId,
 						title: `Review ${guestUsers.length} Guest Users`,
-						description: `Guest users have access to your workspace`,
-						impact: `Reduce security risks`,
-						impactType: "SECURITY",
+						description: `Guest users have access to your workspace. Review and remove unnecessary guest access.`,
+						impact: `Reduce ${guestUsers.length} potential security risks`,
+						impactType: "SECURITY" as ImpactType,
 						source,
 						itemsCount: guestUsers.length,
-						riskLevel: "HIGH",
+						riskLevel: "HIGH" as RiskLevel,
+						status: "PENDING",
 					},
 				});
 
@@ -314,7 +549,14 @@ export class ConnectorService {
 							metadata: {
 								name: u.name,
 								lastActive: u.lastActive,
+								role: u.role,
 								source,
+								// For undo: store original access level
+								originalAccess: {
+									isGuest: true,
+									role: u.role,
+									licenseType: u.licenseType,
+								},
 							},
 						})),
 					});
@@ -324,7 +566,7 @@ export class ConnectorService {
 	}
 
 	/**
-	 * Execute a playbook and log results
+	 * Execute a playbook and create undo records
 	 */
 	async executePlaybook(playbookId: string, userId: string): Promise<void> {
 		const playbook = await prisma.playbook.findUnique({
@@ -339,8 +581,8 @@ export class ConnectorService {
 			throw new Error("Playbook not found");
 		}
 
-		if (playbook.status !== "PENDING" && playbook.status !== "APPROVED") {
-			throw new Error("Playbook cannot be executed");
+		if (playbook.status !== "APPROVED") {
+			throw new Error("Playbook must be approved before execution");
 		}
 
 		const startTime = Date.now();
@@ -351,9 +593,13 @@ export class ConnectorService {
 		});
 
 		try {
-			const results = await this.performPlaybookActions(playbook);
+			const results = await this.performPlaybookActions(playbook, userId);
 
-			// Create audit log entry
+			// Create audit log entry with undo actions
+			const undoExpiresAt = new Date(
+				Date.now() + 30 * 24 * 60 * 60 * 1000
+			); // 30 days
+
 			await prisma.auditLog.create({
 				data: {
 					organizationId: playbook.organizationId,
@@ -370,7 +616,10 @@ export class ConnectorService {
 						itemsProcessed: results.processed,
 						itemsFailed: results.failed,
 						executionTime: Date.now() - startTime,
+						affectedFiles: results.affectedFiles,
 					},
+					undoActions: results.undoActions,
+					undoExpiresAt,
 				},
 			});
 
@@ -397,6 +646,8 @@ export class ConnectorService {
 						playbookId: playbook.id,
 						title: playbook.title,
 						itemsProcessed: results.processed,
+						canUndo: true,
+						undoExpiresAt,
 					},
 				},
 			});
@@ -432,10 +683,18 @@ export class ConnectorService {
 		}
 	}
 
+	/**
+	 * Perform playbook actions and collect undo information
+	 */
 	async performPlaybookActions(
-		playbook: PlaybookWithItems
-	): Promise<{ processed: number; failed: number }> {
-		// Fetch integration and create connector for the playbook's source
+		playbook: PlaybookWithItems,
+		userId?: string
+	): Promise<{
+		processed: number;
+		failed: number;
+		affectedFiles: string[];
+		undoActions: any[];
+	}> {
 		const integration = await prisma.toolIntegration.findUnique({
 			where: {
 				organizationId_source: {
@@ -455,41 +714,53 @@ export class ConnectorService {
 					metadata: integration.metadata as Record<string, any>,
 				});
 			} catch (err) {
-				logger.warn(`Connector creation failed for execution: ${err}`);
+				logger.warn(`Connector creation failed: ${err}`);
 				connector = null;
 			}
 		}
 
 		let processed = 0;
 		let failed = 0;
+		const affectedFiles: string[] = [];
+		const undoActions: any[] = [];
 
 		const items = Array.isArray(playbook.items) ? playbook.items : [];
 
 		for (const item of items) {
-			// Skip items that are not selected
 			if (item.isSelected === false) continue;
 
 			const actionType = this.mapPlaybookToActionType(
-				playbook.impactType as string
+				playbook.impactType
 			);
 
 			try {
 				if (!connector) {
-					// No connector available; log and treat as best-effort processed
-					logger.info(
-						`No integration connector found for organization ${playbook.organizationId} source ${playbook.source}. Marking item as processed (best-effort).`
-					);
+					logger.info(`No connector for ${playbook.source}`);
 					processed += 1;
 					continue;
 				}
 
-				// Execute action based on mapped action type
+				// Prepare undo action before executing
+				const undoAction = {
+					itemId: item.id,
+					itemName: item.itemName,
+					itemType: item.itemType,
+					externalId: item.externalId,
+					actionType,
+					originalMetadata: item.metadata,
+					executedAt: new Date(),
+					executedBy: userId,
+				};
+
+				// Execute action
 				switch (actionType) {
-					case "DELETE_FILE":
-						await connector.deleteFile(
+					case "ARCHIVE_FILE":
+						await connector.archiveFile(
 							item.externalId || "",
 							(item.metadata as Record<string, any>) || {}
 						);
+						affectedFiles.push(item.itemName);
+						undoActions.push(undoAction);
 						break;
 
 					case "UPDATE_PERMISSIONS":
@@ -497,6 +768,8 @@ export class ConnectorService {
 							item.externalId || "",
 							(item.metadata as Record<string, any>) || {}
 						);
+						affectedFiles.push(item.itemName);
+						undoActions.push(undoAction);
 						break;
 
 					case "ARCHIVE_CHANNEL":
@@ -504,6 +777,8 @@ export class ConnectorService {
 							item.externalId || "",
 							(item.metadata as Record<string, any>) || {}
 						);
+						affectedFiles.push(item.itemName);
+						undoActions.push(undoAction);
 						break;
 
 					case "REMOVE_GUEST":
@@ -511,21 +786,12 @@ export class ConnectorService {
 							item.externalId || "",
 							(item.metadata as Record<string, any>) || {}
 						);
-						break;
-
-					case "REVOKE_ACCESS":
-						// REVOKE_ACCESS is treated as UPDATE_PERMISSIONS for now
-						await connector.updatePermissions(
-							item.externalId || "",
-							(item.metadata as Record<string, any>) || {}
-						);
+						affectedFiles.push(item.itemName);
+						undoActions.push(undoAction);
 						break;
 
 					default:
-						// Unknown action type; log and mark as processed
-						logger.info(
-							`Unknown action type ${actionType} for playbook, skipping execution`
-						);
+						logger.info(`Unknown action type ${actionType}`);
 				}
 
 				processed += 1;
@@ -536,9 +802,6 @@ export class ConnectorService {
 					actionType,
 				});
 
-				// If the connector explicitly does not implement the action,
-				// bubble the error up so the route returns a 500 and the client
-				// can display the precise error via toast.
 				const message = err && (err.message || String(err));
 				if (
 					typeof message === "string" &&
@@ -551,19 +814,16 @@ export class ConnectorService {
 			}
 		}
 
-		return { processed, failed };
+		return { processed, failed, affectedFiles, undoActions };
 	}
 
 	private mapPlaybookToActionType(impactType: string): string {
 		switch (impactType) {
 			case "SECURITY":
-				// For security risks, prioritize revoking access and updating permissions
 				return "REVOKE_ACCESS";
 			case "SAVINGS":
-				// For storage/cost savings, delete or archive files
-				return "DELETE_FILE";
+				return "ARCHIVE_FILE";
 			case "EFFICIENCY":
-				// For efficiency, archive channels or pages
 				return "ARCHIVE_CHANNEL";
 			default:
 				return "OTHER";

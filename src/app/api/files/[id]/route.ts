@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 
 /**
  * DELETE /api/files/[id]
- * Delete a file from both the external platform and local database
+ * Archive a file from both the external platform and local database
  */
 export async function DELETE(
 	req: NextRequest,
@@ -41,10 +41,10 @@ export async function DELETE(
 				);
 			}
 
-			// Prevent deleting already deleted files
-			if (file.status === "DELETED") {
+			// Prevent deleting already archived files
+			if (file.status === "DELETED" || file.status === "ARCHIVED") {
 				return NextResponse.json(
-					{ error: "File is already deleted" },
+					{ error: "File is already archived" },
 					{ status: 400 }
 				);
 			}
@@ -62,7 +62,7 @@ export async function DELETE(
 			if (!integration) {
 				return NextResponse.json(
 					{
-						error: `Integration not found for ${file.source}. Cannot delete file from external platform.`,
+						error: `Integration not found for ${file.source}. Cannot archive file in external platform.`,
 					},
 					{ status: 404 }
 				);
@@ -71,7 +71,7 @@ export async function DELETE(
 			if (!integration.isActive) {
 				return NextResponse.json(
 					{
-						error: `${file.source} integration is inactive. Please reconnect to delete files.`,
+						error: `${file.source} integration is inactive. Please reconnect to archive files.`,
 					},
 					{ status: 400 }
 				);
@@ -101,7 +101,7 @@ export async function DELETE(
 				// Check if externalId exists (required for deletion)
 				if (!file.externalId) {
 					throw new Error(
-						"File missing external ID. Cannot delete from platform."
+						"File missing external ID. Cannot archive from platform."
 					);
 				}
 
@@ -114,7 +114,7 @@ export async function DELETE(
 				};
 
 				// Attempt deletion on external platform
-				await connector.deleteFile(file.externalId, fileMetadata);
+				await connector.archiveFile(file.externalId, fileMetadata);
 				externalDeletionSuccess = true;
 
 				// Store updated tokens if refreshed
@@ -124,7 +124,7 @@ export async function DELETE(
 				}
 			} catch (error) {
 				logger.error(
-					`Failed to delete file from ${file.source}:`,
+					`Failed to archive file from ${file.source}:`,
 					error as Error
 				);
 				externalError =
@@ -147,14 +147,14 @@ export async function DELETE(
 
 					return NextResponse.json(
 						{
-							error: `Failed to delete file from ${file.source}: ${externalError}`,
+							error: `Failed to archive file from ${file.source}: ${externalError}`,
 						},
 						{ status: 500 }
 					);
 				}
 
 				logger.warn(
-					`File deletion not supported for ${file.source}, proceeding with local soft delete only`
+					`File archive not supported for ${file.source}, proceeding with local soft archive only`
 				);
 			}
 
@@ -169,11 +169,11 @@ export async function DELETE(
 				});
 			}
 
-			// 5. Soft delete in local database
+			// 5. Soft archive in local database
 			await prisma.file.update({
 				where: { id },
 				data: {
-					status: "DELETED",
+					status: "ARCHIVED",
 					updatedAt: new Date(),
 				},
 			});
@@ -185,7 +185,7 @@ export async function DELETE(
 					data: {
 						organizationId: user.organizationId,
 						userId: user.id,
-						action: "file.deleted",
+						action: "file.archived",
 						metadata: {
 							fileId: file.id,
 							fileName: file.name,
@@ -203,7 +203,7 @@ export async function DELETE(
 					data: {
 						organizationId: user.organizationId,
 						userId: user.id,
-						actionType: "DELETE_FILE",
+						actionType: "ARCHIVE_FILE",
 						target: file.name,
 						targetType: "File",
 						executor: `${user.name || user.email}`,
@@ -235,10 +235,10 @@ export async function DELETE(
 
 			// 7. Return success response
 			const message = externalDeletionSuccess
-				? `File "${file.name}" deleted successfully from ${file.source} and database`
+				? `File "${file.name}" archived successfully from ${file.source} and database`
 				: externalError?.toLowerCase().includes("not implemented")
-					? `File "${file.name}" marked as deleted (${file.source} does not support automatic deletion)`
-					: `File "${file.name}" marked as deleted locally, but external deletion failed`;
+					? `File "${file.name}" marked as archived (${file.source} does not support automatic deletion)`
+					: `File "${file.name}" marked as archived locally, but external deletion failed`;
 
 			return NextResponse.json({
 				success: true,
@@ -247,13 +247,13 @@ export async function DELETE(
 					id: file.id,
 					name: file.name,
 					source: file.source,
-					status: "DELETED",
+					status: "ARCHIVED",
 				},
 				externalDeletionSuccess,
 				externalError: externalError || undefined,
 			});
 		} catch (error) {
-			logger.error("Failed to delete file:", error as Error);
+			logger.error("Failed to archive file:", error as Error);
 
 			const errorMessage =
 				error instanceof Error ? error.message : "Unknown error";
@@ -271,7 +271,7 @@ export async function DELETE(
 
 			return NextResponse.json(
 				{
-					error: errorMessage || "Failed to delete file",
+					error: errorMessage || "Failed to archive file",
 				},
 				{ status: 500 }
 			);
@@ -294,7 +294,7 @@ async function logFailedDeletion(
 			data: {
 				organizationId,
 				userId,
-				actionType: "DELETE_FILE",
+				actionType: "ARCHIVE_FILE",
 				target: file?.name || "Unknown file",
 				targetType: "File",
 				executor: userEmail,

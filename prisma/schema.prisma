@@ -222,7 +222,7 @@ enum AuditLogStatus {
 
 enum AuditLogActionType {
   REVOKE_ACCESS
-  DELETE_FILE
+  ARCHIVE_FILE
   ARCHIVE_CHANNEL
   ARCHIVE_PAGE
   REMOVE_GUEST

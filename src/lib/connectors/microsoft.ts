@@ -8,6 +8,7 @@ import {
 	UserData,
 } from "./types";
 import crypto from "crypto";
+import { logger } from "../logger";
 
 export class MicrosoftConnector extends BaseConnector {
 	private client: Client;
@@ -26,16 +27,60 @@ export class MicrosoftConnector extends BaseConnector {
 		try {
 			await this.client.api("/me").get();
 			return true;
-		} catch {
+		} catch (error) {
+			logger.error("Microsoft connection test failed:", error);
 			return false;
 		}
 	}
 
 	async refreshToken(): Promise<string> {
-		throw new Error("Token refresh must be handled by OAuth flow");
+		if (!this.config.refreshToken) {
+			throw new Error("No refresh token available for Microsoft");
+		}
+
+		try {
+			const response = await fetch(
+				"https://login.microsoftonline.com/common/oauth2/v2.0/token",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+					body: new URLSearchParams({
+						grant_type: "refresh_token",
+						refresh_token: this.config.refreshToken,
+						client_id: process.env.MICROSOFT_CLIENT_ID!,
+						client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+						scope: "https://graph.microsoft.com/.default",
+					}),
+				}
+			);
+
+			if (!response.ok) {
+				const error = await response.text();
+				throw new Error(`Token refresh failed: ${error}`);
+			}
+
+			const data = await response.json();
+
+			// Update the client with new token
+			this.client = Client.init({
+				authProvider: (done) => {
+					done(null, data.access_token);
+				},
+			});
+
+			return data.access_token;
+		} catch (error) {
+			throw new Error(
+				`Failed to refresh Microsoft token: ${(error as Error).message}`
+			);
+		}
 	}
 
 	async fetchAuditData(): Promise<AuditData> {
+		await this.ensureValidToken();
+
 		const [files, users] = await Promise.all([
 			this.fetchFiles(),
 			this.fetchUsers(),
@@ -51,7 +96,7 @@ export class MicrosoftConnector extends BaseConnector {
 		return {
 			files,
 			users,
-			storageUsedGb: Math.round((totalStorage / 1024) * 100) / 100,
+			storageUsedGb: this.mbToGb(totalStorage),
 			totalLicenses: users.length,
 			activeUsers,
 		};
@@ -65,6 +110,33 @@ export class MicrosoftConnector extends BaseConnector {
 		const drives = await this.getAllDrives();
 
 		for (const drive of drives) {
+			await this.fetchFilesFromDrive(drive, files, duplicateMap);
+		}
+
+		// Mark duplicates after all files are collected
+		for (const file of files) {
+			const duplicateKey = file.duplicateGroup!;
+			const duplicateIds = duplicateMap.get(duplicateKey);
+
+			if (duplicateIds && duplicateIds.length > 1) {
+				file.isDuplicate = true;
+			} else {
+				file.duplicateGroup = undefined;
+			}
+		}
+
+		logger.info(
+			`Fetched ${files.length} files from Microsoft OneDrive/SharePoint`
+		);
+		return files;
+	}
+
+	private async fetchFilesFromDrive(
+		drive: any,
+		files: FileData[],
+		duplicateMap: Map<string, string[]>
+	): Promise<void> {
+		try {
 			let nextLink: string | undefined =
 				`/drives/${drive.id}/root/children`;
 
@@ -73,7 +145,7 @@ export class MicrosoftConnector extends BaseConnector {
 					.api(nextLink)
 					.top(999)
 					.select(
-						"id,name,size,file,webUrl,lastModifiedDateTime,createdDateTime,createdBy,shared,permissions"
+						"id,name,size,file,webUrl,lastModifiedDateTime,createdDateTime,createdBy,shared,permissions,parentReference"
 					)
 					.get();
 
@@ -94,6 +166,7 @@ export class MicrosoftConnector extends BaseConnector {
 						duplicateMap.set(duplicateKey, []);
 					}
 					duplicateMap.get(duplicateKey)!.push(item.id);
+
 					const sharedWith = await this.getSharedWith(
 						drive.id,
 						item.id
@@ -113,42 +186,35 @@ export class MicrosoftConnector extends BaseConnector {
 							? new Date(item.lastModifiedDateTime)
 							: item.createdDateTime
 								? new Date(item.createdDateTime)
-								: new Date(), // ✅ FIXED: Always provide a date
+								: new Date(),
 						ownerEmail: item.createdBy?.user?.email,
 						isPubliclyShared:
 							item.shared?.scope === "anonymous" ||
 							item.shared?.scope === "organization",
 						sharedWith,
-						isDuplicate: false, // Will be updated after processing all files
+						isDuplicate: false,
 						duplicateGroup: duplicateKey,
 					});
 				}
 
 				nextLink = response["@odata.nextLink"];
 			}
+		} catch (error) {
+			logger.error(`Error fetching files from drive ${drive.id}:`, error);
 		}
-
-		// Mark duplicates after all files are collected
-		for (const file of files) {
-			const duplicateKey = file.duplicateGroup!;
-			const duplicateIds = duplicateMap.get(duplicateKey);
-
-			if (duplicateIds && duplicateIds.length > 1) {
-				file.isDuplicate = true;
-			} else {
-				file.duplicateGroup = undefined; // Clear group if not a duplicate
-			}
-		}
-
-		return files;
 	}
 
 	private async getAllDrives(): Promise<any[]> {
 		const drives: any[] = [];
 
-		// Get user's OneDrive
-		const myDrive = await this.client.api("/me/drive").get();
-		drives.push(myDrive);
+		try {
+			// Get user's OneDrive
+			const myDrive = await this.client.api("/me/drive").get();
+			drives.push(myDrive);
+			logger.info(`Found OneDrive: ${myDrive.id}`);
+		} catch (error) {
+			logger.error("Error fetching OneDrive:", error);
+		}
 
 		// Get SharePoint sites drives
 		try {
@@ -157,18 +223,26 @@ export class MicrosoftConnector extends BaseConnector {
 				.filter("siteCollection/root ne null")
 				.get();
 
+			logger.info(`Found ${sites.value?.length || 0} SharePoint sites`);
+
 			for (const site of sites.value || []) {
 				try {
 					const siteDrives = await this.client
 						.api(`/sites/${site.id}/drives`)
 						.get();
+
 					drives.push(...(siteDrives.value || []));
-				} catch {
-					// Skip sites we can't access
+					logger.info(
+						`Found ${siteDrives.value?.length || 0} drives in site ${site.id}`
+					);
+				} catch (error) {
+					logger.warn(
+						`Could not access drives for site ${site.id}: ${error}`
+					);
 				}
 			}
-		} catch {
-			// Skip if no access to sites
+		} catch (error) {
+			logger.warn(`Could not access SharePoint sites: ${error}`);
 		}
 
 		return drives;
@@ -188,8 +262,9 @@ export class MicrosoftConnector extends BaseConnector {
 			for (const perm of permissions.value || []) {
 				if (perm.grantedToIdentitiesV2) {
 					perm.grantedToIdentitiesV2.forEach((identity: any) => {
-						if (identity.user?.email)
+						if (identity.user?.email) {
 							emails.push(identity.user.email);
+						}
 					});
 				}
 				if (perm.grantedTo?.user?.email) {
@@ -207,32 +282,38 @@ export class MicrosoftConnector extends BaseConnector {
 		const users: UserData[] = [];
 		let nextLink: string | undefined = "/users";
 
-		while (nextLink) {
-			const response = await this.client
-				.api(nextLink)
-				.top(999)
-				.select(
-					"id,displayName,mail,userPrincipalName,accountEnabled,signInActivity,assignedLicenses"
-				)
-				.get();
+		try {
+			while (nextLink) {
+				const response = await this.client
+					.api(nextLink)
+					.top(999)
+					.select(
+						"id,displayName,mail,userPrincipalName,accountEnabled,signInActivity,assignedLicenses,userType"
+					)
+					.get();
 
-			for (const user of response.value || []) {
-				users.push({
-					email: user.mail || user.userPrincipalName,
-					name: user.displayName,
-					role: "user",
-					lastActive: user.signInActivity?.lastSignInDateTime
-						? new Date(user.signInActivity.lastSignInDateTime)
-						: undefined,
-					isGuest: user.userType === "Guest",
-					licenseType:
-						user.assignedLicenses?.length > 0
-							? "licensed"
-							: "unlicensed",
-				});
+				for (const user of response.value || []) {
+					users.push({
+						email: user.mail || user.userPrincipalName,
+						name: user.displayName,
+						role: "user",
+						lastActive: user.signInActivity?.lastSignInDateTime
+							? new Date(user.signInActivity.lastSignInDateTime)
+							: undefined,
+						isGuest: user.userType === "Guest",
+						licenseType:
+							user.assignedLicenses?.length > 0
+								? "licensed"
+								: "unlicensed",
+					});
+				}
+
+				nextLink = response["@odata.nextLink"];
 			}
 
-			nextLink = response["@odata.nextLink"];
+			logger.info(`Fetched ${users.length} Microsoft users`);
+		} catch (error) {
+			logger.error("Error fetching Microsoft users:", error);
 		}
 
 		return users;
@@ -244,6 +325,10 @@ export class MicrosoftConnector extends BaseConnector {
 			.update(`${name}-${size}`)
 			.digest("hex");
 	}
+
+	// ============================================================================
+	// ANALYSIS METHODS
+	// ============================================================================
 
 	async identifyDuplicateFiles(): Promise<FileData[]> {
 		const files = await this.fetchFiles();
@@ -280,25 +365,50 @@ export class MicrosoftConnector extends BaseConnector {
 		return users.filter((u) => u.isGuest);
 	}
 
+	// ============================================================================
+	// EXECUTION METHODS
+	// ============================================================================
+
 	/**
-	 * Delete a file permanently from Microsoft OneDrive/SharePoint
+	 * Archive a file in OneDrive/SharePoint by moving it to Recycle Bin
+	 * This is safer than permanent deletion and allows for recovery within 93 days
 	 */
-	async deleteFile(
+	async archiveFile(
 		externalId: string,
 		metadata: Record<string, any>
 	): Promise<void> {
+		await this.ensureValidToken();
+
 		try {
 			const driveId = metadata?.driveId;
 			if (!driveId) {
-				throw new Error("driveId required in metadata for deletion");
+				throw new Error("driveId required in metadata for archiving");
 			}
 
+			// Get file info first for logging
+			const fileInfo = await this.client
+				.api(`/drives/${driveId}/items/${externalId}`)
+				.select("name,size")
+				.get();
+
+			const fileName = fileInfo.name || "Unknown";
+			const fileSizeMb = fileInfo.size
+				? this.bytesToMb(fileInfo.size)
+				: 0;
+
+			// Delete moves the file to Recycle Bin (soft delete)
+			// Files can be restored from Recycle Bin for 93 days
 			await this.client
 				.api(`/drives/${driveId}/items/${externalId}`)
 				.delete();
+
+			logger.info(
+				`Archived Microsoft file "${fileName}" (${externalId}) to Recycle Bin. ` +
+					`Size: ${fileSizeMb} MB, Recoverable for 93 days`
+			);
 		} catch (error: any) {
 			throw new Error(
-				`Failed to delete Microsoft file ${externalId}: ${error.message}`
+				`Failed to archive Microsoft file ${externalId}: ${error.message}`
 			);
 		}
 	}
@@ -310,6 +420,8 @@ export class MicrosoftConnector extends BaseConnector {
 		externalId: string,
 		metadata: Record<string, any>
 	): Promise<void> {
+		await this.ensureValidToken();
+
 		try {
 			const driveId = metadata?.driveId;
 			if (!driveId) {
@@ -321,6 +433,8 @@ export class MicrosoftConnector extends BaseConnector {
 				.api(`/drives/${driveId}/items/${externalId}/permissions`)
 				.get();
 
+			let removedCount = 0;
+
 			// Remove all sharing permissions (keep owner)
 			for (const perm of permissions.value || []) {
 				if (perm.roles?.includes("owner")) continue; // Keep owner
@@ -330,10 +444,49 @@ export class MicrosoftConnector extends BaseConnector {
 						`/drives/${driveId}/items/${externalId}/permissions/${perm.id}`
 					)
 					.delete();
+
+				removedCount++;
 			}
+
+			logger.info(
+				`Revoked ${removedCount} sharing permissions for Microsoft file ${externalId}`
+			);
 		} catch (error: any) {
 			throw new Error(
 				`Failed to update permissions for Microsoft file ${externalId}: ${error.message}`
+			);
+		}
+	}
+
+	/**
+	 * Remove a guest user from Azure AD
+	 */
+	async removeGuest(
+		externalId: string,
+		_metadata: Record<string, any>
+	): Promise<void> {
+		void _metadata;
+		await this.ensureValidToken();
+
+		try {
+			// Get user info for logging
+			const userInfo = await this.client
+				.api(`/users/${externalId}`)
+				.select("displayName,mail,userPrincipalName")
+				.get();
+
+			const userName =
+				userInfo.displayName || userInfo.mail || externalId;
+
+			// Delete user from Azure AD
+			await this.client.api(`/users/${externalId}`).delete();
+
+			logger.info(
+				`Removed guest user "${userName}" (${externalId}) from Azure AD`
+			);
+		} catch (error: any) {
+			throw new Error(
+				`Failed to remove guest user ${externalId}: ${error.message}`
 			);
 		}
 	}
@@ -346,13 +499,63 @@ export class MicrosoftConnector extends BaseConnector {
 		_metadata: Record<string, any>
 	): Promise<void> {
 		void _metadata;
+		await this.ensureValidToken();
+
 		try {
+			// Get user info for logging
+			const userInfo = await this.client
+				.api(`/users/${externalId}`)
+				.select("displayName,mail,userPrincipalName")
+				.get();
+
+			const userName =
+				userInfo.displayName || userInfo.mail || externalId;
+
+			// Disable user account
 			await this.client.api(`/users/${externalId}`).patch({
 				accountEnabled: false,
 			});
+
+			logger.info(
+				`Disabled user account "${userName}" (${externalId}) in Azure AD`
+			);
 		} catch (error: any) {
 			throw new Error(
 				`Failed to disable Microsoft user ${externalId}: ${error.message}`
+			);
+		}
+	}
+
+	/**
+	 * Restore a file from Recycle Bin (for undo functionality)
+	 */
+	async restoreFile(
+		externalId: string,
+		metadata: Record<string, any>
+	): Promise<void> {
+		await this.ensureValidToken();
+
+		try {
+			const driveId = metadata?.driveId;
+			if (!driveId) {
+				throw new Error("driveId required in metadata for restoration");
+			}
+
+			// Microsoft Graph API doesn't have a direct "restore" endpoint
+			// Files in recycle bin can be restored through the UI or SharePoint API
+			// This would require accessing the recycle bin endpoint
+
+			logger.info(
+				`Restore functionality requires manual restoration from Recycle Bin for file ${externalId}`
+			);
+
+			throw new Error(
+				"Microsoft files must be restored manually from the Recycle Bin within 93 days. " +
+					"Go to OneDrive/SharePoint > Recycle Bin to restore."
+			);
+		} catch (error: any) {
+			throw new Error(
+				`Failed to restore Microsoft file ${externalId}: ${error.message}`
 			);
 		}
 	}
