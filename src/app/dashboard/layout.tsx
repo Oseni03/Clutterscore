@@ -16,7 +16,7 @@ import { DashboardStoreProvider } from "@/zustand/providers/dashboard-store-prov
 import { useRouter } from "next/navigation";
 import { getOrganizations } from "@/server/organizations";
 import { Organization } from "@prisma/client";
-import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 export default function Page({
 	children,
@@ -38,13 +38,16 @@ export default function Page({
 		const fetchOrgs = async () => {
 			try {
 				if (!session?.user.id) return;
-				const organizations = await getOrganizations(session?.user.id);
-				if (organizations) {
+				const { organizations, success, error } =
+					await getOrganizations(session?.user.id);
+				if (success && organizations) {
 					setLocalOrganizations(organizations);
 					setOrganizations(organizations);
+				} else {
+					toast.error(error);
 				}
-			} catch (error) {
-				logger.debug("Error fetching organizations", error as Error);
+			} catch {
+				toast.warning("No workspace found");
 			}
 		};
 
@@ -54,13 +57,9 @@ export default function Page({
 	// Move the state update to useEffect to avoid calling it during render
 	useEffect(() => {
 		const fetchActiveOrg = async () => {
-			const { data, error } =
+			const { data } =
 				await authClient.organization.getFullOrganization();
 
-			if (error) {
-				logger.error("FETCH_ACTIVE_ORG_ERROR:", error);
-				return;
-			}
 			if (data) {
 				const isAdmin = !!data?.members?.find(
 					(member) =>

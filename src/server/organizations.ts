@@ -7,28 +7,35 @@ import { headers } from "next/headers";
 import { Organization } from "@prisma/client";
 import { logger } from "@/lib/logger";
 
-export async function getOrganizations(
-	userId: string
-): Promise<Organization[]> {
-	const members = await prisma.member.findMany({
-		where: {
-			userId,
-		},
-	});
+export async function getOrganizations(userId: string): Promise<{
+	organizations?: Organization[];
+	success: boolean;
+	error?: string;
+}> {
+	try {
+		const members = await prisma.member.findMany({
+			where: {
+				userId,
+			},
+		});
 
-	const organizations = await prisma.organization.findMany({
-		where: {
-			members: {
-				some: {
-					id: {
-						in: members.map((member) => member.id),
+		const organizations = await prisma.organization.findMany({
+			where: {
+				members: {
+					some: {
+						id: {
+							in: members.map((member) => member.id),
+						},
 					},
 				},
 			},
-		},
-	});
+		});
 
-	return organizations;
+		return { success: true, organizations };
+	} catch (error) {
+		logger.error("GET_ORGANIZATION_ERROR:", error);
+		return { success: false, error: (error as Error).message };
+	}
 }
 
 export async function getActiveOrganization(userId: string) {

@@ -1,12 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// lib/logger.ts
-import { sendTelegramMessage } from "@/lib/telegram";
 import { APP_NAME } from "@/lib/config";
 
 const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = process.env.NODE_ENV === "development";
-
-// type LogLevel = "error" | "warn" | "info" | "debug";
+const isServer = typeof window === "undefined";
 
 interface LogContext {
 	userId?: string;
@@ -23,7 +20,7 @@ class Logger {
 	}
 
 	/**
-	 * Log error - Console in dev, Telegram in prod
+	 * Log error - Console in dev, Telegram in prod (server-side only)
 	 */
 	async error(message: string, error?: any, context?: LogContext) {
 		if (isDevelopment) {
@@ -39,20 +36,25 @@ class Logger {
 			// Log to console for server logs
 			console.error(`[ERROR] ${message}`, error?.message);
 
-			// Send to Telegram
-			try {
-				const telegramMessage = this.formatTelegramError(
-					message,
-					error,
-					context
-				);
-				await sendTelegramMessage(telegramMessage);
-			} catch (telegramError) {
-				// Fail silently to avoid logging loops
-				console.error(
-					"Failed to send error to Telegram:",
-					telegramError
-				);
+			// Send to Telegram only on server-side
+			if (isServer) {
+				try {
+					// Dynamic import to prevent client-side bundling
+					const { sendTelegramMessage } = await import(
+						"@/lib/telegram"
+					);
+					const telegramMessage = this.formatTelegramError(
+						message,
+						error,
+						context
+					);
+					await sendTelegramMessage(telegramMessage);
+				} catch (telegramError) {
+					console.error(
+						"Failed to send error to Telegram:",
+						telegramError
+					);
+				}
 			}
 		}
 	}
@@ -69,9 +71,12 @@ class Logger {
 		if (isProduction) {
 			console.warn(`[WARN] ${message}`);
 
-			// Only send critical warnings to Telegram
-			if (context?.critical) {
+			// Only send critical warnings to Telegram (server-side only)
+			if (context?.critical && isServer) {
 				try {
+					const { sendTelegramMessage } = await import(
+						"@/lib/telegram"
+					);
 					const telegramMessage = this.formatTelegramWarning(
 						message,
 						context
@@ -96,7 +101,6 @@ class Logger {
 		}
 
 		if (isProduction) {
-			// Only log to server console, don't spam Telegram
 			console.info(`[INFO] ${message}`);
 		}
 	}
