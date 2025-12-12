@@ -43,7 +43,7 @@ import { AuditLogActionType, AuditLogStatus } from "@prisma/client";
 
 const ACTION_ICONS = {
 	REVOKE_ACCESS: UserX,
-	ARCGIVE_FILE: Trash2,
+	ARCHIVE_FILE: Trash2,
 	ARCHIVE_CHANNEL: Archive,
 	ARCHIVE_PAGE: Archive,
 	REMOVE_GUEST: UserX,
