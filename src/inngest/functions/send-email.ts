@@ -10,13 +10,13 @@ export const sendEmailJob = inngest.createFunction(
 	},
 	{ event: "email/send" },
 	async ({ event, step }) => {
-		const { to, subject, body } = event.data;
+		const { to, subject, html } = event.data; // Change body to html
 
 		await step.run("send", async () => {
 			const resp = await sendEmail({
 				to,
 				subject,
-				react: body,
+				html, // Pass the pre-rendered HTML
 			});
 			if (!resp.success) {
 				logger.error("SEND_EMAIL_ERROR", resp.error);

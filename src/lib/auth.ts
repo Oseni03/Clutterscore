@@ -14,6 +14,7 @@ import MagicLinkEmail from "@/components/emails/magic-link-email";
 import { APP_NAME } from "./config";
 import { logger } from "./logger";
 import { inngest } from "@/inngest/client";
+import { render } from "@react-email/render";
 
 const polarClient = new Polar({
 	accessToken: process.env.POLAR_ACCESS_TOKEN!,
@@ -71,18 +72,22 @@ export const auth = betterAuth({
 		organization({
 			creatorRole: "admin",
 			async sendInvitationEmail(data) {
+				const htmlContent = await render(
+					OrganizationInvitationEmail({
+						// Render to HTML before sending
+						organizationName: data.organization.name,
+						inviterName: data.inviter.user.name || "Someone",
+						inviteeEmail: data.email,
+						invitationId: data.id,
+						role: data.role,
+					})
+				);
 				await inngest.send({
 					name: "email/send",
 					data: {
 						to: data.email,
 						subject: `Invitation to join ${data.organization.name} on ${APP_NAME}`,
-						body: OrganizationInvitationEmail({
-							organizationName: data.organization.name,
-							inviterName: data.inviter.user.name || "Someone",
-							inviteeEmail: data.email,
-							invitationId: data.id,
-							role: data.role,
-						}),
+						html: htmlContent,
 					},
 				});
 			},
@@ -160,12 +165,15 @@ export const auth = betterAuth({
 		magicLink({
 			expiresIn: 60 * 5, // 5 minutes
 			sendMagicLink: async ({ email, url }) => {
+				const htmlContent = await render(
+					MagicLinkEmail({ email, magicLink: url })
+				);
 				await inngest.send({
 					name: "email/send",
 					data: {
 						to: email,
 						subject: "Your Magic Link is Here!",
-						body: MagicLinkEmail({ email, magicLink: url }),
+						body: htmlContent,
 					},
 				});
 			},

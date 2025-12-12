@@ -6,14 +6,16 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendEmail(data: {
 	to: string;
 	subject: string;
-	react: React.ReactNode;
+	html?: string;
+	react?: React.ReactNode;
 }) {
 	try {
 		const { data: result, error } = await resend.emails.send({
 			from: `${APP_NAME} <${APP_NAME.toLowerCase()}@resend.dev>`,
 			to: data.to,
 			subject: data.subject,
-			react: data.react,
+			// Use html if provided, otherwise use react
+			...(data.html ? { html: data.html } : { react: data.react }),
 		});
 
 		if (error) {
