@@ -173,7 +173,7 @@ export const auth = betterAuth({
 					data: {
 						to: email,
 						subject: "Your Magic Link is Here!",
-						body: htmlContent,
+						html: htmlContent,
 					},
 				});
 			},
