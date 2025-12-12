@@ -102,6 +102,7 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 			if (!data || !success) {
 				toast.dismiss();
 				toast.error(error || "Failed to create workspace");
+				setIsLoading(false); // Add this
 				return;
 			}
 
@@ -116,6 +117,7 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 				if (!plan) {
 					toast.dismiss();
 					toast.error("Selected plan not found");
+					setIsLoading(false); // Add this
 					return;
 				}
 
@@ -127,6 +129,7 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 					toast.error(
 						"Product ID not configured. Please contact support."
 					);
+					setIsLoading(false); // Add this
 					return;
 				}
 
@@ -147,6 +150,7 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 						checkoutError.message ||
 							"Failed to create checkout session"
 					);
+					setIsLoading(false); // Add this
 					return;
 				}
 
@@ -176,7 +180,7 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 	}
 
 	return (
-		<Card className="border-border/80 shadow-xl max-w-5xl mx-auto">
+		<Card className="border-border/80 shadow-xl mx-auto">
 			<CardHeader className="text-center">
 				<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
 					<Logo className="h-8 w-8" />
