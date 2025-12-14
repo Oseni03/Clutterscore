@@ -11,15 +11,19 @@ export const runAuditJob = inngest.createFunction(
 	{
 		id: "run-audit",
 		name: "Run Organization Audit",
-		retries: 2, // Auto-retry on failure
+		retries: 2,
 	},
 	{ event: "audit/run" },
 	async ({ event, step }) => {
 		const { organizationId, userId } = event.data;
 
 		// Step 1: Sync all integrations
-		const syncResults = await step.run("sync-integrations", async () => {
-			return connectorService.syncAllIntegrations(organizationId);
+		// NOTE: Map will be serialized to object by Inngest
+		const syncResultsRaw = await step.run("sync-integrations", async () => {
+			const results =
+				await connectorService.syncAllIntegrations(organizationId);
+			// Convert Map to plain object for JSON serialization
+			return Object.fromEntries(results);
 		});
 
 		// Step 2: Aggregate and rehydrate data
@@ -31,10 +35,11 @@ export const runAuditJob = inngest.createFunction(
 			const allFiles: FileData[] = [];
 			const allUsers: UserData[] = [];
 
-			for (const [source, data] of syncResults as Map<
+			// Iterate over plain object (Inngest serialized the Map)
+			for (const [source, data] of Object.entries(syncResultsRaw) as [
 				ToolSource,
-				AuditData
-			>) {
+				AuditData,
+			][]) {
 				totalStorage += data.storageUsedGb;
 				totalFiles += data.files.length;
 				totalUsers += data.users.length;
@@ -127,23 +132,56 @@ export const runAuditJob = inngest.createFunction(
 					},
 				});
 
-				// 2. Save all files (using the same method as ConnectorService)
+				// 2. Save all files
 				await connectorService["saveFilesToDatabase"](
 					tx,
 					audit.id,
 					aggregatedData.allFiles as FileData[]
 				);
 
-				// 3. Generate and save playbooks with items
+				// 3. Generate and save playbooks
+				// Convert plain object back to Map with rehydrated dates
+				const syncResultsMap = new Map<ToolSource, AuditData>();
+
+				for (const [source, data] of Object.entries(syncResultsRaw) as [
+					ToolSource,
+					AuditData,
+				][]) {
+					// Rehydrate dates in the data
+					const rehydratedData: AuditData = {
+						...data,
+						files: data.files.map((file) => ({
+							...file,
+							lastAccessed: file.lastAccessed
+								? new Date(file.lastAccessed)
+								: undefined,
+						})),
+						users: data.users.map((user) => ({
+							...user,
+							lastActive: user.lastActive
+								? new Date(user.lastActive)
+								: undefined,
+						})),
+						channels: data.channels?.map((channel) => ({
+							...channel,
+							lastActivity: channel.lastActivity
+								? new Date(channel.lastActivity)
+								: undefined,
+						})),
+					};
+
+					syncResultsMap.set(source, rehydratedData);
+				}
+
 				await connectorService["generateAndSavePlaybooks"](
 					tx,
 					audit.id,
 					organizationId,
-					syncResults as Map<ToolSource, AuditData>
+					syncResultsMap
 				);
 
 				// 4. Save score trend for the month
-				const month = new Date().toISOString().slice(0, 7); // YYYY-MM
+				const month = new Date().toISOString().slice(0, 7);
 				await tx.scoreTrend.upsert({
 					where: {
 						organizationId_month: {
