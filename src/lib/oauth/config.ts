@@ -52,8 +52,8 @@ export const OAUTH_CONFIGS: Record<ToolSource, OAuthConfig> = {
 
 			// Admin SDK - requires domain-wide delegation
 			// Comment out if you don't have super admin access
-			// "https://www.googleapis.com/auth/admin.directory.user.readonly",
-			// "https://www.googleapis.com/auth/admin.directory.group.readonly",
+			"https://www.googleapis.com/auth/admin.directory.user.readonly",
+			"https://www.googleapis.com/auth/admin.directory.group.readonly",
 			// "https://www.googleapis.com/auth/admin.reports.audit.readonly",
 		],
 		redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/google/callback`,

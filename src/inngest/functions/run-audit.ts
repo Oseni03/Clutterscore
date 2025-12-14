@@ -31,32 +31,30 @@ export const runAuditJob = inngest.createFunction(
 			const allFiles: FileData[] = [];
 			const allUsers: UserData[] = [];
 
-			for (const [source, data] of Object.entries(syncResults)) {
-				const integrationData = data as AuditData;
-				totalStorage += integrationData.storageUsedGb;
-				totalFiles += integrationData.files.length;
-				totalUsers += integrationData.users.length;
-				activeUsers += integrationData.activeUsers;
+			for (const [source, data] of syncResults as Map<
+				ToolSource,
+				AuditData
+			>) {
+				totalStorage += data.storageUsedGb;
+				totalFiles += data.files.length;
+				totalUsers += data.users.length;
+				activeUsers += data.activeUsers;
 
 				// Rehydrate Date objects for files
-				const rehydratedFiles: FileData[] = integrationData.files.map(
-					(file) => ({
-						...file,
-						lastAccessed: file.lastAccessed
-							? new Date(file.lastAccessed)
-							: undefined,
-					})
-				);
+				const rehydratedFiles: FileData[] = data.files.map((file) => ({
+					...file,
+					lastAccessed: file.lastAccessed
+						? new Date(file.lastAccessed)
+						: undefined,
+				}));
 
 				// Rehydrate Date objects for users
-				const rehydratedUsers: UserData[] = integrationData.users.map(
-					(user) => ({
-						...user,
-						lastActive: user.lastActive
-							? new Date(user.lastActive)
-							: undefined,
-					})
-				);
+				const rehydratedUsers: UserData[] = data.users.map((user) => ({
+					...user,
+					lastActive: user.lastActive
+						? new Date(user.lastActive)
+						: undefined,
+				}));
 
 				allFiles.push(...rehydratedFiles);
 				allUsers.push(...rehydratedUsers);
