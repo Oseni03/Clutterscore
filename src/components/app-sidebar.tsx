@@ -13,6 +13,7 @@ import {
 	CreditCard,
 	Plug,
 	ChevronRight,
+	Files,
 } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
@@ -54,6 +55,12 @@ const dashboardItems = {
 			title: "Playbooks",
 			icon: Fan,
 			url: "/dashboard/playbooks",
+		},
+		{
+			id: "files",
+			title: "Files",
+			icon: Files,
+			url: "/dashboard/files",
 		},
 		{
 			id: "storage",

@@ -20,7 +20,7 @@ interface StorageAISuggestionsProps {
 	}[];
 }
 
-export default function StorageAISuggestions({
+export default function StorageSuggestions({
 	wastedStorageGb,
 	largestWaster,
 	distribution,
@@ -32,7 +32,7 @@ export default function StorageAISuggestions({
 		{
 			icon: TrendingDown,
 			color: "text-green-600 bg-green-100 dark:bg-green-900/30",
-			title: `Delete ${largestWaster.type} files`,
+			title: `Archive ${largestWaster.type} files`,
 			description: `${largestWaster.location} contains ${largestWaster.sizeGb.toFixed(1)} GB of ${largestWaster.type.toLowerCase()} files. Consider archiving or deleting old files.`,
 			impact: `Save ~$${Math.round(largestWaster.sizeGb * 0.1)}/month`,
 			action: "View Files",
@@ -67,7 +67,7 @@ export default function StorageAISuggestions({
 					<div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center dark:bg-yellow-900/30">
 						<Lightbulb className="h-4 w-4" />
 					</div>
-					<CardTitle>AI-Powered Suggestions</CardTitle>
+					<CardTitle>Suggestions</CardTitle>
 				</div>
 				<p className="text-sm text-muted-foreground mt-2">
 					Based on your storage analysis, here are recommended actions

@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import StorageChart from "@/components/storage/storage-chart";
 import FilesTable from "@/components/storage/files-table";
-import StorageAISuggestions from "@/components/storage/storage-ai-suggestions";
+import StorageSuggestions from "@/components/storage/storage-ai-suggestions";
 import { Download, Film, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { useStorage } from "@/hooks/use-storage";
 
@@ -360,7 +360,7 @@ export default function StoragePage() {
 			</div>
 
 			{/* AI Suggestions */}
-			<StorageAISuggestions
+			<StorageSuggestions
 				wastedStorageGb={stats.wastedStorageGb}
 				largestWaster={stats.largestWaster}
 				distribution={distribution}

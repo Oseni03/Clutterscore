@@ -5,13 +5,13 @@ import { useFilesStore } from "@/zustand/providers/files-store-provider";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { FilesListResponse } from "@/types/audit";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { showUpgradeToast } from "@/components/upgrade-toast";
-
-// Subscription upgrade toast helper
 
 export function useFiles() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
+
 	const allFiles = useFilesStore((state) => state.files);
 	const filters = useFilesStore((state) => state.filters);
 	const pagination = useFilesStore((state) => state.pagination);
@@ -28,6 +28,28 @@ export function useFiles() {
 
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+
+	// Initialize filters from URL params on mount
+	useEffect(() => {
+		const isDuplicateParam = searchParams.get("isDuplicate");
+		const isPublicParam = searchParams.get("isPublic");
+
+		const urlFilters: Partial<typeof filters> = {};
+
+		if (isDuplicateParam === "true") {
+			urlFilters.isDuplicate = true;
+		}
+
+		if (isPublicParam === "true") {
+			urlFilters.isPubliclyShared = true;
+		}
+
+		// Only update if we have URL params to apply
+		if (Object.keys(urlFilters).length > 0) {
+			setFilters(urlFilters);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchParams]);
 
 	const fetchFiles = useCallback(async () => {
 		try {
