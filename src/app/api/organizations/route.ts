@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import {
+	createOrganization,
+	setActiveOrganization,
+} from "@/server/organizations";
 import { createFreeSubscription } from "@/server/subscription";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
 const createOrgSchema = z.object({
 	name: z.string().min(2).max(50),
-	slug: z
-		.string()
-		.min(2)
-		.max(30)
-		.regex(/^[a-z0-9-]+$/),
 	userId: z.string(),
 });
 
@@ -39,7 +37,7 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		const { name, slug, userId } = validation.data;
+		const { name, userId } = validation.data;
 
 		// Verify the userId matches the session user
 		if (userId !== session.user.id) {
@@ -49,69 +47,33 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		// Check if user already has an organization
-		const existingMember = await prisma.member.findFirst({
-			where: { userId },
-		});
+		// Create organization using server action (handles slug generation)
+		const result = await createOrganization(userId, { name });
 
-		if (existingMember) {
+		if (!result.success || !result.data) {
 			return NextResponse.json(
-				{ error: "User already has a workspace" },
+				{ error: result.error || "Failed to create workspace" },
 				{ status: 400 }
 			);
 		}
-
-		// Check if slug is already taken
-		const existingOrg = await prisma.organization.findUnique({
-			where: { slug },
-		});
-
-		if (existingOrg) {
-			return NextResponse.json(
-				{
-					error: "Workspace URL is already taken. Please choose another.",
-				},
-				{ status: 400 }
-			);
-		}
-
-		// Create organization with member
-		const organization = await prisma.organization.create({
-			data: {
-				name,
-				slug,
-				createdAt: new Date(),
-				members: {
-					create: {
-						userId,
-						role: "admin",
-					},
-				},
-			},
-			include: {
-				members: {
-					include: {
-						user: true,
-					},
-				},
-			},
-		});
 
 		// Create free subscription for the organization
-		await createFreeSubscription(organization.id);
+		await createFreeSubscription(result.data.id);
 
 		// Set as active organization
-		await auth.api.setActiveOrganization({
-			body: {
-				organizationId: organization.id,
-			},
-			headers: req.headers,
-		});
+		const setActiveResult = await setActiveOrganization(result.data.id);
+
+		if (!setActiveResult.success) {
+			console.error(
+				"Failed to set active organization:",
+				setActiveResult.error
+			);
+		}
 
 		return NextResponse.json(
 			{
 				success: true,
-				organization,
+				organization: result.data,
 			},
 			{ status: 201 }
 		);
