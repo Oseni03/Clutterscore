@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "@/lib/prisma";
@@ -211,40 +212,49 @@ export async function createOrganization(
 	}
 ) {
 	try {
-		// Generate base slug from name
-		const baseSlug = generateSlug(data.name);
+		// Add timeout to prevent hanging
+		const timeoutPromise = new Promise((_, reject) =>
+			setTimeout(() => reject(new Error("Request timeout")), 10000)
+		);
 
-		if (!baseSlug) {
-			return {
-				success: false,
-				error: "Invalid organization name - unable to workspace slug",
-			};
-		}
+		const createPromise = (async () => {
+			// Generate base slug from name
+			const baseSlug = generateSlug(data.name);
 
-		// Find available slug
-		const slug = await findAvailableSlug(baseSlug);
+			if (!baseSlug) {
+				return {
+					success: false,
+					error: "Invalid workspace name - unable to generate workspace slug",
+				};
+			}
 
-		// Create organization with generated slug
-		const organization = await prisma.organization.create({
-			data: {
-				name: data.name,
-				slug: slug,
-				targetScore: data.targetScore || 75,
-				subscriptionTier: data.subscriptionTier || "free",
-				createdAt: new Date(),
-				members: {
-					create: {
-						userId: userId,
-						role: "admin",
+			// Find available slug
+			const slug = await findAvailableSlug(baseSlug);
+
+			// Create organization with generated slug
+			const organization = await prisma.organization.create({
+				data: {
+					name: data.name,
+					slug: slug,
+					targetScore: data.targetScore || 75,
+					subscriptionTier: data.subscriptionTier || "free",
+					createdAt: new Date(),
+					members: {
+						create: {
+							userId: userId,
+							role: "admin",
+						},
 					},
 				},
-			},
-			include: {
-				members: true,
-			},
-		});
+				include: {
+					members: true,
+				},
+			});
 
-		return { data: organization, success: true };
+			return { data: organization, success: true };
+		})();
+
+		return (await Promise.race([createPromise, timeoutPromise])) as any;
 	} catch (error) {
 		logger.error("CREATE_ORG_ERROR:", error);
 		return {
