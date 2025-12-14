@@ -11,6 +11,7 @@ import {
 } from "@/types/audit";
 import { toast } from "sonner";
 import { useAudit } from "./use-audit";
+import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 
 export function useDashboard() {
 	const auditData = useDashboardStore((state) => state.auditData);
@@ -26,6 +27,10 @@ export function useDashboard() {
 		(state) => state.setSelectedTrendPeriod
 	);
 	const setLastRefresh = useDashboardStore((state) => state.setLastRefresh);
+	const targetScore =
+		useOrganizationStore(
+			(state) => state.activeOrganization?.targetScore
+		) || 75;
 
 	const [isLoading, setIsLoading] = useState(true);
 	const [isRefreshing, setIsRefreshing] = useState(false);
@@ -159,6 +164,7 @@ export function useDashboard() {
 
 	return {
 		// State
+		targetScore,
 		auditData,
 		scoreTrends,
 		selectedTrendPeriod,

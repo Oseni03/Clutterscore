@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 const DashboardPage = () => {
 	const router = useRouter();
 	const {
+		targetScore,
 		auditData,
 		isLoading,
 		isRefreshing,
@@ -128,7 +129,6 @@ const DashboardPage = () => {
 		);
 	}
 
-	const targetScore = 85;
 	const previousScore = getPreviousScore();
 	const trendData = getFilteredTrends();
 
