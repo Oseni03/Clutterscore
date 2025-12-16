@@ -101,12 +101,15 @@ export function useOrganization() {
 		setIsLoading(true);
 
 		try {
-			const response = await fetch("/api/organization/reset", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
+			const response = await fetch(
+				`/api/organizations/${activeOrganization.id}/reset`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}
+			);
 
 			if (!response.ok) {
 				const errorData = await response.json();
