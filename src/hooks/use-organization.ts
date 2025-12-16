@@ -5,10 +5,16 @@ import { useOrganizationStore } from "@/zustand/providers/organization-store-pro
 import { deleteOrganization } from "@/server/organizations";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
+import { useRouter } from "next/navigation";
 
 export function useOrganization() {
+	const router = useRouter();
+
 	const activeOrganization = useOrganizationStore(
 		(state) => state.activeOrganization
+	);
+	const setActiveOrganization = useOrganizationStore(
+		(state) => state.setActiveOrganization
 	);
 	const organizations = useOrganizationStore((state) => state.organizations);
 	const isAdmin = useOrganizationStore((state) => state.isAdmin);
@@ -65,6 +71,12 @@ export function useOrganization() {
 			toast.success("Workspace deleted successfully", { id: toastId });
 			setDeleteDialogOpen(false);
 			setIsLoading(false);
+
+			if (organizations.length > 0) {
+				setActiveOrganization(organizations[0].id);
+			} else {
+				router.push("/onboarding");
+			}
 		} catch (error) {
 			if (isMountedRef.current) {
 				logger.error("Failed to delete workspace", error);
@@ -72,7 +84,15 @@ export function useOrganization() {
 				setIsLoading(false);
 			}
 		}
-	}, [activeOrganization, organizations.length, removeOrganization]);
+	}, [
+		activeOrganization,
+		organizations,
+		removeOrganization,
+		router,
+		setActiveOrganization,
+	]);
+
+	// Updated handleResetData implementation for your component
 
 	const handleResetData = useCallback(async () => {
 		if (!activeOrganization) return;
@@ -81,24 +101,47 @@ export function useOrganization() {
 		setIsLoading(true);
 
 		try {
-			// TODO: Implement reset data API call
-			// await resetOrganizationData(activeOrganization.id);
+			const response = await fetch("/api/organization/reset", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to reset data");
+			}
+
+			const result = await response.json();
 
 			if (!isMountedRef.current) return;
 
-			toast.success("All data has been reset successfully", {
-				id: toastId,
-			});
+			toast.success(
+				result.message || "All data has been reset successfully",
+				{
+					id: toastId,
+				}
+			);
+
 			setResetDialogOpen(false);
 			setIsLoading(false);
+
+			// Optionally refresh the page or refetch data
+			router.refresh(); // or refetch your data here
 		} catch (error) {
 			if (isMountedRef.current) {
 				logger.error("Failed to reset data", error);
-				toast.error("Failed to reset data");
+				toast.error(
+					error instanceof Error
+						? error.message
+						: "Failed to reset data. Please try again.",
+					{ id: toastId }
+				);
 				setIsLoading(false);
 			}
 		}
-	}, [activeOrganization]);
+	}, [activeOrganization, isMountedRef]);
 
 	return {
 		activeOrganization,
