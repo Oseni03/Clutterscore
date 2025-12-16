@@ -6,6 +6,7 @@ import {
 	AuditData,
 	FileData,
 	UserData,
+	RestoreFileAction,
 } from "./types";
 import crypto from "crypto";
 import { logger } from "../logger";
@@ -529,14 +530,11 @@ export class MicrosoftConnector extends BaseConnector {
 	/**
 	 * Restore a file from Recycle Bin (for undo functionality)
 	 */
-	async restoreFile(
-		externalId: string,
-		metadata: Record<string, any>
-	): Promise<void> {
+	async restoreFile(undoAction: RestoreFileAction): Promise<void> {
 		await this.ensureValidToken();
 
 		try {
-			const driveId = metadata?.driveId;
+			const driveId = undoAction.fileId;
 			if (!driveId) {
 				throw new Error("driveId required in metadata for restoration");
 			}
@@ -546,7 +544,7 @@ export class MicrosoftConnector extends BaseConnector {
 			// This would require accessing the recycle bin endpoint
 
 			logger.info(
-				`Restore functionality requires manual restoration from Recycle Bin for file ${externalId}`
+				`Restore functionality requires manual restoration from Recycle Bin for file ${undoAction.fileId}`
 			);
 
 			throw new Error(
@@ -555,7 +553,7 @@ export class MicrosoftConnector extends BaseConnector {
 			);
 		} catch (error: any) {
 			throw new Error(
-				`Failed to restore Microsoft file ${externalId}: ${error.message}`
+				`Failed to restore Microsoft file ${undoAction.fileId}: ${error.message}`
 			);
 		}
 	}
