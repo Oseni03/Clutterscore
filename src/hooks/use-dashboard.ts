@@ -8,6 +8,7 @@ import {
 	transformAuditData,
 	LatestAuditResponse,
 	ScoreTrendsResponse,
+	DashboardStats,
 } from "@/types/audit";
 import { toast } from "sonner";
 import { useAudit } from "./use-audit";
@@ -27,6 +28,7 @@ export function useDashboard() {
 		(state) => state.setSelectedTrendPeriod
 	);
 	const setLastRefresh = useDashboardStore((state) => state.setLastRefresh);
+
 	const targetScore =
 		useOrganizationStore(
 			(state) => state.activeOrganization?.targetScore
@@ -35,6 +37,7 @@ export function useDashboard() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [stats, setStats] = useState<DashboardStats | null>(null);
 
 	// Use audit hook with job polling
 	const { runAudit: triggerAudit, isRunning: isAuditRunning } = useAudit();
@@ -53,7 +56,9 @@ export function useDashboard() {
 
 	const fetchScoreTrends = useCallback(
 		async (months: number = 12): Promise<ScoreTrendData[]> => {
-			const response = await fetch(`/api/score-trends?months=${months}`);
+			const response = await fetch(
+				`/api/dashboard/trends?months=${months}`
+			);
 			const data: ScoreTrendsResponse = await response.json();
 
 			if (!response.ok) {
@@ -65,17 +70,33 @@ export function useDashboard() {
 		[]
 	);
 
+	const fetchDashboardStats =
+		useCallback(async (): Promise<DashboardStats> => {
+			const response = await fetch("/api/dashboard/stats");
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(
+					data.error || "Failed to fetch dashboard stats"
+				);
+			}
+
+			return data;
+		}, []);
+
 	const loadDashboardData = useCallback(async () => {
 		try {
 			setError(null);
 
-			const [audit, trends] = await Promise.all([
+			const [audit, trends, dashboardStats] = await Promise.all([
 				fetchLatestAudit(),
 				fetchScoreTrends(12),
+				fetchDashboardStats(),
 			]);
 
 			setAuditData(audit);
 			setScoreTrends(trends);
+			setStats(dashboardStats);
 			setLastRefresh(new Date());
 		} catch (err) {
 			const errorMsg =
@@ -89,6 +110,7 @@ export function useDashboard() {
 	}, [
 		fetchLatestAudit,
 		fetchScoreTrends,
+		fetchDashboardStats,
 		setAuditData,
 		setScoreTrends,
 		setLastRefresh,
@@ -162,6 +184,14 @@ export function useDashboard() {
 		return scoreTrends[scoreTrends.length - 2].score;
 	}, [scoreTrends]);
 
+	const canRunAudit = useCallback(() => {
+		return stats?.canRunAudit ?? false;
+	}, [stats]);
+
+	const getNextScanDate = useCallback(() => {
+		return stats?.nextScanDate ?? null;
+	}, [stats]);
+
 	return {
 		// State
 		targetScore,
@@ -172,12 +202,17 @@ export function useDashboard() {
 		isLoading,
 		isRefreshing: isRefreshing || isAuditRunning,
 		error,
+		stats,
 
 		// Actions
 		runAudit,
 		refresh,
 		setSelectedTrendPeriod,
+
+		// Computed
 		getFilteredTrends,
 		getPreviousScore,
+		canRunAudit,
+		getNextScanDate,
 	};
 }

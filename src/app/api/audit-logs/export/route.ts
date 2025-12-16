@@ -6,11 +6,12 @@ import { logger } from "@/lib/logger";
 export async function GET(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
 		try {
-			// Fetch all audit logs
+			// Fetch all audit logs for the organization
 			const logs = await prisma.auditLog.findMany({
 				where: {
 					organizationId: user.organizationId,
 				},
+				orderBy: { timestamp: "desc" },
 				include: {
 					user: {
 						select: {
@@ -19,18 +20,12 @@ export async function GET(req: NextRequest) {
 						},
 					},
 					playbook: {
-						select: {
-							title: true,
-							source: true,
-						},
+						select: { title: true },
 					},
-				},
-				orderBy: {
-					timestamp: "desc",
 				},
 			});
 
-			// Generate CSV
+			// Create CSV content
 			const headers = [
 				"Timestamp",
 				"Action Type",
@@ -38,9 +33,10 @@ export async function GET(req: NextRequest) {
 				"Target Type",
 				"Executor",
 				"Status",
-				"Details",
-				"User Email",
 				"Playbook",
+				"Can Undo",
+				"Undo Expires At",
+				"Details",
 			];
 
 			const rows = logs.map((log) => [
@@ -50,18 +46,30 @@ export async function GET(req: NextRequest) {
 				log.targetType,
 				log.executor,
 				log.status,
-				typeof log.details === "object"
-					? JSON.stringify(log.details)
-					: log.details || "",
-				log.user?.email || "",
-				log.playbook?.title || "",
+				log.playbook?.title || "N/A",
+				log.undoExpiresAt && log.undoExpiresAt > new Date()
+					? "Yes"
+					: "No",
+				log.undoExpiresAt?.toISOString() || "N/A",
+				log.details ? JSON.stringify(log.details) : "N/A",
 			]);
 
-			const csv = [
+			// Convert to CSV format
+			const csvContent = [
 				headers.join(","),
 				...rows.map((row) =>
 					row
-						.map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+						.map((cell) => {
+							// Escape quotes and wrap in quotes if contains comma
+							const cellStr = String(cell);
+							if (
+								cellStr.includes(",") ||
+								cellStr.includes('"')
+							) {
+								return `"${cellStr.replace(/"/g, '""')}"`;
+							}
+							return cellStr;
+						})
 						.join(",")
 				),
 			].join("\n");
@@ -78,20 +86,16 @@ export async function GET(req: NextRequest) {
 				},
 			});
 
-			return new NextResponse(csv, {
+			return new NextResponse(csvContent, {
 				headers: {
 					"Content-Type": "text/csv",
 					"Content-Disposition": `attachment; filename="audit-logs-${new Date().toISOString().split("T")[0]}.csv"`,
 				},
 			});
 		} catch (error) {
-			logger.error("Failed to export audit logs:", error as Error);
+			logger.error("Export error:", error);
 			return NextResponse.json(
-				{
-					error:
-						(error as Error).message ||
-						"Failed to export audit logs",
-				},
+				{ error: "Failed to export audit logs" },
 				{ status: 500 }
 			);
 		}

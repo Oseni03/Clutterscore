@@ -6,6 +6,8 @@ import {
 	AuditData,
 	FileData,
 	UserData,
+	RestoreFileAction,
+	RestorePermissionsAction,
 } from "./types";
 import crypto from "crypto";
 import { ToolSource } from "@prisma/client";
@@ -288,87 +290,112 @@ export class DropboxConnector extends BaseConnector {
 	// ============================================================================
 
 	/**
-	 * Archive a file in Dropbox by moving it to an "Archived" folder
-	 * This is safer than permanent deletion and allows for recovery
+	 * Archive a file to a dedicated archive folder
+	 * Override to support proper undo
 	 */
 	async archiveFile(
 		externalId: string,
-		_metadata: Record<string, any>
+		metadata: Record<string, any>
 	): Promise<void> {
-		void _metadata;
-		await this.ensureValidToken();
-
 		try {
-			// Get the file info to construct the archive path
-			const fileInfo = await this.client.filesGetMetadata({
-				path: externalId,
-			});
+			const archiveFolderPath = "/Clutterscore Archive";
 
-			if (fileInfo.result[".tag"] !== "file") {
-				throw new Error("Resource is not a file");
+			// Ensure archive folder exists
+			try {
+				await this.client.filesCreateFolderV2({
+					path: archiveFolderPath,
+					autorename: false,
+				});
+			} catch (error: any) {
+				// Folder already exists - that's fine
+				if (error.error?.error?.[".tag"] !== "path") {
+					throw error;
+				}
 			}
 
-			const file = fileInfo.result;
-			const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-			const archivePath = `/Archived/${timestamp}/${file.name}`;
+			// Get file name from path
+			const fileName = externalId.split("/").pop() || "unknown";
+			const archivePath = `${archiveFolderPath}/${fileName}`;
 
-			// Move file to archive folder instead of deleting
-			await this.client.filesMoveV2({
+			// Move file to archive folder
+			const result = await this.client.filesMoveV2({
 				from_path: externalId,
 				to_path: archivePath,
-				autorename: true, // Automatically rename if conflict exists
+				autorename: true, // Rename if conflict
 			});
 
-			logger.info(`Archived Dropbox file ${file.name} to ${archivePath}`);
-		} catch (error) {
-			throw new Error(
-				`Failed to archive Dropbox file ${externalId}: ${(error as Error).message}`
-			);
+			// Store archive info for undo
+			metadata.archivePath = result.result.metadata.path_display;
+			metadata.originalPath = externalId;
+			metadata.archivedAt = new Date().toISOString();
+
+			logger.info(`Archived file ${externalId} to ${archivePath}`);
+		} catch (error: any) {
+			if (error.error?.error?.[".tag"] === "from_lookup") {
+				throw new Error(`File ${externalId} not found`);
+			}
+			throw new Error(`Failed to archive file: ${error.message}`);
 		}
 	}
 
 	/**
-	 * Revoke shared access to a file (remove all shared links and members)
+	 * Update file permissions (restrict access)
+	 * Override to capture original permissions for undo
 	 */
 	async updatePermissions(
 		externalId: string,
-		_metadata: Record<string, any>
+		metadata: Record<string, any>
 	): Promise<void> {
-		void _metadata;
-		await this.ensureValidToken();
-
 		try {
-			// Get and revoke all shared links
-			const linksResponse = await this.client.sharingListSharedLinks({
-				path: externalId,
-			});
+			// Get current sharing info before modifying
+			const sharingInfo = await this.getSharedInfo(externalId);
 
-			for (const link of linksResponse.result.links || []) {
-				await this.client.sharingRevokeSharedLink({
-					url: link.url,
+			metadata.originalSharing = {
+				isPubliclyShared: sharingInfo.isPublic,
+				sharedWith: sharingInfo.sharedWith,
+			};
+
+			// Remove public link if exists
+			try {
+				const links = await this.client.sharingListSharedLinks({
+					path: externalId,
 				});
-			}
 
-			// Remove all members with access
-			const membersResponse = await this.client.sharingListFileMembers({
-				file: externalId,
-			});
-
-			for (const user of membersResponse.result.users || []) {
-				if (user.user?.account_id) {
-					await this.client.sharingRemoveFileMember2({
-						file: externalId,
-						member: {
-							".tag": "dropbox_id",
-							dropbox_id: user.user.account_id,
-						},
-					});
+				for (const link of links.result.links) {
+					if (link[".tag"] === "file") {
+						await this.client.sharingRevokeSharedLink({
+							url: link.url,
+						});
+					}
 				}
+
+				// Remove all members with access
+				const membersResponse =
+					await this.client.sharingListFileMembers({
+						file: externalId,
+					});
+
+				for (const user of membersResponse.result.users || []) {
+					if (user.user?.account_id) {
+						await this.client.sharingRemoveFileMember2({
+							file: externalId,
+							member: {
+								".tag": "dropbox_id",
+								dropbox_id: user.user.account_id,
+							},
+						});
+					}
+				}
+			} catch (error: any) {
+				logger.warn("Could not revoke shared links:", error.message);
 			}
-		} catch (error) {
-			throw new Error(
-				`Failed to update permissions for Dropbox file ${externalId}: ${(error as Error).message}`
-			);
+
+			logger.info(`Updated permissions for file ${externalId}`);
+		} catch (error: any) {
+			if (error.error?.error?.[".tag"] === "not_found") {
+				throw new Error(`File ${externalId} not found`);
+			}
+			throw new Error(`Failed to update permissions: ${error.message}`);
 		}
 	}
 
@@ -422,6 +449,99 @@ export class DropboxConnector extends BaseConnector {
 			throw new Error(
 				`Failed to suspend Dropbox team member ${externalId}: ${(error as Error).message}`
 			);
+		}
+	}
+
+	/**
+	 * Restore a file from archive folder back to its original location
+	 */
+	async restoreFile(undoAction: RestoreFileAction): Promise<void> {
+		const { externalId, originalPath, originalMetadata } = undoAction;
+
+		try {
+			const archivePath = originalMetadata.archivePath || externalId;
+
+			if (!originalPath) {
+				throw new Error(
+					"Original file path not found in undo metadata"
+				);
+			}
+
+			// Move file back from archive to original location
+			await this.client.filesMoveV2({
+				from_path: archivePath,
+				to_path: originalPath,
+				autorename: false, // Don't rename if conflict exists
+			});
+
+			console.log(`Restored file from ${archivePath} to ${originalPath}`);
+		} catch (error: any) {
+			if (error.status === 409) {
+				// File already exists at destination
+				throw new Error(
+					`Cannot restore: file already exists at ${originalPath}`
+				);
+			}
+			if (error.error?.error?.[".tag"] === "from_lookup") {
+				throw new Error(
+					`File not found in archive. It may have been permanently deleted.`
+				);
+			}
+			throw new Error(`Failed to restore file: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Restore file permissions to their original state
+	 */
+	async restorePermissions(
+		undoAction: RestorePermissionsAction
+	): Promise<void> {
+		const { fileId, originalSharing } = undoAction;
+
+		try {
+			// If file was originally publicly shared, recreate public link
+			if (originalSharing.isPubliclyShared) {
+				await this.client.sharingCreateSharedLinkWithSettings({
+					path: fileId,
+					settings: {
+						requested_visibility: { ".tag": "public" },
+					},
+				});
+			}
+
+			// Restore member permissions
+			if (
+				originalSharing.sharedWith &&
+				originalSharing.sharedWith.length > 0
+			) {
+				for (const email of originalSharing.sharedWith) {
+					try {
+						await this.client.sharingAddFileMember({
+							file: fileId,
+							members: [
+								{
+									".tag": "email",
+									email,
+								},
+							],
+							quiet: true, // Don't send notification
+						});
+					} catch (error: any) {
+						console.warn(
+							`Could not restore access for ${email}:`,
+							error.message
+						);
+					}
+				}
+			}
+
+			console.log(`Restored permissions for file ${fileId}`);
+		} catch (error: any) {
+			if (error.error?.error?.[".tag"] === "not_found") {
+				throw new Error(`File ${fileId} not found`);
+			}
+			throw new Error(`Failed to restore permissions: ${error.message}`);
 		}
 	}
 }

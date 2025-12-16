@@ -7,6 +7,8 @@ import {
 	FileData,
 	UserData,
 	ChannelData,
+	RestoreChannelAction,
+	RestoreUserAction,
 } from "./types";
 import crypto from "crypto";
 import { logger } from "../logger";
@@ -89,7 +91,7 @@ export class SlackConnector extends BaseConnector {
 		return {
 			files,
 			users,
-			channels, // ✅ Include channels in audit data
+			channels,
 			storageUsedGb: this.mbToGb(totalStorage),
 			totalLicenses: users.length,
 			activeUsers,
@@ -115,11 +117,9 @@ export class SlackConnector extends BaseConnector {
 						sizeMb
 					);
 
-					// Create duplicate key using hash OR name-size combination
 					const nameSize = `${file.name || "Untitled"}-${sizeMb}`;
 					const duplicateKey = hash || nameSize;
 
-					// Track duplicates by hash or name-size
 					if (!duplicateMap.has(duplicateKey)) {
 						duplicateMap.set(duplicateKey, []);
 					}
@@ -142,7 +142,7 @@ export class SlackConnector extends BaseConnector {
 						isPubliclyShared:
 							file.is_public || file.public_url_shared || false,
 						sharedWith: file.channels || [],
-						isDuplicate: false, // Will be updated after processing all files
+						isDuplicate: false,
 						duplicateGroup: duplicateKey,
 					});
 				}
@@ -157,7 +157,7 @@ export class SlackConnector extends BaseConnector {
 			logger.error("Error fetching Slack files:", error);
 		}
 
-		// Mark duplicates after all files are collected
+		// Mark duplicates
 		for (const file of files) {
 			const duplicateKey = file.duplicateGroup!;
 			const duplicateIds = duplicateMap.get(duplicateKey);
@@ -165,7 +165,7 @@ export class SlackConnector extends BaseConnector {
 			if (duplicateIds && duplicateIds.length > 1) {
 				file.isDuplicate = true;
 			} else {
-				file.duplicateGroup = undefined; // Clear group if not a duplicate
+				file.duplicateGroup = undefined;
 			}
 		}
 
@@ -184,7 +184,6 @@ export class SlackConnector extends BaseConnector {
 				});
 
 				for (const user of response.members || []) {
-					// Skip bots and deleted users
 					if (user.is_bot || user.deleted) continue;
 
 					users.push({
@@ -235,10 +234,6 @@ export class SlackConnector extends BaseConnector {
 	// CHANNEL MANAGEMENT
 	// ============================================================================
 
-	/**
-	 * Fetch all channels with detailed information
-	 * Returns both public and private channels
-	 */
 	async fetchChannels(): Promise<ChannelData[]> {
 		const channels: ChannelData[] = [];
 		let cursor: string | undefined;
@@ -249,15 +244,12 @@ export class SlackConnector extends BaseConnector {
 					types: "public_channel,private_channel",
 					limit: 1000,
 					cursor,
-					// exclude_archived: false, // Include archived channels for complete audit
 				});
 
 				for (const channel of response.channels || []) {
-					// Get more detailed info about the channel
 					let lastActivity: Date | undefined;
 
 					try {
-						// Fetch channel history to get last message time
 						const history = await this.client.conversations.history(
 							{
 								channel: channel.id,
@@ -272,7 +264,6 @@ export class SlackConnector extends BaseConnector {
 							);
 						}
 					} catch (historyError) {
-						// If we can't get history, use the channel's updated timestamp
 						logger.warn(
 							`Could not fetch history for channel ${channel.name}: ${historyError}`
 						);
@@ -306,12 +297,6 @@ export class SlackConnector extends BaseConnector {
 		return channels;
 	}
 
-	/**
-	 * Identify channels that are inactive based on criteria:
-	 * - Not archived already
-	 * - Last activity older than specified days
-	 * - Low member count (optional filter)
-	 */
 	async identifyInactiveChannels(
 		daysInactive: number = 90,
 		maxMembers?: number
@@ -322,16 +307,10 @@ export class SlackConnector extends BaseConnector {
 		);
 
 		return channels.filter((c) => {
-			// Must not already be archived
 			if (c.isArchived) return false;
-
-			// Must have last activity before cutoff
 			if (!c.lastActivity || c.lastActivity >= cutoffDate) return false;
-
-			// Optional: filter by member count
 			if (maxMembers !== undefined && c.memberCount > maxMembers)
 				return false;
-
 			return true;
 		});
 	}
@@ -379,11 +358,6 @@ export class SlackConnector extends BaseConnector {
 	// EXECUTION METHODS
 	// ============================================================================
 
-	/**
-	 * Archive a file in Slack by deleting it
-	 * Note: Slack doesn't support moving files to folders
-	 * Files are permanently deleted, so use with caution
-	 */
 	async archiveFile(
 		externalId: string,
 		metadata: Record<string, any>
@@ -391,7 +365,7 @@ export class SlackConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
-			// Get file info first for logging
+			// Get file info first for metadata capture
 			const fileInfo: any = await this.client.files.info({
 				file: externalId,
 			});
@@ -403,7 +377,16 @@ export class SlackConnector extends BaseConnector {
 			const file = fileInfo.file;
 			const fileName = file.name || file.title || "Unknown";
 
-			// Revoke public URL if it exists (safety measure before deletion)
+			// Store original state for undo
+			metadata.originalState = {
+				name: fileName,
+				url: file.url_private || file.permalink,
+				isPublic: file.public_url_shared || file.is_public,
+				channels: file.channels || [],
+				timestamp: file.timestamp,
+			};
+
+			// Revoke public URL if exists
 			if (file.public_url_shared || file.is_public) {
 				await this.client.files.revokePublicURL({
 					file: externalId,
@@ -414,7 +397,7 @@ export class SlackConnector extends BaseConnector {
 			}
 
 			// Delete the file
-			// WARNING: This is permanent in Slack - there's no archive folder
+			// WARNING: Slack doesn't support archive folders - this is permanent
 			const deleteResponse: any = await this.client.files.delete({
 				file: externalId,
 			});
@@ -425,9 +408,9 @@ export class SlackConnector extends BaseConnector {
 				);
 			}
 
+			metadata.deletedAt = new Date().toISOString();
 			logger.info(
-				`Archived (deleted) Slack file "${fileName}" (${externalId}). ` +
-					`Size: ${metadata.size || 0} MB, Path: ${metadata.path || "unknown"}`
+				`Archived (deleted) Slack file "${fileName}" (${externalId})`
 			);
 		} catch (error) {
 			throw new Error(
@@ -436,17 +419,28 @@ export class SlackConnector extends BaseConnector {
 		}
 	}
 
-	/**
-	 * Revoke public sharing for a file
-	 */
 	async updatePermissions(
 		externalId: string,
-		_metadata: Record<string, any>
+		metadata: Record<string, any>
 	): Promise<void> {
-		void _metadata;
 		await this.ensureValidToken();
 
 		try {
+			// Get file info to capture original state
+			const fileInfo: any = await this.client.files.info({
+				file: externalId,
+			});
+
+			if (fileInfo.ok && fileInfo.file) {
+				metadata.originalSharing = {
+					isPubliclyShared:
+						fileInfo.file.public_url_shared ||
+						fileInfo.file.is_public,
+					sharedWith: fileInfo.file.channels || [],
+				};
+			}
+
+			// Revoke public access
 			const response: any = await this.client.files.revokePublicURL({
 				file: externalId,
 			});
@@ -465,10 +459,6 @@ export class SlackConnector extends BaseConnector {
 		}
 	}
 
-	/**
-	 * Archive a Slack channel
-	 * Archived channels can be unarchived by workspace admins
-	 */
 	async archiveChannel(
 		externalId: string,
 		metadata: Record<string, any>
@@ -476,18 +466,38 @@ export class SlackConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
+			// Get channel info before archiving
+			const infoResponse: any = await this.client.conversations.info({
+				channel: externalId,
+			});
+
+			if (infoResponse.ok && infoResponse.channel) {
+				const channel = infoResponse.channel;
+				metadata.originalState = {
+					isArchived: channel.is_archived,
+					memberCount: channel.num_members,
+					name: channel.name,
+					isPrivate: channel.is_private,
+				};
+			}
+
+			// Archive the channel
 			const response: any = await this.client.conversations.archive({
 				channel: externalId,
 			});
 
 			if (!response.ok) {
+				if (response.error === "already_archived") {
+					logger.warn(`Channel ${externalId} is already archived`);
+					return;
+				}
 				throw new Error(response.error || "Failed to archive channel");
 			}
 
+			metadata.archivedAt = new Date().toISOString();
 			const channelName = metadata.name || externalId;
 			logger.info(
-				`Archived Slack channel "${channelName}" (${externalId}). ` +
-					`Members: ${metadata.memberCount || 0}, Last activity: ${metadata.lastActivity || "unknown"}`
+				`Archived Slack channel "${channelName}" (${externalId})`
 			);
 		} catch (error) {
 			throw new Error(
@@ -496,39 +506,6 @@ export class SlackConnector extends BaseConnector {
 		}
 	}
 
-	/**
-	 * Unarchive a Slack channel (for undo functionality)
-	 */
-	async unarchiveChannel(
-		externalId: string,
-		_metadata: Record<string, any>
-	): Promise<void> {
-		void _metadata;
-		await this.ensureValidToken();
-
-		try {
-			const response: any = await this.client.conversations.unarchive({
-				channel: externalId,
-			});
-
-			if (!response.ok) {
-				throw new Error(
-					response.error || "Failed to unarchive channel"
-				);
-			}
-
-			logger.info(`Unarchived Slack channel ${externalId}`);
-		} catch (error) {
-			throw new Error(
-				`Failed to unarchive Slack channel ${externalId}: ${(error as Error).message}`
-			);
-		}
-	}
-
-	/**
-	 * Remove a guest user from Slack workspace
-	 * Requires admin.users:write scope
-	 */
 	async removeGuest(
 		externalId: string,
 		metadata: Record<string, any>
@@ -536,20 +513,48 @@ export class SlackConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
+			// Get user info before removing
+			const userResponse: any = await this.client.users.info({
+				user: externalId,
+			});
+
+			if (userResponse.ok && userResponse.user) {
+				const user = userResponse.user;
+				metadata.originalAccess = {
+					isGuest:
+						user.is_restricted ||
+						user.is_ultra_restricted ||
+						user.is_stranger,
+					role: user.is_ultra_restricted
+						? "single_channel_guest"
+						: user.is_restricted
+							? "guest"
+							: "member",
+					email: user.profile?.email,
+					name: user.real_name || user.name,
+					licenseType: this.mapLicenseType(user),
+				};
+			}
+
 			const teamId = this.config.metadata?.teamId;
 			if (!teamId) {
 				throw new Error("Team ID is required to remove guests");
 			}
 
+			// Remove user from workspace
 			const response: any = await this.client.admin.users.remove({
 				user_id: externalId,
 				team_id: teamId,
 			});
 
 			if (!response.ok) {
+				if (response.error === "cant_remove_primary_owner") {
+					throw new Error("Cannot remove primary workspace owner");
+				}
 				throw new Error(response.error || "Failed to remove guest");
 			}
 
+			metadata.removedAt = new Date().toISOString();
 			const userName = metadata.name || metadata.email || externalId;
 			logger.info(
 				`Removed guest user "${userName}" (${externalId}) from Slack workspace`
@@ -561,10 +566,6 @@ export class SlackConnector extends BaseConnector {
 		}
 	}
 
-	/**
-	 * Deactivate a user account in Slack
-	 * Requires admin.users:write scope
-	 */
 	async disableUser(
 		externalId: string,
 		metadata: Record<string, any>
@@ -596,5 +597,118 @@ export class SlackConnector extends BaseConnector {
 				`Failed to deactivate Slack user ${externalId}: ${(error as Error).message}`
 			);
 		}
+	}
+
+	// ============================================================================
+	// UNDO METHODS - Restore previously executed actions
+	// ============================================================================
+
+	/**
+	 * Restore (unarchive) a Slack channel
+	 */
+	async restoreChannel(undoAction: RestoreChannelAction): Promise<void> {
+		await this.ensureValidToken();
+
+		const { channelId, channelName } = undoAction;
+
+		try {
+			const response: any = await this.client.conversations.unarchive({
+				channel: channelId,
+			});
+
+			if (!response.ok) {
+				if (response.error === "not_archived") {
+					logger.warn(`Channel ${channelName} is not archived`);
+					return;
+				}
+				if (response.error === "channel_not_found") {
+					throw new Error(
+						`Channel ${channelName} not found. It may have been deleted.`
+					);
+				}
+				throw new Error(`Slack API error: ${response.error}`);
+			}
+
+			logger.info(
+				`Restored (unarchived) channel ${channelId} (${channelName})`
+			);
+		} catch (error) {
+			throw new Error(
+				`Failed to restore channel: ${(error as Error).message}`
+			);
+		}
+	}
+
+	/**
+	 * Restore a guest user's access by re-inviting them
+	 */
+	async restoreUser(undoAction: RestoreUserAction): Promise<void> {
+		await this.ensureValidToken();
+
+		const { userEmail, role, originalMetadata } = undoAction;
+
+		try {
+			const teamId = this.config.metadata?.teamId;
+			if (!teamId) {
+				throw new Error("Team ID is required to restore users");
+			}
+
+			// Determine invite parameters based on original role
+			const isUltraRestricted = role === "single_channel_guest";
+			const isRestricted =
+				role === "guest" || role === "multi-channel-guest";
+
+			// Re-invite the user
+			const response: any = await this.client.admin.users.invite({
+				email: userEmail,
+				team_id: teamId,
+				channel_ids: originalMetadata?.defaultChannels || [],
+				is_restricted: isRestricted && !isUltraRestricted,
+				is_ultra_restricted: isUltraRestricted,
+			});
+
+			if (!response.ok) {
+				if (response.error === "already_in_team") {
+					logger.info(
+						`User ${userEmail} is already in the workspace`
+					);
+					return;
+				}
+				if (response.error === "already_invited") {
+					logger.info(
+						`User ${userEmail} already has a pending invite`
+					);
+					return;
+				}
+				throw new Error(`Slack API error: ${response.error}`);
+			}
+
+			logger.info(`Restored user ${userEmail} with role ${role}`);
+		} catch (error) {
+			throw new Error(
+				`Failed to restore user: ${(error as Error).message}`
+			);
+		}
+	}
+
+	/**
+	 * Note: Slack file restoration is not supported because files are permanently deleted
+	 * You would need to implement a backup mechanism if file undo is required
+	 */
+	async restoreFile(): Promise<void> {
+		throw new Error(
+			"Slack file restoration is not supported. Files are permanently deleted in Slack. " +
+				"Consider implementing a backup mechanism or using Slack's file export API before deletion."
+		);
+	}
+
+	/**
+	 * Restore file permissions (make file public again)
+	 */
+	async restorePermissions(): Promise<void> {
+		throw new Error(
+			"Slack permission restoration is not supported. Once public access is revoked, " +
+				"files must be manually shared again by the file owner."
+		);
 	}
 }

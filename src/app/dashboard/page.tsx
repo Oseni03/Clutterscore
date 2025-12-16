@@ -1,27 +1,23 @@
+// app/dashboard/page.tsx
 "use client";
 
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	AreaChart,
-	Area,
-	XAxis,
-	CartesianGrid,
-	Tooltip,
-	ResponsiveContainer,
-} from "recharts";
 import { PlaybookCard } from "@/components/playbook-card";
 import { ScoreRing } from "@/components/ui/score-ring";
+import { SavingsTracker } from "@/components/dashboard/savings-tracker";
+import { ClutterscoreTrend } from "@/components/dashboard/clutterscore-trend";
+import { NextScanCountdown } from "@/components/dashboard/next-scan-countdown";
 import {
 	TrendingUp,
 	AlertTriangle,
 	RefreshCw,
 	AlertCircle,
 	Loader2,
+	History,
 } from "lucide-react";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useRouter } from "next/navigation";
@@ -34,10 +30,7 @@ const DashboardPage = () => {
 		isLoading,
 		isRefreshing,
 		error,
-		selectedTrendPeriod,
 		runAudit,
-		setSelectedTrendPeriod,
-		getFilteredTrends,
 		getPreviousScore,
 	} = useDashboard();
 
@@ -130,7 +123,6 @@ const DashboardPage = () => {
 	}
 
 	const previousScore = getPreviousScore();
-	const trendData = getFilteredTrends();
 
 	return (
 		<div className="p-4 md:p-6 space-y-6">
@@ -145,24 +137,34 @@ const DashboardPage = () => {
 						{new Date(auditData.auditedAt).toLocaleString()}
 					</p>
 				</div>
-				<Button
-					onClick={runAudit}
-					disabled={isRefreshing}
-					variant="outline"
-					size="sm"
-				>
-					{isRefreshing ? (
-						<>
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							Running...
-						</>
-					) : (
-						<>
-							<RefreshCw className="mr-2 h-4 w-4" />
-							Run Audit
-						</>
-					)}
-				</Button>
+				<div className="flex gap-2">
+					<Button
+						onClick={() => router.push("/dashboard/audit-logs")}
+						variant="outline"
+						size="sm"
+					>
+						<History className="mr-2 h-4 w-4" />
+						Audit Logs
+					</Button>
+					<Button
+						onClick={runAudit}
+						disabled={isRefreshing}
+						variant="outline"
+						size="sm"
+					>
+						{isRefreshing ? (
+							<>
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								Running...
+							</>
+						) : (
+							<>
+								<RefreshCw className="mr-2 h-4 w-4" />
+								Run Audit
+							</>
+						)}
+					</Button>
+				</div>
 			</div>
 
 			{/* Error Alert */}
@@ -173,21 +175,21 @@ const DashboardPage = () => {
 				</Alert>
 			)}
 
-			{/* Overview Section */}
+			{/* Top Row: Score + Metrics + Savings + Countdown */}
 			<div className="grid md:grid-cols-12 gap-4 md:gap-6">
 				{/* Score Card */}
-				<Card className="md:col-span-4 flex flex-col items-center justify-center p-6 border-border/60 shadow-sm relative overflow-hidden">
+				<Card className="md:col-span-3 flex flex-col items-center justify-center p-6 border-border/60 shadow-sm relative overflow-hidden">
 					<div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent pointer-events-none"></div>
-					<h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-6 w-full text-center uppercase tracking-wider">
-						Current Hygiene Score
+					<h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-4 w-full text-center uppercase tracking-wider">
+						Clutterscore
 					</h3>
-					<ScoreRing score={auditData.score} size={160} />
-					<div className="mt-6 flex gap-4 text-center">
+					<ScoreRing score={auditData.score} size={140} />
+					<div className="mt-4 flex gap-4 text-center">
 						{previousScore !== null && (
 							<>
 								<div>
 									<p className="text-xs text-muted-foreground">
-										Last Month
+										Last
 									</p>
 									<p className="text-sm font-bold text-muted-foreground">
 										{previousScore}
@@ -207,12 +209,12 @@ const DashboardPage = () => {
 					</div>
 				</Card>
 
-				{/* Key Metrics */}
-				<div className="md:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-					<Card className="p-4 md:p-6 border-border/60 shadow-sm flex flex-col justify-between">
+				{/* Waste Metrics */}
+				<div className="md:col-span-5 grid grid-cols-1 gap-4">
+					<Card className="p-4 border-border/60 shadow-sm">
 						<div className="flex justify-between items-start">
 							<div>
-								<p className="text-xs md:text-sm font-medium text-muted-foreground mb-1">
+								<p className="text-xs font-medium text-muted-foreground mb-1">
 									Projected Annual Waste
 								</p>
 								<h3 className="text-2xl md:text-3xl font-display font-bold text-foreground">
@@ -223,32 +225,22 @@ const DashboardPage = () => {
 								<TrendingUp className="h-5 w-5" />
 							</div>
 						</div>
-						<div className="mt-4">
-							<div className="flex justify-between text-xs mb-1">
-								<span>
-									Storage:{" "}
-									{formatCurrency(auditData.storageWaste)}
-								</span>
-								<span>
-									Licenses:{" "}
-									{formatCurrency(auditData.licenseWaste)}
-								</span>
-							</div>
-							<Progress
-								value={
-									(auditData.storageWaste /
-										auditData.estimatedSavings) *
-									100
-								}
-								className="h-2 bg-destructive/10 [&>div]:bg-destructive"
-							/>
+						<div className="mt-3 flex justify-between text-xs text-muted-foreground">
+							<span>
+								Storage:{" "}
+								{formatCurrency(auditData.storageWaste)}
+							</span>
+							<span>
+								Licenses:{" "}
+								{formatCurrency(auditData.licenseWaste)}
+							</span>
 						</div>
 					</Card>
 
-					<Card className="p-4 md:p-6 border-border/60 shadow-sm flex flex-col justify-between">
+					<Card className="p-4 border-border/60 shadow-sm">
 						<div className="flex justify-between items-start">
 							<div>
-								<p className="text-xs md:text-sm font-medium text-muted-foreground mb-1">
+								<p className="text-xs font-medium text-muted-foreground mb-1">
 									Active Risks
 								</p>
 								<h3 className="text-2xl md:text-3xl font-display font-bold text-foreground">
@@ -259,128 +251,30 @@ const DashboardPage = () => {
 								<AlertTriangle className="h-5 w-5" />
 							</div>
 						</div>
-						<div className="mt-4 text-xs md:text-sm text-muted-foreground">
+						<div className="mt-3 text-xs text-muted-foreground">
 							<span className="text-orange-600 font-medium">
 								{auditData.criticalRisks} Critical
 							</span>{" "}
-							(Ghost Access)
-							<br />
+							•{" "}
 							<span className="text-yellow-600 font-medium">
 								{auditData.moderateRisks} Moderate
-							</span>{" "}
-							(Public Links)
-						</div>
-					</Card>
-
-					<Card className="col-span-1 md:col-span-2 p-4 md:p-6 border-border/60 shadow-sm">
-						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-xs md:text-sm font-medium text-muted-foreground">
-								Hygiene Trend
-							</h3>
-							<div className="flex gap-2">
-								<Button
-									variant={
-										selectedTrendPeriod === "30"
-											? "outline"
-											: "ghost"
-									}
-									size="sm"
-									className="h-7 text-xs"
-									onClick={() => setSelectedTrendPeriod("30")}
-								>
-									30d
-								</Button>
-								<Button
-									variant={
-										selectedTrendPeriod === "90"
-											? "outline"
-											: "ghost"
-									}
-									size="sm"
-									className="h-7 text-xs"
-									onClick={() => setSelectedTrendPeriod("90")}
-								>
-									90d
-								</Button>
-							</div>
-						</div>
-						<div className="h-[140px] md:h-[160px] w-full">
-							{trendData.length > 0 ? (
-								<ResponsiveContainer width="100%" height="100%">
-									<AreaChart data={trendData}>
-										<defs>
-											<linearGradient
-												id="colorScore"
-												x1="0"
-												y1="0"
-												x2="0"
-												y2="1"
-											>
-												<stop
-													offset="0%"
-													stopColor="hsl(var(--foreground))"
-													stopOpacity={0.25}
-												/>
-												<stop
-													offset="80%"
-													stopColor="hsl(var(--foreground))"
-													stopOpacity={0.05}
-												/>
-											</linearGradient>
-										</defs>
-
-										<CartesianGrid
-											strokeDasharray="3 3"
-											vertical={false}
-											stroke="hsl(var(--border))"
-										/>
-
-										<XAxis
-											dataKey="name"
-											stroke="hsl(var(--muted-foreground))"
-											fontSize={12}
-											tickLine={false}
-											axisLine={false}
-										/>
-
-										<Tooltip
-											contentStyle={{
-												backgroundColor:
-													"hsl(var(--card))",
-												borderRadius: "8px",
-												border: "1px solid hsl(var(--border))",
-												boxShadow:
-													"0 4px 12px rgba(0,0,0,0.1)",
-											}}
-											itemStyle={{
-												color: "hsl(var(--foreground))",
-											}}
-											labelStyle={{
-												color: "hsl(var(--muted-foreground))",
-											}}
-										/>
-
-										<Area
-											type="monotone"
-											dataKey="score"
-											stroke="hsl(var(--foreground))"
-											strokeWidth={2}
-											fill="url(#colorScore)"
-											isAnimationActive={true}
-											animationDuration={700}
-											animationEasing="ease-in-out"
-										/>
-									</AreaChart>
-								</ResponsiveContainer>
-							) : (
-								<div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-									No trend data available yet
-								</div>
-							)}
+							</span>
 						</div>
 					</Card>
 				</div>
+
+				{/* Right Column: Savings Tracker + Scan Countdown */}
+				<div className="md:col-span-4 grid grid-cols-1 gap-4">
+					<SavingsTracker />
+					<NextScanCountdown
+						onRunAudit={runAudit}
+						isRunning={isRefreshing}
+					/>
+				</div>
 			</div>
+
+			{/* Trend Chart */}
+			<ClutterscoreTrend />
 
 			{/* Playbooks Section */}
 			<div>

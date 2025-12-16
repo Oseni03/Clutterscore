@@ -6,6 +6,8 @@ import {
 	AuditData,
 	FileData,
 	UserData,
+	RestoreFileAction,
+	RestorePermissionsAction,
 } from "./types";
 import crypto from "crypto";
 import { logger } from "../logger";
@@ -275,43 +277,20 @@ export class GoogleConnector extends BaseConnector {
 	// ============================================================================
 
 	/**
-	 * Archive a file in Google Drive by moving it to an "Archived" folder
-	 * This is safer than permanent deletion and allows for recovery
+	 * Archive a file to a dedicated archive folder
+	 * Override to support proper undo
 	 */
 	async archiveFile(
 		externalId: string,
-		_metadata: Record<string, unknown>
+		metadata: Record<string, any>
 	): Promise<void> {
-		void _metadata;
 		await this.ensureValidToken();
 
 		try {
-			// Get or create "Archived" folder
-			const archiveFolderName = "Archived";
-			let archiveFolderId: string;
+			// Get or create archive folder
+			const archiveFolderId = await this.getOrCreateArchiveFolder();
 
-			// Search for existing archive folder
-			const folderSearch = await this.drive.files.list({
-				q: `name='${archiveFolderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-				fields: "files(id, name)",
-				supportsAllDrives: true,
-			});
-
-			if (folderSearch.data.files && folderSearch.data.files.length > 0) {
-				archiveFolderId = folderSearch.data.files[0].id!;
-			} else {
-				// Create archive folder if it doesn't exist
-				const folder = await this.drive.files.create({
-					requestBody: {
-						name: archiveFolderName,
-						mimeType: "application/vnd.google-apps.folder",
-					},
-					fields: "id",
-				});
-				archiveFolderId = folder.data.id!;
-			}
-
-			// Get file info to preserve the name
+			// Get current file parents
 			const file = await this.drive.files.get({
 				fileId: externalId,
 				fields: "name, parents",
@@ -330,13 +309,19 @@ export class GoogleConnector extends BaseConnector {
 				fields: "id, parents",
 			});
 
+			// Store archive info in metadata for undo
+			metadata.archiveFolderId = archiveFolderId;
+			metadata.originalParentId = previousParents;
+			metadata.archivedAt = new Date().toISOString();
+
 			logger.info(
-				`Archived Google Drive file "${fileName}" (${externalId})`
+				`Archived file ${fileName} to folder ${archiveFolderId}`
 			);
-		} catch (error) {
-			throw new Error(
-				`Failed to archive Google Drive file ${externalId}: ${(error as Error).message}`
-			);
+		} catch (error: any) {
+			if (error.code === 404) {
+				throw new Error(`File ${externalId} not found`);
+			}
+			throw new Error(`Failed to archive file: ${error.message}`);
 		}
 	}
 
@@ -420,5 +405,137 @@ export class GoogleConnector extends BaseConnector {
 				`Failed to disable user ${externalId}: ${(error as Error).message}`
 			);
 		}
+	}
+
+	/**
+	 * Restore a file from archive folder back to its original location
+	 */
+	async restoreFile(undoAction: RestoreFileAction): Promise<void> {
+		await this.ensureValidToken();
+
+		const { fileId, originalParentId, archiveFolderId } = undoAction;
+
+		try {
+			// Remove file from archive folder and restore to original parent
+			const updateParams: any = {};
+
+			if (originalParentId) {
+				updateParams.addParents = originalParentId;
+			}
+
+			if (archiveFolderId) {
+				updateParams.removeParents = archiveFolderId;
+			}
+
+			await this.drive.files.update({
+				fileId,
+				...updateParams,
+				fields: "id, name, parents",
+			});
+
+			logger.info(`Restored file ${fileId} to original location`);
+		} catch (error: any) {
+			if (error.code === 404) {
+				throw new Error(
+					`File ${fileId} not found. It may have been permanently deleted.`
+				);
+			}
+			throw new Error(`Failed to restore file: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Restore file permissions to their original state
+	 */
+	async restorePermissions(
+		undoAction: RestorePermissionsAction
+	): Promise<void> {
+		await this.ensureValidToken();
+
+		const { fileId, originalSharing } = undoAction;
+
+		try {
+			// Get current permissions
+			const file = await this.drive.files.get({
+				fileId,
+				fields: "permissions",
+			});
+
+			const currentPermissions = file.data.permissions || [];
+
+			// If file was originally publicly shared, restore public link
+			if (originalSharing.isPubliclyShared) {
+				await this.drive.permissions.create({
+					fileId,
+					requestBody: {
+						role: "reader",
+						type: "anyone",
+					},
+				});
+			}
+
+			// Restore original user/group permissions
+			if (
+				originalSharing.permissions &&
+				Array.isArray(originalSharing.permissions)
+			) {
+				for (const perm of originalSharing.permissions) {
+					// Check if permission already exists
+					const exists = currentPermissions.some(
+						(cp: any) =>
+							cp.emailAddress === perm.emailAddress ||
+							cp.id === perm.id
+					);
+
+					if (!exists) {
+						await this.drive.permissions.create({
+							fileId,
+							requestBody: {
+								role: perm.role,
+								type: perm.type,
+								emailAddress: perm.emailAddress,
+								domain: perm.domain,
+							},
+						});
+					}
+				}
+			}
+
+			logger.info(`Restored permissions for file ${fileId}`);
+		} catch (error: any) {
+			if (error.code === 404) {
+				throw new Error(`File ${fileId} not found`);
+			}
+			throw new Error(`Failed to restore permissions: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Get or create a dedicated "Clutterscore Archive" folder
+	 */
+	private async getOrCreateArchiveFolder(): Promise<string> {
+		const folderName = "Clutterscore Archive";
+
+		// Search for existing archive folder
+		const response = await this.drive.files.list({
+			q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+			fields: "files(id, name)",
+			pageSize: 1,
+		});
+
+		if (response.data.files && response.data.files.length > 0) {
+			return response.data.files[0].id!;
+		}
+
+		// Create new archive folder
+		const folder = await this.drive.files.create({
+			requestBody: {
+				name: folderName,
+				mimeType: "application/vnd.google-apps.folder",
+			},
+			fields: "id",
+		});
+
+		return folder.data.id!;
 	}
 }

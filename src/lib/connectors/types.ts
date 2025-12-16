@@ -69,6 +69,78 @@ export interface ConnectorError {
 	retryable: boolean;
 }
 
+export interface UndoAction {
+	type:
+		| "restore_file"
+		| "restore_access"
+		| "restore_permissions"
+		| "restore_channel"
+		| "restore_user"
+		| "restore_license";
+	itemId: string;
+	itemName: string;
+	itemType: string;
+	externalId: string | null;
+	actionType: string;
+	originalMetadata: Record<string, any>;
+	executedAt: Date;
+	executedBy?: string;
+}
+
+export interface RestoreFileAction extends UndoAction {
+	type: "restore_file";
+	fileId: string;
+	fileName: string;
+	originalPath: string;
+	originalParentId?: string;
+	archiveFolderId?: string;
+	source: string;
+}
+
+export interface RestoreAccessAction extends UndoAction {
+	type: "restore_access";
+	userId: string;
+	userEmail: string;
+	groupId?: string;
+	role?: string;
+	permissions?: string[];
+}
+
+export interface RestorePermissionsAction extends UndoAction {
+	type: "restore_permissions";
+	fileId: string;
+	fileName: string;
+	originalSharing: {
+		isPubliclyShared: boolean;
+		sharedWith: string[];
+		permissions?: any[];
+	};
+}
+
+export interface RestoreChannelAction extends UndoAction {
+	type: "restore_channel";
+	channelId: string;
+	channelName: string;
+	isPrivate: boolean;
+	memberCount: number;
+}
+
+export interface RestoreUserAction extends UndoAction {
+	type: "restore_user";
+	userId: string;
+	userEmail: string;
+	role: string;
+	licenseType?: string;
+}
+
+export interface RestoreLicenseAction extends UndoAction {
+	type: "restore_license";
+	userId: string;
+	userEmail: string;
+	licenseType: string;
+	sku?: string;
+}
+
 export abstract class BaseConnector {
 	protected config: ConnectorConfig;
 	protected source: ToolSource;
@@ -216,6 +288,78 @@ export abstract class BaseConnector {
 		void _metadata;
 		throw new Error(
 			`License removal is not supported for ${this.source}. Please manage licenses directly in the service.`
+		);
+	}
+
+	// ============================================================================
+	// UNDO METHODS - Restore previously executed actions
+	// ============================================================================
+
+	/**
+	 * Restore a file from archive back to its original location
+	 * @param undoAction Action metadata containing restore information
+	 */
+	async restoreFile(_undoAction: RestoreFileAction): Promise<void> {
+		void _undoAction;
+		throw new Error(
+			`File restoration is not supported for ${this.source}. Please contact support if you need this feature.`
+		);
+	}
+
+	/**
+	 * Restore user access that was previously revoked
+	 * @param undoAction Action metadata containing restore information
+	 */
+	async restoreAccess(_undoAction: RestoreAccessAction): Promise<void> {
+		void _undoAction;
+		throw new Error(
+			`Access restoration is not supported for ${this.source}. Please contact support if you need this feature.`
+		);
+	}
+
+	/**
+	 * Restore file permissions to their original state
+	 * @param undoAction Action metadata containing restore information
+	 */
+	async restorePermissions(
+		_undoAction: RestorePermissionsAction
+	): Promise<void> {
+		void _undoAction;
+		throw new Error(
+			`Permission restoration is not supported for ${this.source}. Please contact support if you need this feature.`
+		);
+	}
+
+	/**
+	 * Unarchive a channel or workspace
+	 * @param undoAction Action metadata containing restore information
+	 */
+	async restoreChannel(_undoAction: RestoreChannelAction): Promise<void> {
+		void _undoAction;
+		throw new Error(
+			`Channel restoration is not supported for ${this.source}. Please contact support if you need this feature.`
+		);
+	}
+
+	/**
+	 * Re-enable a previously disabled user account
+	 * @param undoAction Action metadata containing restore information
+	 */
+	async restoreUser(_undoAction: RestoreUserAction): Promise<void> {
+		void _undoAction;
+		throw new Error(
+			`User restoration is not supported for ${this.source}. Please contact support if you need this feature.`
+		);
+	}
+
+	/**
+	 * Re-assign a license to a user
+	 * @param undoAction Action metadata containing restore information
+	 */
+	async restoreLicense(_undoAction: RestoreLicenseAction): Promise<void> {
+		void _undoAction;
+		throw new Error(
+			`License restoration is not supported for ${this.source}. Please contact support if you need this feature.`
 		);
 	}
 

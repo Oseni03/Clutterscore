@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 import { AuditLogActionType, AuditLogStatus } from "@prisma/client";
+import { UndoButton } from "@/components/audit-logs/undo-button";
 
 const ACTION_ICONS = {
 	REVOKE_ACCESS: UserX,
@@ -122,9 +123,9 @@ export default function AuditLogsPage() {
 
 		if (minutes < 1) return "Just now";
 		if (minutes < 60)
-			return `${minutes} ${minutes === 1 ? "min" : "mins"} ago`;
-		if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
-		return `${days} ${days === 1 ? "day" : "days"} ago`;
+			return `${minutes} min${minutes === 1 ? "" : "s"} ago`;
+		if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+		return `${days} day${days === 1 ? "" : "s"} ago`;
 	};
 
 	const getActionIcon = (actionType: AuditLogActionType) => {
@@ -150,13 +151,11 @@ export default function AuditLogsPage() {
 					</div>
 					<Skeleton className="h-10 w-32" />
 				</div>
-
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					{[1, 2, 3, 4].map((i) => (
 						<Skeleton key={i} className="h-24" />
 					))}
 				</div>
-
 				<Card>
 					<CardHeader>
 						<Skeleton className="h-10 w-full" />
@@ -179,10 +178,10 @@ export default function AuditLogsPage() {
 			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 				<div>
 					<h1 className="text-xl md:text-2xl font-display font-bold">
-						Audit Logs
+						Audit Logs & Undo History
 					</h1>
 					<p className="text-sm text-muted-foreground mt-1">
-						Track every cleanup action and security event.
+						Track actions with 30-day undo safety net
 					</p>
 				</div>
 				<div className="flex gap-2 w-full md:w-auto">
@@ -247,10 +246,10 @@ export default function AuditLogsPage() {
 				</Card>
 				<Card className="p-4">
 					<p className="text-xs text-muted-foreground mb-1">
-						Pending
+						Can Undo
 					</p>
-					<p className="text-2xl font-bold text-yellow-600">
-						{stats.pending}
+					<p className="text-2xl font-bold text-blue-600">
+						{logs.filter((l) => l.canUndo).length}
 					</p>
 				</Card>
 			</div>
@@ -259,7 +258,6 @@ export default function AuditLogsPage() {
 			<Card>
 				<CardHeader className="pb-3">
 					<div className="flex flex-col md:flex-row gap-4 justify-between">
-						{/* Search */}
 						<div className="relative flex-1 md:max-w-sm">
 							<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
@@ -269,10 +267,7 @@ export default function AuditLogsPage() {
 								onChange={(e) => handleSearch(e.target.value)}
 							/>
 						</div>
-
-						{/* Filters */}
 						<div className="flex gap-2 flex-wrap">
-							{/* Action Type Filter */}
 							<Select
 								value={filters.actionType}
 								onValueChange={(value) =>
@@ -299,8 +294,6 @@ export default function AuditLogsPage() {
 									))}
 								</SelectContent>
 							</Select>
-
-							{/* Status Filter */}
 							<Select
 								value={filters.status}
 								onValueChange={(value) =>
@@ -344,7 +337,7 @@ export default function AuditLogsPage() {
 											<TableHead>Time</TableHead>
 											<TableHead>Status</TableHead>
 											<TableHead className="text-right">
-												Details
+												Undo
 											</TableHead>
 										</TableRow>
 									</TableHeader>
@@ -353,7 +346,6 @@ export default function AuditLogsPage() {
 											const Icon = getActionIcon(
 												log.actionType
 											);
-
 											return (
 												<TableRow key={log.id}>
 													<TableCell>
@@ -415,18 +407,22 @@ export default function AuditLogsPage() {
 														</Badge>
 													</TableCell>
 													<TableCell className="text-right">
-														<div className="flex justify-end items-center gap-2">
-															{log.details && (
-																<span className="text-xs text-muted-foreground mr-2 max-w-[150px] truncate">
-																	{typeof log.details ===
-																	"object"
-																		? JSON.stringify(
-																				log.details
-																			)
-																		: log.details}
-																</span>
+														<UndoButton
+															logId={log.id}
+															canUndo={
+																log.canUndo
+															}
+															daysUntilExpiry={
+																log.daysUntilExpiry
+															}
+															actionType={formatActionType(
+																log.actionType
 															)}
-														</div>
+															target={log.target}
+															onUndoComplete={
+																handleRefresh
+															}
+														/>
 													</TableCell>
 												</TableRow>
 											);

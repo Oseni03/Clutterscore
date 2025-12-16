@@ -684,7 +684,7 @@ export class ConnectorService {
 	}
 
 	/**
-	 * Perform playbook actions and collect undo information
+	 * Perform playbook actions and collect detailed undo information
 	 */
 	async performPlaybookActions(
 		playbook: PlaybookWithItems,
@@ -732,6 +732,7 @@ export class ConnectorService {
 			const actionType = this.mapPlaybookToActionType(
 				playbook.impactType
 			);
+			const metadata = (item.metadata as Record<string, any>) || {};
 
 			try {
 				if (!connector) {
@@ -740,55 +741,156 @@ export class ConnectorService {
 					continue;
 				}
 
-				// Prepare undo action before executing
-				const undoAction = {
-					itemId: item.id,
-					itemName: item.itemName,
-					itemType: item.itemType,
-					externalId: item.externalId,
-					actionType,
-					originalMetadata: item.metadata,
-					executedAt: new Date(),
-					executedBy: userId,
-				};
-
-				// Execute action
+				// Execute action and capture metadata for undo
 				switch (actionType) {
-					case "ARCHIVE_FILE":
+					case "ARCHIVE_FILE": {
+						// Archive the file
 						await connector.archiveFile(
 							item.externalId || "",
-							(item.metadata as Record<string, any>) || {}
+							metadata
 						);
-						affectedFiles.push(item.itemName);
-						undoActions.push(undoAction);
-						break;
 
-					case "UPDATE_PERMISSIONS":
+						// Prepare undo action with all necessary info
+						undoActions.push({
+							type: "restore_file",
+							itemId: item.id,
+							itemName: item.itemName,
+							itemType: item.itemType,
+							externalId: item.externalId,
+							fileId: item.externalId,
+							fileName: item.itemName,
+							originalPath:
+								metadata.originalPath || metadata.path,
+							originalParentId: metadata.originalParentId,
+							archiveFolderId: metadata.archiveFolderId,
+							archivePath: metadata.archivePath,
+							source: playbook.source,
+							actionType: "ARCHIVE_FILE",
+							originalMetadata: metadata,
+							executedAt: new Date(),
+							executedBy: userId,
+						});
+
+						affectedFiles.push(item.itemName);
+						break;
+					}
+
+					case "UPDATE_PERMISSIONS": {
+						// Update permissions (restrict access)
 						await connector.updatePermissions(
 							item.externalId || "",
-							(item.metadata as Record<string, any>) || {}
+							metadata
 						);
-						affectedFiles.push(item.itemName);
-						undoActions.push(undoAction);
-						break;
 
-					case "ARCHIVE_CHANNEL":
+						// Prepare undo action
+						undoActions.push({
+							type: "restore_permissions",
+							itemId: item.id,
+							itemName: item.itemName,
+							itemType: item.itemType,
+							externalId: item.externalId,
+							fileId: item.externalId,
+							fileName: item.itemName,
+							originalSharing: metadata.originalSharing || {
+								isPubliclyShared:
+									metadata.isPubliclyShared || false,
+								sharedWith: metadata.sharedWith || [],
+								permissions: metadata.permissions || [],
+							},
+							actionType: "UPDATE_PERMISSIONS",
+							originalMetadata: metadata,
+							executedAt: new Date(),
+							executedBy: userId,
+						});
+
+						affectedFiles.push(item.itemName);
+						break;
+					}
+
+					case "ARCHIVE_CHANNEL": {
+						// Archive the channel
 						await connector.archiveChannel(
 							item.externalId || "",
-							(item.metadata as Record<string, any>) || {}
+							metadata
 						);
-						affectedFiles.push(item.itemName);
-						undoActions.push(undoAction);
-						break;
 
-					case "REMOVE_GUEST":
+						// Prepare undo action
+						undoActions.push({
+							type: "restore_channel",
+							itemId: item.id,
+							itemName: item.itemName,
+							itemType: item.itemType,
+							externalId: item.externalId,
+							channelId: item.externalId,
+							channelName: item.itemName,
+							isPrivate: metadata.isPrivate || false,
+							memberCount: metadata.memberCount || 0,
+							actionType: "ARCHIVE_CHANNEL",
+							originalMetadata: metadata,
+							executedAt: new Date(),
+							executedBy: userId,
+						});
+
+						affectedFiles.push(item.itemName);
+						break;
+					}
+
+					case "REMOVE_GUEST": {
+						// Remove guest user
 						await connector.removeGuest(
 							item.externalId || "",
-							(item.metadata as Record<string, any>) || {}
+							metadata
 						);
+
+						// Prepare undo action
+						undoActions.push({
+							type: "restore_user",
+							itemId: item.id,
+							itemName: item.itemName,
+							itemType: item.itemType,
+							externalId: item.externalId,
+							userId: item.externalId,
+							userEmail: item.itemName,
+							role: metadata.role || "guest",
+							licenseType: metadata.licenseType,
+							actionType: "REMOVE_GUEST",
+							originalMetadata: metadata,
+							executedAt: new Date(),
+							executedBy: userId,
+						});
+
 						affectedFiles.push(item.itemName);
-						undoActions.push(undoAction);
 						break;
+					}
+
+					case "REVOKE_ACCESS": {
+						// Revoke access
+						await connector.revokeAccess(
+							item.externalId || "",
+							metadata
+						);
+
+						// Prepare undo action
+						undoActions.push({
+							type: "restore_access",
+							itemId: item.id,
+							itemName: item.itemName,
+							itemType: item.itemType,
+							externalId: item.externalId,
+							userId: item.externalId,
+							userEmail: item.itemName,
+							groupId: metadata.groupId,
+							role: metadata.role,
+							permissions: metadata.permissions,
+							actionType: "REVOKE_ACCESS",
+							originalMetadata: metadata,
+							executedAt: new Date(),
+							executedBy: userId,
+						});
+
+						affectedFiles.push(item.itemName);
+						break;
+					}
 
 					default:
 						logger.info(`Unknown action type ${actionType}`);
@@ -805,7 +907,7 @@ export class ConnectorService {
 				const message = err && (err.message || String(err));
 				if (
 					typeof message === "string" &&
-					/not implemented/i.test(message)
+					/not (implemented|supported)/i.test(message)
 				) {
 					throw new Error(message);
 				}

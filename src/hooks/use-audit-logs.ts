@@ -82,8 +82,12 @@ export function useAuditLogs() {
 	const exportLogs = useCallback(async () => {
 		try {
 			const response = await fetch("/api/audit-logs/export");
-			const blob = await response.blob();
 
+			if (!response.ok) {
+				throw new Error("Failed to export logs");
+			}
+
+			const blob = await response.blob();
 			const url = window.URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
@@ -100,14 +104,44 @@ export function useAuditLogs() {
 		}
 	}, []);
 
+	const undoAction = useCallback(
+		async (logId: string) => {
+			try {
+				const response = await fetch(`/api/audit-logs/${logId}/undo`, {
+					method: "POST",
+				});
+
+				const data = await response.json();
+
+				if (!response.ok) {
+					throw new Error(data.error || "Failed to undo action");
+				}
+
+				toast.success("Action undone successfully");
+
+				// Refresh logs after undo
+				await fetchLogs();
+
+				return data;
+			} catch (err) {
+				const errorMsg =
+					(err as Error).message || "Failed to undo action";
+				toast.error(errorMsg);
+				throw err;
+			}
+		},
+		[fetchLogs]
+	);
+
 	const getActionStats = useCallback(() => {
 		return {
-			total: logs.length,
+			total: pagination.total,
 			success: logs.filter((l) => l.status === "SUCCESS").length,
 			failed: logs.filter((l) => l.status === "FAILED").length,
 			pending: logs.filter((l) => l.status === "PENDING").length,
+			canUndo: logs.filter((l) => l.canUndo).length,
 		};
-	}, [logs]);
+	}, [logs, pagination.total]);
 
 	const getActionTypeCount = useCallback(
 		(type: AuditLogActionType) => {
@@ -134,6 +168,7 @@ export function useAuditLogs() {
 		setFilters,
 		setPagination,
 		exportLogs,
+		undoAction,
 		refresh: fetchLogs,
 
 		// Computed

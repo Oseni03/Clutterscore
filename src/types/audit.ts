@@ -104,8 +104,11 @@ export type AuditLogData = Prisma.AuditLogGetPayload<{
 			select: {
 				title: true;
 				source: true;
+				impactType: true;
 			};
 		};
+		canUndo: boolean;
+		daysUntilExpiry: number | null;
 	};
 }>;
 
@@ -294,4 +297,50 @@ export interface IntegrationStatusSummary {
 export interface IntegrationStatusResponse {
 	success: boolean;
 	status: IntegrationStatusSummary;
+}
+
+export interface AuditLogsListResponse {
+	logs: AuditLogData[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+	error?: string;
+}
+
+export interface UndoActionResponse {
+	success: boolean;
+	message: string;
+	results: Array<{
+		type: string;
+		fileId?: string;
+		userId?: string;
+		status: string;
+	}>;
+	auditLog: any;
+	error?: string;
+}
+
+// Dashboard Stats Types
+export interface DashboardStats {
+	clutterscore: number;
+	lastAuditDate: Date | null;
+	nextScanDate: Date | null;
+	monthlySavings: number;
+	estimatedAnnualSavings: number;
+	activeRisks: number;
+	criticalRisks: number;
+	pendingPlaybooks: number;
+	subscriptionTier: string;
+	targetScore: number;
+	isFreeTier: boolean;
+	canRunAudit: boolean;
+}
+
+export interface ScoreTrendsResponse {
+	trends: ScoreTrendData[];
+	source: "audits" | "scoreTrends";
+	error?: any;
 }

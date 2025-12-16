@@ -2,7 +2,7 @@ import { ToolSource } from "@prisma/client";
 import { BaseConnector, ConnectorConfig } from "./types";
 import { SlackConnector } from "./slack";
 import { GoogleConnector } from "./google";
-import { MicrosoftConnector } from "./microsoft";
+// import { MicrosoftConnector } from "./microsoft";
 import { NotionConnector } from "./notion";
 import { DropboxConnector } from "./dropbox";
 import { FigmaConnector } from "./figma";
@@ -15,8 +15,8 @@ export class ConnectorFactory {
 				return new SlackConnector(config);
 			case "GOOGLE":
 				return new GoogleConnector(config);
-			case "MICROSOFT":
-				return new MicrosoftConnector(config);
+			// case "MICROSOFT":
+			// 	return new MicrosoftConnector(config);
 			case "NOTION":
 				return new NotionConnector(config);
 			case "DROPBOX":
