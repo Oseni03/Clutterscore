@@ -14,7 +14,6 @@ import {
 } from "recharts";
 import { useEffect, useState } from "react";
 import { ScoreTrendsResponse } from "@/types/audit";
-import { logger } from "@/lib/logger";
 
 interface TrendData {
 	month: string;
@@ -48,7 +47,7 @@ export function ClutterscoreTrend({ className }: ClutterscoreTrendProps) {
 				setLoading(false);
 			})
 			.catch((err) => {
-				logger.error("Failed to fetch trends:", err);
+				console.error("Failed to fetch trends:", err);
 				setLoading(false);
 			});
 	}, [period]);
