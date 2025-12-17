@@ -10,6 +10,7 @@ import {
 	APP_NAME,
 	APP_URL,
 } from "@/lib/config";
+import { NotificationStoreProvider } from "@/zustand/providers/notifications-store-provider";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -115,7 +116,9 @@ export default function RootLayout({
 			>
 				<ThemeProvider>
 					<OrganizationStoreProvider>
-						{children}
+						<NotificationStoreProvider>
+							{children}
+						</NotificationStoreProvider>
 					</OrganizationStoreProvider>
 					<Toaster />
 				</ThemeProvider>

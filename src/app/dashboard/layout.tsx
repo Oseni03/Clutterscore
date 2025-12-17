@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { getOrganizations } from "@/server/organizations";
 import { Organization } from "@prisma/client";
 import { toast } from "sonner";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 
 export default function Page({
 	children,
@@ -114,6 +115,9 @@ export default function Page({
 							orientation="vertical"
 							className="mr-2 data-[orientation=vertical]:h-4"
 						/>
+						<div className="ml-auto">
+							<NotificationDropdown />
+						</div>
 					</div>
 				</header>
 				<div className="flex flex-1 flex-col gap-4 p-4 pt-0">
