@@ -9,16 +9,20 @@ import {
 	ChannelData,
 	RestoreChannelAction,
 	RestoreUserAction,
+	RestoreFileAction,
 } from "./types";
 import crypto from "crypto";
 import { logger } from "../logger";
+import { ArchiveService } from "@/server/archive-service";
 
 export class SlackConnector extends BaseConnector {
 	private client: WebClient;
+	private archiveService: ArchiveService;
 
 	constructor(config: ConnectorConfig) {
 		super(config, "SLACK");
 		this.client = new WebClient(config.accessToken);
+		this.archiveService = new ArchiveService();
 	}
 
 	async testConnection(): Promise<boolean> {
@@ -358,6 +362,10 @@ export class SlackConnector extends BaseConnector {
 	// EXECUTION METHODS
 	// ============================================================================
 
+	/**
+	 * Archive a file by downloading to Vercel Blob, then deleting from Slack
+	 * This provides full restore capability despite Slack's permanent deletion
+	 */
 	async archiveFile(
 		externalId: string,
 		metadata: Record<string, any>
@@ -365,7 +373,7 @@ export class SlackConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
-			// Get file info first for metadata capture
+			// 1. Get file info from Slack
 			const fileInfo: any = await this.client.files.info({
 				file: externalId,
 			});
@@ -376,47 +384,82 @@ export class SlackConnector extends BaseConnector {
 
 			const file = fileInfo.file;
 			const fileName = file.name || file.title || "Unknown";
+			const fileUrl = file.url_private;
 
-			// Store original state for undo
+			if (!fileUrl) {
+				throw new Error("File download URL not available");
+			}
+
+			// 2. Store original state for metadata
 			metadata.originalState = {
 				name: fileName,
-				url: file.url_private || file.permalink,
+				url: fileUrl,
 				isPublic: file.public_url_shared || file.is_public,
 				channels: file.channels || [],
 				timestamp: file.timestamp,
+				user: file.user,
 			};
 
-			// Revoke public URL if exists
+			// 3. Archive to Vercel Blob
+			const archiveId = await this.archiveService.archiveFile({
+				organizationId: this.config.organizationId,
+				source: "SLACK",
+				externalId,
+				fileName,
+				fileUrl,
+				sizeMb: this.bytesToMb(file.size || 0),
+				mimeType: file.mimetype,
+				metadata: {
+					...metadata,
+					originalState: metadata.originalState,
+					headers: {
+						Authorization: `Bearer ${this.config.accessToken}`,
+					},
+				},
+				archivedBy: metadata.archivedBy,
+			});
+
+			// 4. Store archive ID for undo
+			metadata.archiveId = archiveId;
+			metadata.canRestore = true;
+			metadata.archivedAt = new Date().toISOString();
+
+			// 5. Revoke public URL if exists (safety measure)
 			if (file.public_url_shared || file.is_public) {
-				await this.client.files.revokePublicURL({
-					file: externalId,
-				});
-				logger.info(
-					`Revoked public access for Slack file "${fileName}"`
-				);
+				await this.client.files.revokePublicURL({ file: externalId });
+				logger.info(`Revoked public access for file "${fileName}"`);
 			}
 
-			// Delete the file
-			// WARNING: Slack doesn't support archive folders - this is permanent
+			// 6. Delete from Slack (now safe because we have a backup)
 			const deleteResponse: any = await this.client.files.delete({
 				file: externalId,
 			});
 
 			if (!deleteResponse.ok) {
+				// If deletion fails, we should clean up the archive
+				logger.error(
+					`Failed to delete file from Slack, but archive exists: ${archiveId}`
+				);
 				throw new Error(
-					deleteResponse.error || "Failed to delete file"
+					deleteResponse.error || "Failed to delete file from Slack"
 				);
 			}
 
-			metadata.deletedAt = new Date().toISOString();
 			logger.info(
-				`Archived (deleted) Slack file "${fileName}" (${externalId})`
+				`Archived Slack file "${fileName}" (${externalId}) to Vercel Blob (${archiveId})`
 			);
 		} catch (error) {
 			throw new Error(
 				`Failed to archive Slack file ${externalId}: ${(error as Error).message}`
 			);
 		}
+	}
+
+	/**
+	 * Check if a file can be restored
+	 */
+	async canRestoreFile(archiveId: string): Promise<boolean> {
+		return this.archiveService.fileExists(archiveId);
 	}
 
 	async updatePermissions(
@@ -692,14 +735,70 @@ export class SlackConnector extends BaseConnector {
 	}
 
 	/**
-	 * Note: Slack file restoration is not supported because files are permanently deleted
-	 * You would need to implement a backup mechanism if file undo is required
+	 * Restore a file from Vercel Blob back to Slack
+	 * The file will be uploaded as a new file with a new ID
 	 */
-	async restoreFile(): Promise<void> {
-		throw new Error(
-			"Slack file restoration is not supported. Files are permanently deleted in Slack. " +
-				"Consider implementing a backup mechanism or using Slack's file export API before deletion."
-		);
+	async restoreFile(undoAction: RestoreFileAction): Promise<void> {
+		await this.ensureValidToken();
+
+		const { originalMetadata } = undoAction;
+		const archiveId = originalMetadata.archiveId;
+
+		if (!archiveId) {
+			throw new Error(
+				"Archive ID not found. Cannot restore file without backup."
+			);
+		}
+
+		try {
+			// Restore from Vercel Blob back to Slack
+			const uploadResult = await this.archiveService.restoreFile(
+				{ archiveId },
+				async (buffer, metadata) => {
+					// Upload callback: upload buffer back to Slack
+					const channels =
+						metadata.originalLocation?.channels ||
+						originalMetadata.originalState?.channels ||
+						[];
+
+					const channelId = channels[0] || metadata.targetLocation;
+
+					if (!channelId) {
+						throw new Error(
+							"No channel specified for file restoration. Original channel information may be lost."
+						);
+					}
+
+					// Upload to Slack
+					const uploadResponse = await this.client.files.uploadV2({
+						channel_id: channelId,
+						file: buffer,
+						filename: metadata.fileName,
+						title: metadata.fileName,
+						initial_comment: `📦 Restored from archive (original file was archived on ${new Date(originalMetadata.archivedAt).toLocaleDateString()})`,
+					});
+
+					if (!uploadResponse.ok) {
+						throw new Error(
+							`Slack upload failed: ${uploadResponse.error || "Unknown error"}`
+						);
+					}
+
+					return {
+						messages: uploadResponse.response_metadata?.messages,
+						channelId,
+					};
+				}
+			);
+
+			logger.info(
+				`Restored file from archive ${archiveId}, new Slack file: ${uploadResult}`
+			);
+		} catch (error) {
+			throw new Error(
+				`Failed to restore file: ${(error as Error).message}`
+			);
+		}
 	}
 
 	/**

@@ -103,13 +103,14 @@ model Organization {
   members         Member[]
   invitations     Invitation[]
 
-  integrations ToolIntegration[]
-  audits       AuditResult[]
-  playbooks    Playbook[]
-  auditLogs    AuditLog[]
-  scoreTrends  ScoreTrend[]
-  activities   Activity[]
-  feedbacks    Feedback[]
+  integrations  ToolIntegration[]
+  audits        AuditResult[]
+  playbooks     Playbook[]
+  auditLogs     AuditLog[]
+  scoreTrends   ScoreTrend[]
+  activities    Activity[]
+  feedbacks     Feedback[]
+  archivedFiles ArchivedFile[]
 
   targetScore      Int    @default(75)
   subscriptionTier String @default("free")
@@ -485,4 +486,50 @@ model Feedback {
 
   @@index([organizationId, createdAt])
   @@index([userId, createdAt])
+}
+
+enum ArchiveStatus {
+  STAGED // Marked for archival but not yet archived
+  ARCHIVED // Successfully archived in Vercel Blob
+  RESTORED // File restored back to platform
+  DELETED // Permanently deleted after expiry
+}
+
+model ArchivedFile {
+  id             String     @id @default(uuid())
+  organizationId String
+  source         ToolSource
+  externalId     String // Original file ID in the platform
+
+  // File metadata
+  name     String
+  sizeMb   Float
+  mimeType String?
+
+  // Storage info (Vercel Blob)
+  storageProvider String // "VERCEL_BLOB"
+  storageBucket   String // "default" for Vercel Blob
+  storageKey      String // Path in blob storage
+  downloadUrl     String? // Public Vercel Blob URL
+
+  // Archive info
+  archivedAt DateTime      @default(now())
+  archivedBy String
+  expiresAt  DateTime // 30 days from archive date
+  status     ArchiveStatus @default(ARCHIVED)
+
+  // Undo info
+  originalLocation Json // Platform-specific location data
+  metadata         Json // Full original file metadata
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([expiresAt])
+  @@index([source])
+  @@index([status])
 }
