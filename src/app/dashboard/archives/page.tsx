@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-	Download,
 	RotateCcw,
 	Trash2,
 	AlertCircle,
@@ -24,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ArchivedFile, ArchiveStats } from "@/types/archives";
+import { DownloadButton } from "@/components/archives/download-button";
 
 export default function ArchivesPage() {
 	const [archives, setArchives] = useState<ArchivedFile[]>([]);
@@ -59,22 +59,6 @@ export default function ArchivesPage() {
 			toast.error("Failed to load archives");
 		} finally {
 			setLoading(false);
-		}
-	};
-
-	const handleDownload = async (archive: ArchivedFile) => {
-		try {
-			const link = document.createElement("a");
-			link.href = archive.downloadUrl;
-			link.download = archive.name;
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-
-			toast.success(`Downloading ${archive.name}`);
-		} catch (err) {
-			console.error("ARCHIVE_DOWNLOAD_ERROR: ", err);
-			toast.error("Failed to download file");
 		}
 	};
 
@@ -300,17 +284,9 @@ export default function ArchivesPage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<div className="flex gap-2 justify-end">
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() =>
-															handleDownload(
-																archive
-															)
-														}
-													>
-														<Download className="h-4 w-4" />
-													</Button>
+													<DownloadButton
+														archive={archive}
+													/>
 													{archive.status ===
 														"ARCHIVED" && (
 														<Button

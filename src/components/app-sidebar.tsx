@@ -69,12 +69,12 @@ const dashboardItems = {
 			icon: HardDrive,
 			url: "/dashboard/storage",
 		},
-		{
-			id: "archives",
-			title: "Archives",
-			icon: Archive,
-			url: "/dashboard/archives",
-		},
+		// {
+		// 	id: "archives",
+		// 	title: "Archives",
+		// 	icon: Archive,
+		// 	url: "/dashboard/archives",
+		// },
 		{
 			id: "settings",
 			title: "Settings",

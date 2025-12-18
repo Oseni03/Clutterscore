@@ -11,6 +11,7 @@ import {
 	APP_URL,
 } from "@/lib/config";
 import { NotificationStoreProvider } from "@/zustand/providers/notifications-store-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -115,12 +116,14 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<ThemeProvider>
-					<OrganizationStoreProvider>
-						<NotificationStoreProvider>
-							{children}
-						</NotificationStoreProvider>
-					</OrganizationStoreProvider>
-					<Toaster />
+					<TooltipProvider>
+						<OrganizationStoreProvider>
+							<NotificationStoreProvider>
+								{children}
+							</NotificationStoreProvider>
+						</OrganizationStoreProvider>
+						<Toaster />
+					</TooltipProvider>
 				</ThemeProvider>
 			</body>
 		</html>
