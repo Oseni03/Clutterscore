@@ -14,6 +14,7 @@ import {
 	Plug,
 	ChevronRight,
 	Files,
+	Archive,
 } from "lucide-react";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
@@ -67,6 +68,12 @@ const dashboardItems = {
 			title: "Storage Audit",
 			icon: HardDrive,
 			url: "/dashboard/storage",
+		},
+		{
+			id: "archives",
+			title: "Archives",
+			icon: Archive,
+			url: "/dashboard/archives",
 		},
 		{
 			id: "settings",

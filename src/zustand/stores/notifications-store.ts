@@ -1,9 +1,7 @@
-// stores/notification-store.ts
 "use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
 import { Notification } from "@prisma/client";
 
 export interface NotificationState {
@@ -23,7 +21,7 @@ export interface NotificationState {
 export const createNotificationStore = () => {
 	return create<NotificationState>()(
 		persist(
-			immer((set) => ({
+			(set) => ({
 				notifications: [],
 				unreadCount: 0,
 				loading: false,
@@ -42,10 +40,20 @@ export const createNotificationStore = () => {
 						const exists = state.notifications.some(
 							(n: Notification) => n.id === notification.id
 						);
-						if (!exists) {
-							state.notifications.unshift(notification);
-							if (!notification.read) state.unreadCount += 1;
+						if (exists) {
+							return state; // Return unchanged state if already exists
 						}
+
+						const newNotifications = [
+							notification,
+							...state.notifications,
+						];
+						return {
+							notifications: newNotifications,
+							unreadCount: notification.read
+								? state.unreadCount
+								: state.unreadCount + 1,
+						};
 					}),
 
 				markAsRead: async (id: string) => {
@@ -64,10 +72,17 @@ export const createNotificationStore = () => {
 							const notif = state.notifications.find(
 								(n: Notification) => n.id === id
 							);
-							if (notif && !notif.read) {
-								notif.read = true;
-								state.unreadCount -= 1;
+
+							if (!notif || notif.read) {
+								return state; // No change needed
 							}
+
+							return {
+								notifications: state.notifications.map((n) =>
+									n.id === id ? { ...n, read: true } : n
+								),
+								unreadCount: state.unreadCount - 1,
+							};
 						});
 					} catch (err) {
 						set({ error: (err as Error).message });
@@ -88,12 +103,13 @@ export const createNotificationStore = () => {
 						if (!response.ok)
 							throw new Error("Failed to mark all as read");
 
-						set((state) => {
-							state.notifications.forEach(
-								(n: Notification) => (n.read = true)
-							);
-							state.unreadCount = 0;
-						});
+						set((state) => ({
+							notifications: state.notifications.map((n) => ({
+								...n,
+								read: true,
+							})),
+							unreadCount: 0,
+						}));
 					} catch (err) {
 						set({ error: (err as Error).message });
 					} finally {
@@ -129,7 +145,7 @@ export const createNotificationStore = () => {
 				},
 
 				clearError: () => set({ error: null }),
-			})),
+			}),
 			{
 				name: "notification-store",
 				partialize: (state) => ({ notifications: state.notifications }),

@@ -13,7 +13,7 @@ export const cleanupExpiredArchives = inngest.createFunction(
 		name: "Clean up expired archived files",
 		retries: 3,
 	},
-	{ cron: "0 2 * * *" }, // Every day at 2 AM UTC
+	{ cron: "0 2 * * 0" }, // Every week at 2 AM UTC
 	async ({ step }) => {
 		const archiveService = new ArchiveService();
 

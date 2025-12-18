@@ -185,7 +185,7 @@ export const sendFinalExpiryWarnings = inngest.createFunction(
 								type: "RISK_DETECTED",
 								title: `URGENT: Archive expiring tomorrow – ${archive.name}`,
 								message: `The archived file "${archive.name}" will be permanently deleted tomorrow. Restore now if needed.`,
-								actionUrl: `/archives?highlight=${archive.id}`,
+								actionUrl: `/dashboard/archives?highlight=${archive.id}`,
 								metadata: {
 									archiveId: archive.id,
 									fileName: archive.name,
