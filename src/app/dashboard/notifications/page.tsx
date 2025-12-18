@@ -1,4 +1,3 @@
-// components/notifications/notifications-page-client.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -30,11 +29,9 @@ import {
 	ChevronLeft,
 	ChevronRight,
 } from "lucide-react";
-import Link from "next/link";
-import { useNotificationStore } from "@/zustand/providers/notifications-store-provider";
 import { cn } from "@/lib/utils";
-
-const ITEMS_PER_PAGE = 20;
+import { useNotificationStore } from "@/zustand/providers/notifications-store-provider";
+import Link from "next/link";
 
 const getIconForType = (type: string) => {
 	switch (type) {
@@ -57,50 +54,64 @@ export default function NotificationsPage() {
 		notifications,
 		pagination,
 		loading,
+		unreadCount,
 		fetchNotifications,
 		markAsRead,
 		markAllAsRead,
-	} = useNotificationStore((s) => ({
-		notifications: s.notifications,
-		pagination: s.pagination,
-		loading: s.loading,
-		fetchNotifications: s.fetchNotifications,
-		markAllAsRead: s.markAllAsRead,
-		markAsRead: s.markAsRead,
+	} = useNotificationStore((state) => ({
+		notifications: state.notifications,
+		pagination: state.pagination,
+		loading: state.loading,
+		unreadCount: state.unreadCount,
+		fetchNotifications: state.fetchNotifications,
+		markAsRead: state.markAsRead,
+		markAllAsRead: state.markAllAsRead,
 	}));
 
-	const totalPages = Math.ceil(notifications.length / ITEMS_PER_PAGE);
-	const currentPage = useNotificationStore(
-		(state) => Math.floor(state.notifications.length / ITEMS_PER_PAGE) || 1
-	); // Simple client-side calc; real pagination would use server offset
-
+	// Fetch page 1 on mount
 	useEffect(() => {
-		fetchNotifications();
+		fetchNotifications(1);
 	}, [fetchNotifications]);
 
-	const paginated = notifications.slice(
-		(currentPage - 1) * ITEMS_PER_PAGE,
-		currentPage * ITEMS_PER_PAGE
-	);
+	const handlePrev = () => {
+		if (pagination?.hasPrev) {
+			fetchNotifications(pagination.page - 1);
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		}
+	};
+
+	const handleNext = () => {
+		if (pagination?.hasNext) {
+			fetchNotifications(pagination.page + 1);
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		}
+	};
 
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-5xl">
 			<Card className="shadow-sm">
 				<CardHeader>
-					<div className="flex items-center justify-between">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 						<div>
 							<CardTitle className="text-2xl">
 								Notifications
 							</CardTitle>
 							<CardDescription>
-								Manage and review all your activity
+								{pagination ? (
+									<>
+										Showing {notifications.length} of{" "}
+										{pagination.totalCount} notifications
+									</>
+								) : (
+									"Manage and review all your activity"
+								)}
 							</CardDescription>
 						</div>
-						{notifications.some((n) => !n.read) && (
+						{unreadCount > 0 && (
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => markAllAsRead()}
+								onClick={markAllAsRead}
 								disabled={loading}
 							>
 								Mark all as read
@@ -122,15 +133,17 @@ export default function NotificationsPage() {
 							</TableHeader>
 							<TableBody>
 								{loading ? (
-									Array.from({ length: 8 }).map((_, i) => (
+									// Loading skeletons
+									Array.from({ length: 10 }).map((_, i) => (
 										<TableRow key={i}>
 											<TableCell>
 												<Skeleton className="h-4 w-4 rounded-full" />
 											</TableCell>
 											<TableCell>
 												<Skeleton className="h-4 w-[300px]" />
+												<Skeleton className="h-3 w-[200px] mt-2" />
 											</TableCell>
-											<TableCell className="hidden sm:table-cell">
+											<TableCell className="hidden sm:table-cell text-right">
 												<Skeleton className="h-4 w-20 ml-auto" />
 											</TableCell>
 										</TableRow>
@@ -147,7 +160,7 @@ export default function NotificationsPage() {
 										</TableCell>
 									</TableRow>
 								) : (
-									paginated.map((notif) => (
+									notifications.map((notif) => (
 										<TableRow
 											key={notif.id}
 											className={cn(
@@ -210,34 +223,32 @@ export default function NotificationsPage() {
 						</Table>
 					</ScrollArea>
 
-					{/* Simple client-side pagination */}
-					{totalPages > 1 && (
-						<div className="flex items-center justify-between border-t px-4 py-3">
+					{/* Server-side pagination controls */}
+					{pagination && pagination.totalPages > 1 && (
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t px-4 py-4">
 							<p className="text-sm text-muted-foreground">
-								Page {currentPage} of {totalPages}
+								Page {pagination.page} of{" "}
+								{pagination.totalPages} ({pagination.totalCount}{" "}
+								total)
 							</p>
-							<div className="flex gap-2">
+							<div className="flex items-center gap-2">
 								<Button
 									variant="outline"
 									size="sm"
-									disabled={!pagination?.hasPrev || loading}
-									onClick={() =>
-										fetchNotifications(pagination!.page - 1)
-									}
+									onClick={handlePrev}
+									disabled={!pagination.hasPrev || loading}
 								>
-									<ChevronLeft className="h-4 w-4" />
+									<ChevronLeft className="h-4 w-4 mr-1" />
 									Previous
 								</Button>
 								<Button
 									variant="outline"
 									size="sm"
-									disabled={!pagination?.hasNext || loading}
-									onClick={() =>
-										fetchNotifications(pagination!.page + 1)
-									}
+									onClick={handleNext}
+									disabled={!pagination.hasNext || loading}
 								>
 									Next
-									<ChevronRight className="h-4 w-4" />
+									<ChevronRight className="h-4 w-4 ml-1" />
 								</Button>
 							</div>
 						</div>
