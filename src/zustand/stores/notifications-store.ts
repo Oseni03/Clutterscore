@@ -1,20 +1,33 @@
+// stores/notification-store.ts
 "use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Notification } from "@prisma/client";
 
+export interface PaginationMeta {
+	page: number;
+	totalPages: number;
+	totalCount: number;
+	hasNext: boolean;
+	hasPrev: boolean;
+}
+
 export interface NotificationState {
 	notifications: Notification[];
 	unreadCount: number;
 	loading: boolean;
 	error: string | null;
+	pagination: PaginationMeta | null;
 
-	setNotifications: (notifications: Notification[]) => void;
+	setNotifications: (
+		notifications: Notification[],
+		meta: PaginationMeta
+	) => void;
 	addNotification: (notification: Notification) => void;
 	markAsRead: (id: string) => Promise<void>;
 	markAllAsRead: () => Promise<void>;
-	fetchNotifications: () => Promise<void>;
+	fetchNotifications: (page?: number) => Promise<void>;
 	clearError: () => void;
 }
 
@@ -26,33 +39,44 @@ export const createNotificationStore = () => {
 				unreadCount: 0,
 				loading: false,
 				error: null,
+				pagination: null,
 
-				setNotifications: (notifications: Notification[]) =>
+				setNotifications: (
+					notifications: Notification[],
+					meta: PaginationMeta
+				) =>
 					set({
 						notifications,
 						unreadCount: notifications.filter(
 							(n: Notification) => !n.read
 						).length,
+						pagination: meta,
 					}),
 
 				addNotification: (notification: Notification) =>
 					set((state) => {
 						const exists = state.notifications.some(
-							(n: Notification) => n.id === notification.id
+							(n) => n.id === notification.id
 						);
-						if (exists) {
-							return state; // Return unchanged state if already exists
-						}
+						if (exists) return state;
 
 						const newNotifications = [
 							notification,
 							...state.notifications,
-						];
+						].slice(0, 20); // Keep reasonable size for recent
+
 						return {
 							notifications: newNotifications,
 							unreadCount: notification.read
 								? state.unreadCount
 								: state.unreadCount + 1,
+							pagination: state.pagination
+								? {
+										...state.pagination,
+										totalCount:
+											state.pagination.totalCount + 1,
+									}
+								: null,
 						};
 					}),
 
@@ -70,12 +94,9 @@ export const createNotificationStore = () => {
 
 						set((state) => {
 							const notif = state.notifications.find(
-								(n: Notification) => n.id === id
+								(n) => n.id === id
 							);
-
-							if (!notif || notif.read) {
-								return state; // No change needed
-							}
+							if (!notif || notif.read) return state;
 
 							return {
 								notifications: state.notifications.map((n) =>
@@ -117,25 +138,30 @@ export const createNotificationStore = () => {
 					}
 				},
 
-				fetchNotifications: async () => {
+				fetchNotifications: async (page = 1) => {
 					set({ loading: true, error: null });
 					try {
-						const response = await fetch("/api/notifications");
+						const response = await fetch(
+							`/api/notifications?page=${page}`
+						);
 						if (!response.ok)
 							throw new Error("Failed to fetch notifications");
-						const data: Notification[] = await response.json();
 
-						data.sort(
+						const { notifications, pagination } =
+							await response.json();
+
+						notifications.sort(
 							(a: Notification, b: Notification) =>
 								new Date(b.createdAt).getTime() -
 								new Date(a.createdAt).getTime()
 						);
 
 						set({
-							notifications: data,
-							unreadCount: data.filter(
+							notifications,
+							unreadCount: notifications.filter(
 								(n: Notification) => !n.read
 							).length,
+							pagination,
 						});
 					} catch (err) {
 						set({ error: (err as Error).message });
@@ -148,7 +174,10 @@ export const createNotificationStore = () => {
 			}),
 			{
 				name: "notification-store",
-				partialize: (state) => ({ notifications: state.notifications }),
+				partialize: (state) => ({
+					notifications: state.notifications,
+					pagination: state.pagination,
+				}),
 			}
 		)
 	);

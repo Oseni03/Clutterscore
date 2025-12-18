@@ -125,7 +125,7 @@ export const NotificationDropdown = () => {
 				<DropdownMenuLabel className="flex items-center justify-between p-4">
 					<span className="font-semibold">Notifications</span>
 					<Link
-						href="/notifications"
+						href="/dashboard/notifications"
 						className="text-xs text-primary hover:underline"
 					>
 						View all
