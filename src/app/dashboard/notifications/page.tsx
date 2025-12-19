@@ -50,23 +50,15 @@ const getIconForType = (type: string) => {
 };
 
 export default function NotificationsPage() {
-	const {
-		notifications,
-		pagination,
-		loading,
-		unreadCount,
-		fetchNotifications,
-		markAsRead,
-		markAllAsRead,
-	} = useNotificationStore((state) => ({
-		notifications: state.notifications,
-		pagination: state.pagination,
-		loading: state.loading,
-		unreadCount: state.unreadCount,
-		fetchNotifications: state.fetchNotifications,
-		markAsRead: state.markAsRead,
-		markAllAsRead: state.markAllAsRead,
-	}));
+	const notifications = useNotificationStore((state) => state.notifications);
+	const pagination = useNotificationStore((state) => state.pagination);
+	const loading = useNotificationStore((state) => state.loading);
+	const unreadCount = useNotificationStore((state) => state.unreadCount);
+	const fetchNotifications = useNotificationStore(
+		(state) => state.fetchNotifications
+	);
+	const markAsRead = useNotificationStore((state) => state.markAsRead);
+	const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
 
 	// Fetch page 1 on mount
 	useEffect(() => {
