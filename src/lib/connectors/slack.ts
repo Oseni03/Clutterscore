@@ -75,6 +75,56 @@ export class SlackConnector extends BaseConnector {
 		}
 	}
 
+	async fetchUserCount(): Promise<number> {
+		await this.ensureValidToken();
+
+		try {
+			let totalUsers = 0;
+			let cursor: string | undefined = undefined;
+
+			do {
+				const params = new URLSearchParams({
+					limit: "200",
+					...(cursor && { cursor }),
+				});
+
+				const response = await fetch(
+					`https://slack.com/api/users.list?${params.toString()}`,
+					{
+						headers: {
+							Authorization: `Bearer ${this.config.accessToken}`,
+						},
+					}
+				);
+
+				if (!response.ok) {
+					throw new Error(`Slack API error: ${response.statusText}`);
+				}
+
+				const data = await response.json();
+
+				if (!data.ok) {
+					throw new Error(`Slack API error: ${data.error}`);
+				}
+
+				// Count non-bot, non-deleted users
+				const realUsers = data.members?.filter(
+					(member: any) => !member.is_bot && !member.deleted
+				);
+				totalUsers += realUsers?.length || 0;
+
+				cursor = data.response_metadata?.next_cursor;
+			} while (cursor);
+
+			return totalUsers;
+		} catch (error: any) {
+			const connectorError = await this.handleApiError(error);
+			throw new Error(
+				`Failed to fetch Slack user count: ${connectorError.message}`
+			);
+		}
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		await this.ensureValidToken();
 

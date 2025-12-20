@@ -40,6 +40,11 @@ export class FigmaConnector extends BaseConnector {
 		);
 	}
 
+	async fetchUserCount(): Promise<number> {
+		// Figma doesn't provide organization user count via API
+		return 0;
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		await this.ensureValidToken();
 

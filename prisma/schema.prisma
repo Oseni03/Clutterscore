@@ -112,8 +112,12 @@ model Organization {
   feedbacks     Feedback[]
   archivedFiles ArchivedFile[]
 
-  targetScore      Int    @default(75)
-  subscriptionTier String @default("free")
+  targetScore         Int      @default(75)
+  subscriptionTier    String   @default("free")
+  detectedUserCount   Int?     // Auto-detected from integrations
+  userCountSource     String?  // "GOOGLE", "DROPBOX", "SLACK", or "MANUAL"
+  userCountLastSync   DateTime? // When we last synced user count
+  userCountVerified   Boolean  @default(false) // Has user confirmed the count?
 
   @@unique([slug])
   @@map("organization")
@@ -171,7 +175,6 @@ model Subscription {
   customFieldData             String? // JSON string
   organizationId              String    @unique
 
-  // Relation to Organization model
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("subscription")

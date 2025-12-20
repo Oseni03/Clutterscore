@@ -33,6 +33,12 @@ export class NotionConnector extends BaseConnector {
 		throw new Error("Notion tokens do not expire");
 	}
 
+	async fetchUserCount(): Promise<number> {
+		// Notion doesn't have a direct user count API for workspace members
+		// Return 0 to indicate unavailable
+		return 0;
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		const [files, users] = await Promise.all([
 			this.fetchFiles(),

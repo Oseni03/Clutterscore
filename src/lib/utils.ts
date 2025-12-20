@@ -40,7 +40,7 @@ export interface SubscriptionPlan {
 			priceValue: number;
 			period: string;
 			productId: string;
-			savings?: string; // e.g., "Save 20%"
+			savings?: string;
 		};
 	};
 }
@@ -49,14 +49,15 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 	{
 		id: "free",
 		name: "Free",
-		description: "Read-only audit insights for curious teams",
+		description: "One audit per month – See your waste, no cleanup",
 		icon: DollarSign,
 		features: [
-			"Read-only access to audit results",
-			"View Clutterscore (1-100) and breakdown",
-			"See waste, risks, and duplicate analysis",
-			"Export reports as PDF",
-			"Limited integrations (up to 2 tools)",
+			"1 audit scan per month (throttled)",
+			"Clutterscore (0-100) + waste breakdown",
+			"Dark data & duplicate detection",
+			"Storage cost calculator ($XX,XXX/year)",
+			"PDF export (watermarked)",
+			"Read-only dashboard access",
 			"No cleanup execution",
 		],
 		popular: false,
@@ -65,7 +66,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 				price: "$0",
 				priceValue: 0,
 				period: "/month",
-				productId: "", // No product ID for free tier
+				productId: "",
 			},
 			yearly: {
 				price: "$0",
@@ -77,129 +78,111 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 		},
 	},
 	{
-		id: "pro",
-		name: "Pro",
-		description: "Full automation with unlimited cleanups",
+		id: "pro-tier1",
+		name: "Pro Tier 1",
+		description: "For teams with 300–599 Google Workspace users",
 		icon: Zap,
 		features: [
-			"All integrations supported",
-			"Unlimited audit runs",
-			"Execute cleanup playbooks with approval",
-			"One-click automated cleanups",
-			"Real-time dashboard with trends",
-			"Gamification and leaderboards",
-			"Email notifications for risks",
-		],
-		popular: true,
-		plans: {
-			monthly: {
-				price: "$15",
-				priceValue: 15,
-				period: "/month",
-				productId: process.env.NEXT_PUBLIC_PRO_MONTHLY_PLAN_ID || "",
-			},
-			yearly: {
-				price: "$150",
-				priceValue: 150,
-				period: "/year",
-				productId: process.env.NEXT_PUBLIC_PRO_YEARLY_PLAN_ID || "",
-				savings: "Save 17%", // $348/year monthly vs $290/year
-			},
-		},
-	},
-	{
-		id: "enterprise",
-		name: "Enterprise",
-		description: "Advanced management for large organizations",
-		icon: Building2,
-		features: [
-			"All Pro features",
-			"Organization and membership management",
-			"Role-based access control (RBAC)",
-			"Automated periodic cleanups (scheduled)",
-			"Quarterly expert review sessions",
-			"Priority support and onboarding",
-			"Custom playbook creation",
-			"API access for custom integrations",
-			"White-label branding options",
+			"Unlimited automated cleanups",
+			"Google Workspace + Dropbox integration",
+			"Dark data detection (>12 months)",
+			"Duplicate consolidation (hash-based)",
+			"Preview & approve cleanup playbooks",
+			"30-day undo safety net",
+			"Weekly savings reports via email",
+			"40% storage reduction guarantee",
+			"Priority email support (48h SLA)",
 		],
 		popular: false,
 		plans: {
 			monthly: {
-				price: "$35",
-				priceValue: 35,
-				period: "/mo per 50 users",
+				price: "$4,997",
+				priceValue: 4997,
+				period: "/month",
 				productId:
-					process.env.NEXT_PUBLIC_ENTERPRISE_MONTHLY_PLAN_ID || "",
+					process.env.NEXT_PUBLIC_PRO_TIER1_MONTHLY_PLAN_ID || "",
 			},
 			yearly: {
-				price: "$350",
-				priceValue: 350,
-				period: "/yr per 50 users",
+				price: "$59,964",
+				priceValue: 59964,
+				period: "/year",
 				productId:
-					process.env.NEXT_PUBLIC_ENTERPRISE_YEARLY_PLAN_ID || "",
-				savings: "Save 17%", // $1,188/year monthly vs $990/year
+					process.env.NEXT_PUBLIC_PRO_TIER1_YEARLY_PLAN_ID || "",
+				savings: "Founders Circle Locked",
+			},
+		},
+	},
+	{
+		id: "pro-tier2",
+		name: "Pro Tier 2",
+		description: "For teams with 600–999 Google Workspace users",
+		icon: Zap,
+		features: [
+			"All Pro Tier 1 features",
+			"Enhanced cleanup capacity",
+			"Optimized for larger teams",
+			"Advanced duplicate detection",
+			"Team usage analytics",
+			"Custom playbook templates",
+			"Slack integration (alerts)",
+			"40% storage reduction guarantee",
+			"Priority support with 24h response",
+		],
+		popular: true,
+		plans: {
+			monthly: {
+				price: "$7,997",
+				priceValue: 7997,
+				period: "/month",
+				productId:
+					process.env.NEXT_PUBLIC_PRO_TIER2_MONTHLY_PLAN_ID || "",
+			},
+			yearly: {
+				price: "$95,964",
+				priceValue: 95964,
+				period: "/year",
+				productId:
+					process.env.NEXT_PUBLIC_PRO_TIER2_YEARLY_PLAN_ID || "",
+				savings: "Founders Circle Locked",
+			},
+		},
+	},
+	{
+		id: "pro-tier3",
+		name: "Pro Tier 3",
+		description: "For teams with 1,000–1,500 Google Workspace users",
+		icon: Building2,
+		features: [
+			"All Pro Tier 2 features",
+			"Maximum cleanup capacity",
+			"Enterprise-grade performance",
+			"Dedicated account manager",
+			"Custom onboarding (15-min demo)",
+			"Advanced RBAC (role permissions)",
+			"Quarterly business reviews",
+			"Custom SLA options",
+			"40% storage reduction guarantee",
+		],
+		popular: false,
+		plans: {
+			monthly: {
+				price: "$11,997",
+				priceValue: 11997,
+				period: "/month",
+				productId:
+					process.env.NEXT_PUBLIC_PRO_TIER3_MONTHLY_PLAN_ID || "",
+			},
+			yearly: {
+				price: "$143,964",
+				priceValue: 143964,
+				period: "/year",
+				productId:
+					process.env.NEXT_PUBLIC_PRO_TIER3_YEARLY_PLAN_ID || "",
+				savings: "Founders Circle Locked",
 			},
 		},
 	},
 ];
-
-export const FREE_PLAN = SUBSCRIPTION_PLANS[0];
-
-export const getPlan = (planId: string) => {
-	return SUBSCRIPTION_PLANS.find((plan) => plan.id === planId);
-};
-
-export const getPlanByTier = (tier: string) => {
-	return SUBSCRIPTION_PLANS.find(
-		(plan) => plan.id.toLowerCase() === tier.toLowerCase() || FREE_PLAN
-	);
-};
-
-export const getPlanByProductId = (productId: string) => {
-	for (const plan of SUBSCRIPTION_PLANS) {
-		if (
-			plan.plans.monthly.productId === productId ||
-			plan.plans.yearly.productId === productId
-		) {
-			return plan;
-		}
-	}
-	return FREE_PLAN;
-};
-
-export const getBillingInterval = (
-	productId: string
-): BillingInterval | null => {
-	for (const plan of SUBSCRIPTION_PLANS) {
-		if (plan.plans.monthly.productId === productId) {
-			return "monthly";
-		}
-		if (plan.plans.yearly.productId === productId) {
-			return "yearly";
-		}
-	}
-	return null;
-};
-
-export const getAllProductIds = (interval?: BillingInterval): string[] => {
-	const ids: string[] = [];
-
-	SUBSCRIPTION_PLANS.forEach((plan) => {
-		if (!interval || interval === "monthly") {
-			if (plan.plans.monthly.productId) {
-				ids.push(plan.plans.monthly.productId);
-			}
-		}
-		if (!interval || interval === "yearly") {
-			if (plan.plans.yearly.productId) {
-				ids.push(plan.plans.yearly.productId);
-			}
-		}
-	});
-
-	return ids.filter(Boolean);
-};
 
 export const FILE_TYPE_ICONS = {
 	DOCUMENT: FileText,

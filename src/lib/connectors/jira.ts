@@ -70,6 +70,11 @@ export class JiraConnector extends BaseConnector {
 		}
 	}
 
+	async fetchUserCount(): Promise<number> {
+		// Jira doesn't provide reliable user count for all license types
+		return 0;
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		await this.ensureValidToken();
 

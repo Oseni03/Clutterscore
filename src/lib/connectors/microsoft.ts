@@ -79,6 +79,11 @@ export class MicrosoftConnector extends BaseConnector {
 		}
 	}
 
+	async fetchUserCount(): Promise<number> {
+		// TODO: Implement Microsoft 365 user count when needed
+		return 0;
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		await this.ensureValidToken();
 

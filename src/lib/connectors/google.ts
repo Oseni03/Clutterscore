@@ -55,6 +55,50 @@ export class GoogleConnector extends BaseConnector {
 		}
 	}
 
+	async fetchUserCount(): Promise<number> {
+		await this.ensureValidToken();
+
+		const oauth2Client = new google.auth.OAuth2(
+			process.env.GOOGLE_CLIENT_ID,
+			process.env.GOOGLE_CLIENT_SECRET
+		);
+
+		oauth2Client.setCredentials({
+			access_token: this.config.accessToken,
+			refresh_token: this.config.refreshToken,
+		});
+
+		const admin = google.admin({
+			version: "directory_v1",
+			auth: oauth2Client,
+		});
+
+		try {
+			let totalUsers = 0;
+			let pageToken: string | undefined = undefined;
+
+			do {
+				const response = (await admin.users.list({
+					customer: "my_customer",
+					maxResults: 500,
+					pageToken,
+					fields: "nextPageToken,users(suspended)",
+				})) as any;
+
+				// Count all users (including suspended for license count)
+				totalUsers += response.data.users?.length || 0;
+				pageToken = response.data.nextPageToken || undefined;
+			} while (pageToken);
+
+			return totalUsers;
+		} catch (error: any) {
+			const connectorError = await this.handleApiError(error);
+			throw new Error(
+				`Failed to fetch Google user count: ${connectorError.message}`
+			);
+		}
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		await this.ensureValidToken();
 

@@ -79,6 +79,37 @@ export class DropboxConnector extends BaseConnector {
 		}
 	}
 
+	async fetchUserCount(): Promise<number> {
+		await this.ensureValidToken();
+
+		try {
+			const response = await fetch(
+				"https://api.dropboxapi.com/2/team/get_info",
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${this.config.accessToken}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`Dropbox API error: ${response.statusText}`);
+			}
+
+			const data = await response.json();
+
+			// Return the number of licensed users
+			return data.num_licensed_users || 0;
+		} catch (error: any) {
+			const connectorError = await this.handleApiError(error);
+			throw new Error(
+				`Failed to fetch Dropbox user count: ${connectorError.message}`
+			);
+		}
+	}
+
 	async fetchAuditData(): Promise<AuditData> {
 		await this.ensureValidToken();
 

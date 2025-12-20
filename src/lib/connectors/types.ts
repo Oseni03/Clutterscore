@@ -158,6 +158,12 @@ export abstract class BaseConnector {
 	abstract testConnection(): Promise<boolean>;
 	abstract refreshToken(): Promise<string>;
 
+	/**
+	 * NEW: Fetch the total user/license count from the integration
+	 * This is used to determine the appropriate subscription tier
+	 */
+	abstract fetchUserCount(): Promise<number>;
+
 	// ============================================================================
 	// EXECUTION METHODS - Override as needed per connector
 	// ============================================================================
