@@ -29,7 +29,7 @@ import {
 } from "./ui/dialog";
 import { CreateOrganizationForm } from "./forms/create-organization-form";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
-import { getPlanByTier } from "@/lib/utils";
+import { getPlanByTier } from "@/lib/subscription-plans";
 import { Member } from "@/types";
 import { Organization } from "@prisma/client";
 import Logo from "./logo";
