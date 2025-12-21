@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { Organization } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { slugifyWithCounter } from "@sindresorhus/slugify";
+import { createFreeSubscription } from "./subscription";
 
 export async function getOrganizations(userId: string): Promise<{
 	organizations?: Organization[];
@@ -215,7 +216,7 @@ export async function createOrganization(
 				name: data.name,
 				slug: slug,
 				targetScore: data.targetScore || 75,
-				subscriptionTier: data.subscriptionTier || "FREE",
+				subscriptionTier: data.subscriptionTier || "free",
 				createdAt: new Date(),
 				members: {
 					create: {
@@ -228,6 +229,18 @@ export async function createOrganization(
 				members: true,
 			},
 		});
+
+		// Set this as the active organization
+		await setActiveOrganization(organization.id);
+
+		// Create subscription
+		try {
+			// Create free subscription
+			await createFreeSubscription(organization.id);
+		} catch (err) {
+			logger.error("Error creating subscription for organization:", err);
+			// Don't fail the entire operation if subscription creation fails
+		}
 
 		return { data: organization, success: true };
 	} catch (error) {

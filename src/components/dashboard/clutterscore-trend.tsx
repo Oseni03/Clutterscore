@@ -25,7 +25,9 @@ interface ClutterscoreTrendProps {
 	className?: string;
 }
 
-export function ClutterscoreTrend({ className }: ClutterscoreTrendProps) {
+export default function ClutterscoreTrend({
+	className,
+}: ClutterscoreTrendProps) {
 	const [trends, setTrends] = useState<TrendData[]>([]);
 	const [period, setPeriod] = useState<"30" | "90">("30");
 	const [loading, setLoading] = useState(true);

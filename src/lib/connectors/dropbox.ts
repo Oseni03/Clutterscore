@@ -83,25 +83,10 @@ export class DropboxConnector extends BaseConnector {
 		await this.ensureValidToken();
 
 		try {
-			const response = await fetch(
-				"https://api.dropboxapi.com/2/team/get_info",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${this.config.accessToken}`,
-						"Content-Type": "application/json",
-					},
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error(`Dropbox API error: ${response.statusText}`);
-			}
-
-			const data = await response.json();
+			const data = await this.client.teamGetInfo();
 
 			// Return the number of licensed users
-			return data.num_licensed_users || 0;
+			return data.result.num_licensed_users || 0;
 		} catch (error: any) {
 			const connectorError = await this.handleApiError(error);
 			throw new Error(
@@ -251,8 +236,15 @@ export class DropboxConnector extends BaseConnector {
 	private async fetchUsers(): Promise<UserData[]> {
 		try {
 			// Try to fetch team members (Business accounts)
-			const response = await this.client.teamMembersListV2({});
-			const members = response.result.members || [];
+			let cursor: string | undefined = undefined;
+			const members = [];
+			do {
+				const response = await this.client.teamMembersList({});
+				for (const user in response.result.members || []) {
+					members.push(user);
+				}
+				cursor = response.result.cursor;
+			} while (cursor);
 
 			return members.map((member: any) => ({
 				email: member.profile.email,

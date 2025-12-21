@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { WebClient } from "@slack/web-api";
 import {
@@ -83,32 +84,18 @@ export class SlackConnector extends BaseConnector {
 			let cursor: string | undefined = undefined;
 
 			do {
-				const params = new URLSearchParams({
-					limit: "200",
-					...(cursor && { cursor }),
+				const data = await this.client.admin.users.list({
+					is_active: true,
+					limit: 200,
+					cursor,
 				});
-
-				const response = await fetch(
-					`https://slack.com/api/users.list?${params.toString()}`,
-					{
-						headers: {
-							Authorization: `Bearer ${this.config.accessToken}`,
-						},
-					}
-				);
-
-				if (!response.ok) {
-					throw new Error(`Slack API error: ${response.statusText}`);
-				}
-
-				const data = await response.json();
 
 				if (!data.ok) {
 					throw new Error(`Slack API error: ${data.error}`);
 				}
 
 				// Count non-bot, non-deleted users
-				const realUsers = data.members?.filter(
+				const realUsers = data.users?.filter(
 					(member: any) => !member.is_bot && !member.deleted
 				);
 				totalUsers += realUsers?.length || 0;

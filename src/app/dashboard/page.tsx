@@ -1,28 +1,20 @@
 // app/dashboard/page.tsx
 "use client";
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PlaybookCard } from "@/components/playbook-card";
-import { ScoreRing } from "@/components/ui/score-ring";
-import { SavingsTracker } from "@/components/dashboard/savings-tracker";
-import { ClutterscoreTrend } from "@/components/dashboard/clutterscore-trend";
-import { NextScanCountdown } from "@/components/dashboard/next-scan-countdown";
-import {
-	TrendingUp,
-	AlertTriangle,
-	RefreshCw,
-	AlertCircle,
-	Loader2,
-	History,
-} from "lucide-react";
-import { useDashboard } from "@/hooks/use-dashboard";
 import { useRouter } from "next/navigation";
 
-const DashboardPage = () => {
+import DashboardHeader from "@/components/dashboard/dashboard-header";
+import ThrottleAlert from "@/components/dashboard/throttle-alert";
+import ErrorAlert from "@/components/dashboard/error-alert";
+import DashboardHero from "@/components/dashboard/dashboard-hero";
+import ClutterscoreTrend from "@/components/dashboard/clutterscore-trend";
+import RecommendedPlaybooks from "@/components/dashboard/recommended-playbooks";
+import DashboardEmptyState from "@/components/dashboard/dashboard-empty-state";
+import DashboardSkeleton from "@/components/dashboard/dashboard-skeleton";
+
+import { useDashboard } from "@/hooks/use-dashboard";
+
+export default function DashboardPage() {
 	const router = useRouter();
 	const {
 		targetScore,
@@ -30,95 +22,25 @@ const DashboardPage = () => {
 		isLoading,
 		isRefreshing,
 		error,
+		isThrottled,
+		throttleInfo,
 		runAudit,
 		getPreviousScore,
 	} = useDashboard();
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: "USD",
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 0,
-		}).format(amount);
-	};
-
-	// Loading skeleton
 	if (isLoading) {
-		return (
-			<div className="p-4 md:p-6 space-y-6">
-				<div className="flex items-center justify-between">
-					<Skeleton className="h-8 w-48" />
-					<Skeleton className="h-10 w-32" />
-				</div>
-
-				<div className="grid md:grid-cols-12 gap-4 md:gap-6">
-					<Skeleton className="md:col-span-4 h-[320px]" />
-					<div className="md:col-span-8 space-y-4 md:space-y-6">
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-							<Skeleton className="h-[140px]" />
-							<Skeleton className="h-[140px]" />
-						</div>
-						<Skeleton className="h-[240px]" />
-					</div>
-				</div>
-
-				<div className="space-y-4">
-					<Skeleton className="h-8 w-64" />
-					<div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-						{[1, 2, 3, 4].map((i) => (
-							<Skeleton key={i} className="h-[200px]" />
-						))}
-					</div>
-				</div>
-			</div>
-		);
+		return <DashboardSkeleton />;
 	}
 
-	// Empty state - no audit data
 	if (!auditData) {
 		return (
-			<div className="p-4 md:p-6 space-y-6">
-				<div className="flex items-center justify-between">
-					<h1 className="text-xl md:text-2xl font-bold text-foreground">
-						Dashboard
-					</h1>
-				</div>
-
-				<Card className="p-8 md:p-12 text-center">
-					<div className="max-w-md mx-auto space-y-4">
-						<div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center text-3xl">
-							📊
-						</div>
-						<h2 className="text-lg md:text-xl font-semibold">
-							No Audit Data Available
-						</h2>
-						<p className="text-sm md:text-base text-muted-foreground">
-							Run your first audit to start tracking your
-							workspace hygiene and get actionable
-							recommendations.
-						</p>
-						<Button
-							onClick={runAudit}
-							disabled={isRefreshing}
-							size="lg"
-							className="mt-4"
-						>
-							{isRefreshing ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Running Audit...
-								</>
-							) : (
-								<>
-									<RefreshCw className="mr-2 h-4 w-4" />
-									Run First Audit
-								</>
-							)}
-						</Button>
-					</div>
-				</Card>
-			</div>
+			<DashboardEmptyState
+				isThrottled={isThrottled}
+				throttleInfo={throttleInfo}
+				isRefreshing={isRefreshing}
+				onRunAudit={runAudit}
+				onUpgrade={() => router.push("/pricing")}
+			/>
 		);
 	}
 
@@ -126,207 +48,41 @@ const DashboardPage = () => {
 
 	return (
 		<div className="p-4 md:p-6 space-y-6">
-			{/* Header */}
-			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-				<div>
-					<h1 className="text-xl md:text-2xl font-bold text-foreground">
-						Dashboard
-					</h1>
-					<p className="text-xs md:text-sm text-muted-foreground mt-1">
-						Last updated{" "}
-						{new Date(auditData.auditedAt).toLocaleString()}
-					</p>
-				</div>
-				<div className="flex gap-2">
-					<Button
-						onClick={() => router.push("/dashboard/audit-logs")}
-						variant="outline"
-						size="sm"
-					>
-						<History className="mr-2 h-4 w-4" />
-						Audit Logs
-					</Button>
-					<Button
-						onClick={runAudit}
-						disabled={isRefreshing}
-						variant="outline"
-						size="sm"
-					>
-						{isRefreshing ? (
-							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Running...
-							</>
-						) : (
-							<>
-								<RefreshCw className="mr-2 h-4 w-4" />
-								Run Audit
-							</>
-						)}
-					</Button>
-				</div>
-			</div>
+			<DashboardHeader
+				auditedAt={auditData.auditedAt}
+				isRefreshing={isRefreshing}
+				isThrottled={isThrottled}
+				onRunAudit={runAudit}
+				onViewLogs={() => router.push("/dashboard/audit-logs")}
+			/>
 
-			{/* Error Alert */}
-			{error && (
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
+			{isThrottled && throttleInfo && (
+				<ThrottleAlert
+					throttleInfo={throttleInfo}
+					onUpgrade={() => router.push("/pricing")}
+				/>
 			)}
 
-			{/* Top Row: Score + Metrics + Savings + Countdown */}
-			<div className="grid md:grid-cols-12 gap-4 md:gap-6">
-				{/* Score Card */}
-				<Card className="md:col-span-3 flex flex-col items-center justify-center p-6 border-border/60 shadow-sm relative overflow-hidden">
-					<div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent pointer-events-none"></div>
-					<h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-4 w-full text-center uppercase tracking-wider">
-						Clutterscore
-					</h3>
-					<ScoreRing score={auditData.score} size={140} />
-					<div className="mt-4 flex gap-4 text-center">
-						{previousScore !== null && (
-							<>
-								<div>
-									<p className="text-xs text-muted-foreground">
-										Last
-									</p>
-									<p className="text-sm font-bold text-muted-foreground">
-										{previousScore}
-									</p>
-								</div>
-								<div className="w-px h-8 bg-border"></div>
-							</>
-						)}
-						<div>
-							<p className="text-xs text-muted-foreground">
-								Target
-							</p>
-							<p className="text-sm font-bold text-emerald-600">
-								{targetScore}
-							</p>
-						</div>
-					</div>
-				</Card>
+			{error && <ErrorAlert message={error} />}
 
-				{/* Waste Metrics */}
-				<div className="md:col-span-5 grid grid-cols-1 gap-4">
-					<Card className="p-4 border-border/60 shadow-sm">
-						<div className="flex justify-between items-start">
-							<div>
-								<p className="text-xs font-medium text-muted-foreground mb-1">
-									Projected Annual Waste
-								</p>
-								<h3 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-									{formatCurrency(auditData.estimatedSavings)}
-								</h3>
-							</div>
-							<div className="h-10 w-10 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center">
-								<TrendingUp className="h-5 w-5" />
-							</div>
-						</div>
-						<div className="mt-3 flex justify-between text-xs text-muted-foreground">
-							<span>
-								Storage:{" "}
-								{formatCurrency(auditData.storageWaste)}
-							</span>
-							<span>
-								Licenses:{" "}
-								{formatCurrency(auditData.licenseWaste)}
-							</span>
-						</div>
-					</Card>
+			<DashboardHero
+				score={auditData.score}
+				previousScore={previousScore ?? undefined}
+				targetScore={targetScore}
+				estimatedSavings={auditData.estimatedSavings}
+				storageWaste={auditData.storageWaste}
+				licenseWaste={auditData.licenseWaste}
+				activeRisks={auditData.activeRisks}
+				criticalRisks={auditData.criticalRisks}
+				moderateRisks={auditData.moderateRisks}
+				isThrottled={isThrottled}
+				isRefreshing={isRefreshing}
+				onRunAudit={runAudit}
+			/>
 
-					<Card className="p-4 border-border/60 shadow-sm">
-						<div className="flex justify-between items-start">
-							<div>
-								<p className="text-xs font-medium text-muted-foreground mb-1">
-									Active Risks
-								</p>
-								<h3 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-									{auditData.activeRisks}
-								</h3>
-							</div>
-							<div className="h-10 w-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center dark:bg-orange-900/30">
-								<AlertTriangle className="h-5 w-5" />
-							</div>
-						</div>
-						<div className="mt-3 text-xs text-muted-foreground">
-							<span className="text-orange-600 font-medium">
-								{auditData.criticalRisks} Critical
-							</span>{" "}
-							•{" "}
-							<span className="text-yellow-600 font-medium">
-								{auditData.moderateRisks} Moderate
-							</span>
-						</div>
-					</Card>
-				</div>
-
-				{/* Right Column: Savings Tracker + Scan Countdown */}
-				<div className="md:col-span-4 grid grid-cols-1 gap-4">
-					<SavingsTracker />
-					<NextScanCountdown
-						onRunAudit={runAudit}
-						isRunning={isRefreshing}
-					/>
-				</div>
-			</div>
-
-			{/* Trend Chart */}
 			<ClutterscoreTrend />
 
-			{/* Playbooks Section */}
-			<div>
-				<div className="flex items-center justify-between mb-6">
-					<h2 className="text-lg md:text-2xl font-display font-bold">
-						Recommended Actions
-					</h2>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => router.push("/dashboard/playbooks")}
-					>
-						View All
-					</Button>
-				</div>
-
-				{auditData.playbooks && auditData.playbooks.length > 0 ? (
-					<div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-						{auditData.playbooks.slice(0, 4).map((playbook) => (
-							<PlaybookCard
-								key={playbook.id}
-								title={playbook.title}
-								description={playbook.description}
-								impact={playbook.impact}
-								impactType={playbook.impactType}
-								source={playbook.source}
-								itemsCount={playbook.itemsCount}
-								onAction={() =>
-									router.push(
-										`/dashboard/playbooks/${playbook.id}`
-									)
-								}
-							/>
-						))}
-					</div>
-				) : (
-					<Card className="p-8 md:p-12 text-center">
-						<div className="max-w-md mx-auto space-y-2">
-							<div className="text-3xl md:text-4xl mb-2">✨</div>
-							<h3 className="text-base md:text-lg font-semibold">
-								No Recommendations Yet
-							</h3>
-							<p className="text-xs md:text-sm text-muted-foreground">
-								Your workspace is clean! We&apos;ll notify you
-								when we find optimization opportunities.
-							</p>
-						</div>
-					</Card>
-				)}
-			</div>
+			<RecommendedPlaybooks playbooks={auditData.playbooks ?? []} />
 		</div>
 	);
-};
-
-export default DashboardPage;
+}

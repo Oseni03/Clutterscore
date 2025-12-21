@@ -27,10 +27,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import Logo from "@/components/logo";
-import {
-	createOrganization,
-	setActiveOrganization,
-} from "@/server/organizations";
+import { createOrganization } from "@/server/organizations";
 import { APP_NAME } from "@/lib/config";
 import { logger } from "@/lib/logger";
 
@@ -95,8 +92,6 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 				setIsLoading(false);
 				return;
 			}
-
-			await setActiveOrganization(data.id);
 
 			toast.success("Workspace created successfully!");
 			router.push(`/dashboard/settings/integrations`);

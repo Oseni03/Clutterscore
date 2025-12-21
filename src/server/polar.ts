@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { getPlanByProductId } from "@/lib/utils";
+import { getPlanByProductId } from "@/lib/subscription-plans";
 
 // Helper function for safe date parsing
 function safeParseDate(dateString: string | null | undefined): Date | null {

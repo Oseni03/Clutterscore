@@ -216,16 +216,37 @@ export async function DELETE(
 							externalDeletionSuccess,
 							externalError: externalError || undefined,
 						},
-						// Enable undo for 30 days
+						// Enable undo for 30 days only if external archive succeeded
 						undoActions: externalDeletionSuccess
-							? []
-							: [
+							? [
 									{
-										action: "restore",
-										fileId: file.id,
+										type: "restore_file",
+										itemId: file.id,
+										itemName: file.name,
+										itemType: "File",
 										externalId: file.externalId,
+										actionType: "ARCHIVE_FILE",
+										originalMetadata: {
+											sizeMb: file.sizeMb,
+											mimeType: file.mimeType,
+											url: file.url,
+											path: file.path,
+											ownerEmail: file.ownerEmail,
+											isPubliclyShared:
+												file.isPubliclyShared,
+											sharedWith: file.sharedWith,
+											lastAccessed: file.lastAccessed,
+										},
+										executedAt: new Date(),
+										executedBy: user.id,
+										fileId: file.id,
+										fileName: file.name,
+										originalPath: file.path || "",
+										source: file.source,
+										// Omit optional fields like originalParentId and archiveFolderId if not available
 									},
-								],
+								]
+							: [],
 						undoExpiresAt: new Date(
 							Date.now() + 30 * 24 * 60 * 60 * 1000
 						), // 30 days

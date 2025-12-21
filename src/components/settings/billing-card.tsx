@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
 	Card,
 	CardContent,
@@ -23,225 +23,38 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import {
 	getPlanByProductId,
 	getPlanByTier,
 	getBillingInterval,
-	type BillingInterval,
+	FREE_PLAN,
 } from "@/lib/subscription-plans";
-import { toast } from "sonner";
-import { logger } from "@/lib/logger";
-import {
-	syncUserCount,
-	verifyUserCount,
-	initiateCheckout,
-} from "@/server/subscription";
-
-interface EligiblePlan {
-	id: string;
-	name: string;
-	description: string;
-	minUsers: number;
-	maxUsers: number;
-	price: string;
-	priceValue: number;
-	features: string[];
-	popular: boolean;
-}
-
-interface RecommendedPlan {
-	id: string;
-	name: string;
-	description: string;
-	minUsers: number;
-	maxUsers: number;
-}
+import { useBilling } from "@/hooks/use-billing";
 
 function BillingCard() {
-	const { activeOrganization, subscription, loadSubscription, isAdmin } =
-		useOrganizationStore((state) => state);
-	const [isUpgrading, setIsUpgrading] = useState(false);
-	const [isSyncing, setIsSyncing] = useState(false);
-	const [selectedInterval, setSelectedInterval] =
-		useState<BillingInterval>("yearly");
-
-	// User count state
-	const [userCount, setUserCount] = useState<number | null>(null);
-	const [userCountSource, setUserCountSource] = useState<string | null>(null);
-	const [userCountLastSync, setUserCountLastSync] = useState<Date | null>(
-		null
-	);
-	const [userCountVerified, setUserCountVerified] = useState(false);
-	const [needsUserCountSync, setNeedsUserCountSync] = useState(false);
-
-	// Eligible plans state
-	const [eligiblePlans, setEligiblePlans] = useState<EligiblePlan[]>([]);
-	const [recommendedPlan, setRecommendedPlan] =
-		useState<RecommendedPlan | null>(null);
-
-	useEffect(() => {
-		if (activeOrganization?.id) {
-			loadSubscription(activeOrganization.id).catch((err) => {
-				logger.error("Failed to load subscription:", err);
-			});
-			fetchEligiblePlans();
-		}
-	}, [activeOrganization?.id, loadSubscription]);
-
-	const fetchEligiblePlans = async () => {
-		if (!activeOrganization?.id) return;
-
-		try {
-			const response = await fetch(`/api/billing/eligible-plans`);
-			if (response.ok) {
-				const data = await response.json();
-				setEligiblePlans(data.eligiblePlans || []);
-				setRecommendedPlan(data.recommendedPlan);
-				setUserCount(data.userCount);
-				setUserCountSource(data.userCountSource);
-				setUserCountLastSync(
-					data.userCountLastSync
-						? new Date(data.userCountLastSync)
-						: null
-				);
-				setUserCountVerified(data.userCountVerified || false);
-				setNeedsUserCountSync(data.needsUserCountSync || false);
-			}
-		} catch (error) {
-			logger.error("Failed to fetch eligible plans:", error);
-		}
-	};
-
-	const handleSyncUserCount = async () => {
-		if (!activeOrganization?.id) return;
-
-		setIsSyncing(true);
-		toast.loading("Syncing user count from integrations...");
-
-		const result = await syncUserCount(activeOrganization.id);
-
-		toast.dismiss();
-
-		if (result.error) {
-			toast.error(result.error);
-		} else {
-			setUserCount(result.userCount);
-			setUserCountSource(result.source);
-			toast.success(
-				`Detected ${result.userCount} users from ${result.source}`
-			);
-			await fetchEligiblePlans();
-		}
-
-		setIsSyncing(false);
-	};
-
-	const handleVerifyUserCount = async () => {
-		if (!activeOrganization?.id || !userCount) return;
-
-		const result = await verifyUserCount(activeOrganization.id, userCount);
-
-		if (result.error) {
-			toast.error(result.error);
-		} else {
-			setUserCountVerified(true);
-			toast.success("User count verified");
-			await fetchEligiblePlans();
-		}
-	};
-
-	const handleUpgradeSubscription = async () => {
-		if (!activeOrganization?.id) {
-			toast.error("No active organization selected");
-			return;
-		}
-
-		if (!isAdmin) {
-			toast.error("You do not have permission to upgrade subscription");
-			return;
-		}
-
-		if (!userCount || userCount === 0) {
-			toast.error("Please sync your user count first");
-			return;
-		}
-
-		if (eligiblePlans.length === 0) {
-			if (userCount < 350) {
-				toast.error(
-					"Your organization has fewer than 350 users. Please stay on the Free plan or contact sales."
-				);
-			} else if (userCount > 2000) {
-				toast.error(
-					"Your organization exceeds 2,000 users. Please contact sales for enterprise pricing."
-				);
-			}
-			return;
-		}
-
-		setIsUpgrading(true);
-		toast.loading("Creating your checkout session...");
-
-		const result = await initiateCheckout(
-			activeOrganization.id,
-			selectedInterval
-		);
-
-		toast.dismiss();
-
-		if (result.error) {
-			toast.error(result.error);
-		} else if (result.url) {
-			toast.success("Redirecting to checkout...");
-			window.location.href = result.url;
-		}
-
-		setIsUpgrading(false);
-	};
-
-	const handleManageBilling = async () => {
-		if (!activeOrganization) {
-			toast.error("No active organization selected");
-			return;
-		}
-
-		if (!isAdmin) {
-			toast.error("You do not have permission to manage billing");
-			return;
-		}
-
-		toast.loading("Opening billing portal...");
-
-		try {
-			const response = await fetch("/api/billing/portal", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					organizationId: activeOrganization.id,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error("Failed to create portal session");
-			}
-
-			const { url } = await response.json();
-
-			if (url) {
-				toast.dismiss();
-				toast.success("Redirecting to billing portal...");
-				window.location.href = url;
-			}
-		} catch (error) {
-			logger.error("Error opening billing portal:", error);
-			toast.dismiss();
-			toast.error("Failed to open billing portal");
-		}
-	};
+	const {
+		isAdmin,
+		activeOrganization,
+		subscription,
+		isUpgrading,
+		isSyncing,
+		userCount,
+		recommendedPlan,
+		userCountSource,
+		userCountVerified,
+		eligiblePlans,
+		selectedInterval,
+		userCountLastSync,
+		needsUserCountSync,
+		setSelectedInterval,
+		handleManageBilling,
+		handleSyncUserCount,
+		handleUpgradeSubscription,
+		handleVerifyUserCount,
+	} = useBilling();
 
 	const currentPlan = subscription
-		? getPlanByProductId(subscription.productId)
+		? getPlanByProductId(subscription.productId) || FREE_PLAN
 		: getPlanByTier(activeOrganization?.subscriptionTier || "free");
 
 	const currentInterval = subscription
@@ -333,18 +146,18 @@ function BillingCard() {
 
 			{/* Out of Range Alert */}
 			{userCount &&
-				(userCount < 350 || userCount > 2000) &&
+				(userCount < 1 || userCount > 2000) &&
 				!needsUserCountSync && (
 					<Alert className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20">
 						<AlertCircle className="h-4 w-4 text-red-600" />
 						<AlertDescription>
-							{userCount < 350 ? (
+							{userCount < 1 ? (
 								<>
 									Your organization has{" "}
 									<strong>{userCount} users</strong>, which is
-									below our minimum of 350 users for Pro
-									plans. Please stay on the Free plan or
-									contact sales for custom pricing.
+									below our minimum of 1 users for Pro plans.
+									Please stay on the Free plan or contact
+									sales for custom pricing.
 								</>
 							) : (
 								<>
@@ -542,7 +355,7 @@ function BillingCard() {
 										Choose billing cycle:
 									</p>
 									<div className="inline-flex w-full items-center gap-2 p-1 bg-secondary rounded-lg">
-										<button
+										<Button
 											onClick={() =>
 												setSelectedInterval("monthly")
 											}
@@ -553,8 +366,8 @@ function BillingCard() {
 											}`}
 										>
 											Monthly
-										</button>
-										<button
+										</Button>
+										<Button
 											onClick={() =>
 												setSelectedInterval("yearly")
 											}
@@ -568,7 +381,7 @@ function BillingCard() {
 											<span className="text-xs text-primary ml-1">
 												(Required)
 											</span>
-										</button>
+										</Button>
 									</div>
 								</div>
 							)}

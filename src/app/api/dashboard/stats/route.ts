@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 				},
 			});
 
-			const isFreeTier = organization?.subscriptionTier === "FREE";
+			const isFreeTier = organization?.subscriptionTier === "free";
 			const canRunAudit =
 				!isFreeTier ||
 				!latestAudit ||
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 				activeRisks,
 				criticalRisks,
 				pendingPlaybooks,
-				subscriptionTier: organization?.subscriptionTier || "FREE",
+				subscriptionTier: organization?.subscriptionTier || "free",
 				targetScore: organization?.targetScore || 85,
 				isFreeTier,
 				canRunAudit,

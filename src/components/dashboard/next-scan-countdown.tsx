@@ -2,20 +2,25 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, RefreshCw, Lock } from "lucide-react";
+import { Clock, RefreshCw, Crown, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { DashboardStats } from "@/types/audit";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 
 interface NextScanCountdownProps {
 	onRunAudit?: () => void;
 	isRunning?: boolean;
+	isThrottled?: boolean;
 }
 
 export function NextScanCountdown({
 	onRunAudit,
 	isRunning,
+	isThrottled = false,
 }: NextScanCountdownProps) {
+	const router = useRouter();
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [timeLeft, setTimeLeft] = useState("");
 	const [loading, setLoading] = useState(true);
@@ -36,7 +41,7 @@ export function NextScanCountdown({
 	useEffect(() => {
 		if (!stats?.nextScanDate) return;
 
-		const interval = setInterval(() => {
+		const updateCountdown = () => {
 			const now = new Date();
 			const next = new Date(stats.nextScanDate!);
 			const diff = next.getTime() - now.getTime();
@@ -59,7 +64,13 @@ export function NextScanCountdown({
 			} else {
 				setTimeLeft(`${minutes}m`);
 			}
-		}, 60000); // Update every minute
+		};
+
+		// Update immediately
+		updateCountdown();
+
+		// Then update every minute
+		const interval = setInterval(updateCountdown, 60000);
 
 		return () => clearInterval(interval);
 	}, [stats]);
@@ -82,13 +93,16 @@ export function NextScanCountdown({
 
 	if (!stats) return null;
 
-	const canRunAudit = stats.canRunAudit;
+	const canRunAudit = stats.canRunAudit && !isThrottled;
 	const isFreeTier = stats.isFreeTier;
+	// const showThrottleUI = isThrottled || !canRunAudit;
 
 	return (
 		<Card
 			className={
-				canRunAudit ? "border-green-200 bg-green-50" : "border-border"
+				canRunAudit
+					? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30"
+					: "border-border"
 			}
 		>
 			<CardHeader>
@@ -106,12 +120,12 @@ export function NextScanCountdown({
 				{canRunAudit ? (
 					<>
 						<div className="text-center">
-							<div className="text-3xl font-bold text-green-600">
+							<div className="text-3xl font-bold text-green-600 dark:text-green-500">
 								Available Now
 							</div>
 							<p className="text-xs text-muted-foreground mt-1">
 								{stats.lastAuditDate
-									? `Last scan: ${new Date(stats.lastAuditDate).toLocaleDateString()}`
+									? `Last scan: ${format(new Date(stats.lastAuditDate), "MMM d, yyyy")}`
 									: "Ready for your first scan"}
 							</p>
 						</div>
@@ -136,41 +150,54 @@ export function NextScanCountdown({
 					</>
 				) : (
 					<>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-orange-600">
-								{timeLeft}
-							</div>
-							<p className="text-xs text-muted-foreground mt-1">
-								Until next free scan
-							</p>
+						<div className="text-center space-y-2">
+							{stats.nextScanDate && (
+								<>
+									<div className="text-2xl font-bold text-orange-600 dark:text-orange-500">
+										{timeLeft}
+									</div>
+									<p className="text-xs text-muted-foreground">
+										Until next free scan
+									</p>
+								</>
+							)}
 							{stats.lastAuditDate && (
-								<p className="text-xs text-muted-foreground mt-2">
-									Last scan:{" "}
-									{new Date(
-										stats.lastAuditDate
-									).toLocaleDateString()}
-								</p>
+								<div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-2">
+									<Calendar className="h-3 w-3" />
+									<span>
+										Last scan:{" "}
+										{format(
+											new Date(stats.lastAuditDate),
+											"MMM d, yyyy"
+										)}
+									</span>
+								</div>
 							)}
 						</div>
-						<div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
-							<Lock className="h-4 w-4 text-orange-600 mx-auto mb-2" />
-							<p className="text-xs text-orange-800">
-								{isFreeTier
-									? "Free tier: 1 scan every 30 days"
-									: "Next scan unlocks soon"}
-							</p>
-							{isFreeTier && (
-								<Button
-									variant="link"
-									size="sm"
-									className="text-orange-600 text-xs mt-2 h-auto p-0"
-									onClick={() =>
-										(window.location.href = "/pricing")
-									}
-								>
-									Upgrade for unlimited scans →
-								</Button>
-							)}
+
+						<div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 space-y-3">
+							<div className="text-center space-y-2">
+								<div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/50">
+									<Crown className="h-5 w-5 text-orange-600 dark:text-orange-500" />
+								</div>
+								<p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+									{isFreeTier
+										? "Free tier: 1 scan per month"
+										: "Audit limit reached"}
+								</p>
+								<p className="text-xs text-orange-700 dark:text-orange-300">
+									Upgrade to Pro for unlimited scans anytime
+								</p>
+							</div>
+							<Button
+								variant="outline"
+								size="sm"
+								className="w-full border-orange-600 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/50"
+								onClick={() => router.push("/pricing")}
+							>
+								<Crown className="mr-2 h-4 w-4" />
+								View Pro Plans
+							</Button>
 						</div>
 					</>
 				)}
@@ -178,7 +205,10 @@ export function NextScanCountdown({
 				{stats.pendingPlaybooks > 0 && (
 					<div className="pt-3 border-t">
 						<p className="text-xs text-muted-foreground text-center">
-							You have <strong>{stats.pendingPlaybooks}</strong>{" "}
+							You have{" "}
+							<strong className="text-foreground">
+								{stats.pendingPlaybooks}
+							</strong>{" "}
 							pending action
 							{stats.pendingPlaybooks !== 1 ? "s" : ""}
 						</p>

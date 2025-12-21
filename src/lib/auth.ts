@@ -8,7 +8,7 @@ import { getActiveOrganization } from "@/server/organizations";
 import { polar, checkout, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { handleSubscriptionWebhook } from "@/server/polar";
-import { SUBSCRIPTION_PLANS } from "./utils";
+import { SUBSCRIPTION_PLANS } from "./subscription-plans";
 import OrganizationInvitationEmail from "@/components/emails/organization-invitation-email";
 import MagicLinkEmail from "@/components/emails/magic-link-email";
 import { APP_NAME } from "./config";

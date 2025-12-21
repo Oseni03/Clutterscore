@@ -119,6 +119,11 @@ model Organization {
   userCountLastSync   DateTime? // When we last synced user count
   userCountVerified   Boolean  @default(false) // Has user confirmed the count?
 
+  // Free tier audit tracking
+  lastFreeAuditDate    DateTime?
+  freeAuditsThisMonth  Int       @default(0)
+  freeAuditResetDate   DateTime? // First day of current month
+
   @@unique([slug])
   @@map("organization")
 }

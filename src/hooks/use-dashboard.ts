@@ -40,7 +40,12 @@ export function useDashboard() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 
 	// Use audit hook with job polling
-	const { runAudit: triggerAudit, isRunning: isAuditRunning } = useAudit();
+	const {
+		runAudit: triggerAudit,
+		isRunning: isAuditRunning,
+		isThrottled,
+		throttleInfo,
+	} = useAudit();
 
 	const fetchLatestAudit =
 		useCallback(async (): Promise<DashboardAuditData> => {
@@ -203,6 +208,8 @@ export function useDashboard() {
 		isRefreshing: isRefreshing || isAuditRunning,
 		error,
 		stats,
+		isThrottled,
+		throttleInfo,
 
 		// Actions
 		runAudit,

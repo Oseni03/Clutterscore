@@ -1,11 +1,5 @@
 // lib/subscription-plans.ts
-import {
-	DollarSign,
-	Zap,
-	Building2,
-	Crown,
-	type LucideIcon,
-} from "lucide-react";
+import { DollarSign, Zap, Building2, type LucideIcon } from "lucide-react";
 
 export type BillingInterval = "monthly" | "yearly";
 
@@ -43,7 +37,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 		description: "One audit per month – See your waste, no cleanup",
 		icon: DollarSign,
 		minUsers: 0,
-		maxUsers: 349,
+		maxUsers: 2500,
 		features: [
 			"1 audit scan per month (throttled)",
 			"Clutterscore (0-100) + waste breakdown",
@@ -71,14 +65,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 		},
 	},
 	{
-		id: "pro-tier1",
-		name: "Pro Tier 1",
-		description: "For teams with 350–799 users",
+		id: "pro-tier0",
+		name: "Pro Tier 0",
+		description: "For teams with 1-349 users",
 		icon: Zap,
-		minUsers: 350,
-		maxUsers: 799,
+		minUsers: 1,
+		maxUsers: 349,
 		features: [
-			"Unlimited automated cleanups",
+			"Weekly automated cleanups",
 			"All integration sources supported",
 			"Dark data detection (>12 months)",
 			"Duplicate consolidation (hash-based)",
@@ -90,15 +84,51 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 		popular: false,
 		plans: {
 			monthly: {
-				price: "$4,997",
-				priceValue: 4997,
+				price: "$875",
+				priceValue: 875,
+				period: "/month",
+				productId:
+					process.env.NEXT_PUBLIC_PRO_TIER0_MONTHLY_PLAN_ID || "",
+			},
+			yearly: {
+				price: "$8,715",
+				priceValue: 8715,
+				period: "/year",
+				productId:
+					process.env.NEXT_PUBLIC_PRO_TIER0_YEARLY_PLAN_ID || "",
+				savings: "Founders Circle Locked",
+			},
+		},
+	},
+	{
+		id: "pro-tier1",
+		name: "Pro Tier 1",
+		description: "For teams with 350–799 users",
+		icon: Zap,
+		minUsers: 350,
+		maxUsers: 799,
+		features: [
+			"Weekly automated cleanups",
+			"All integration sources supported",
+			"Dark data detection (>12 months)",
+			"Duplicate consolidation (hash-based)",
+			"Preview & approve cleanup playbooks",
+			"30-day undo safety net",
+			"Weekly savings reports via email",
+			"Priority email support (48h SLA)",
+		],
+		popular: false,
+		plans: {
+			monthly: {
+				price: "$2,000",
+				priceValue: 2000,
 				period: "/month",
 				productId:
 					process.env.NEXT_PUBLIC_PRO_TIER1_MONTHLY_PLAN_ID || "",
 			},
 			yearly: {
-				price: "$59,964",
-				priceValue: 59964,
+				price: "$19,920",
+				priceValue: 19920,
 				period: "/year",
 				productId:
 					process.env.NEXT_PUBLIC_PRO_TIER1_YEARLY_PLAN_ID || "",
@@ -114,27 +144,35 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 		minUsers: 800,
 		maxUsers: 1349,
 		features: [
-			"All Pro Tier 1 features",
-			"Enhanced cleanup capacity",
-			"Optimized for larger teams",
-			"Advanced duplicate detection",
-			"Team usage analytics",
-			"Custom playbook templates",
-			"Slack integration (alerts)",
-			"Priority support with 24h response",
+			// "All Pro Tier 1 features",
+			// "Enhanced cleanup capacity",
+			// "Optimized for larger teams",
+			// "Advanced duplicate detection",
+			// "Team usage analytics",
+			// "Custom playbook templates",
+			// "Slack integration (alerts)",
+			// "Priority support with 24h response",
+			"Weekly automated cleanups",
+			"All integration sources supported",
+			"Dark data detection (>12 months)",
+			"Duplicate consolidation (hash-based)",
+			"Preview & approve cleanup playbooks",
+			"30-day undo safety net",
+			"Weekly savings reports via email",
+			"Priority email support (48h SLA)",
 		],
 		popular: true,
 		plans: {
 			monthly: {
-				price: "$7,997",
-				priceValue: 7997,
+				price: "$3,375",
+				priceValue: 3375,
 				period: "/month",
 				productId:
 					process.env.NEXT_PUBLIC_PRO_TIER2_MONTHLY_PLAN_ID || "",
 			},
 			yearly: {
-				price: "$95,964",
-				priceValue: 95964,
+				price: "$33,615",
+				priceValue: 33615,
 				period: "/year",
 				productId:
 					process.env.NEXT_PUBLIC_PRO_TIER2_YEARLY_PLAN_ID || "",
@@ -150,27 +188,35 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 		minUsers: 1350,
 		maxUsers: 2000,
 		features: [
-			"All Pro Tier 2 features",
-			"Maximum cleanup capacity",
-			"Enterprise-grade performance",
-			"Dedicated account manager",
-			"Custom onboarding (15-min demo)",
-			"Advanced RBAC (role permissions)",
-			"Quarterly business reviews",
-			"Custom SLA options",
+			// "All Pro Tier 2 features",
+			// "Maximum cleanup capacity",
+			// "Enterprise-grade performance",
+			// "Dedicated account manager",
+			// "Custom onboarding (15-min demo)",
+			// "Advanced RBAC (role permissions)",
+			// "Quarterly business reviews",
+			// "Custom SLA options",
+			"Weekly automated cleanups",
+			"All integration sources supported",
+			"Dark data detection (>12 months)",
+			"Duplicate consolidation (hash-based)",
+			"Preview & approve cleanup playbooks",
+			"30-day undo safety net",
+			"Weekly savings reports via email",
+			"Priority email support (48h SLA)",
 		],
 		popular: false,
 		plans: {
 			monthly: {
-				price: "$11,997",
-				priceValue: 11997,
+				price: "$5,000",
+				priceValue: 5000,
 				period: "/month",
 				productId:
 					process.env.NEXT_PUBLIC_PRO_TIER3_MONTHLY_PLAN_ID || "",
 			},
 			yearly: {
-				price: "$143,964",
-				priceValue: 143964,
+				price: "$49,800",
+				priceValue: 49800,
 				period: "/year",
 				productId:
 					process.env.NEXT_PUBLIC_PRO_TIER3_YEARLY_PLAN_ID || "",
@@ -178,41 +224,41 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 			},
 		},
 	},
-	{
-		id: "enterprise",
-		name: "Enterprise",
-		description: "For organizations with 2,000+ users",
-		icon: Crown,
-		minUsers: 2001,
-		maxUsers: 999999,
-		features: [
-			"All Pro Tier 3 features",
-			"Unlimited user capacity",
-			"White-label branding options",
-			"Custom contract terms",
-			"Dedicated infrastructure",
-			"24/7 premium support",
-			"Custom integrations",
-			"On-premise deployment options",
-		],
-		popular: false,
-		plans: {
-			monthly: {
-				price: "Custom",
-				priceValue: 0,
-				period: "",
-				productId: "",
-				savings: "Contact Sales",
-			},
-			yearly: {
-				price: "Custom",
-				priceValue: 0,
-				period: "",
-				productId: "",
-				savings: "Contact Sales",
-			},
-		},
-	},
+	// {
+	// 	id: "enterprise",
+	// 	name: "Enterprise",
+	// 	description: "For organizations with 2,000+ users",
+	// 	icon: Crown,
+	// 	minUsers: 2001,
+	// 	maxUsers: 999999,
+	// 	features: [
+	// 		"All Pro Tier 3 features",
+	// 		"Unlimited user capacity",
+	// 		"White-label branding options",
+	// 		"Custom contract terms",
+	// 		"Dedicated infrastructure",
+	// 		"24/7 premium support",
+	// 		"Custom integrations",
+	// 		"On-premise deployment options",
+	// 	],
+	// 	popular: false,
+	// 	plans: {
+	// 		monthly: {
+	// 			price: "Custom",
+	// 			priceValue: 0,
+	// 			period: "",
+	// 			productId: "",
+	// 			savings: "Contact Sales",
+	// 		},
+	// 		yearly: {
+	// 			price: "Custom",
+	// 			priceValue: 0,
+	// 			period: "",
+	// 			productId: "",
+	// 			savings: "Contact Sales",
+	// 		},
+	// 	},
+	// },
 ];
 
 export const FREE_PLAN = SUBSCRIPTION_PLANS[0];
@@ -238,7 +284,6 @@ export const getPlanByProductId = (productId: string) => {
 			return plan;
 		}
 	}
-	return FREE_PLAN;
 };
 
 export const getBillingInterval = (

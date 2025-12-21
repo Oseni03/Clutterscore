@@ -2,16 +2,14 @@
 
 import { prisma } from "@/lib/prisma";
 import { FREE_PLAN } from "@/lib/subscription-plans";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { authClient } from "@/lib/auth-client";
 import {
-	canUpgradeToPlan,
 	getEligibleProductIds,
 	type BillingInterval,
 } from "@/lib/subscription-plans";
 import { logger } from "@/lib/logger";
 import { UserCountService } from "./user-count-service";
+import { getSession } from "@/lib/auth-utils";
 
 export async function createFreeSubscription(organizationId: string) {
 	const freePlan = FREE_PLAN;
@@ -43,9 +41,7 @@ export async function createFreeSubscription(organizationId: string) {
 
 export async function syncUserCount(organizationId: string) {
 	try {
-		const session = await auth.api.getSession({
-			headers: await headers(),
-		});
+		const session = await getSession();
 
 		if (!session) {
 			return { error: "Unauthorized", userCount: null, source: null };
@@ -73,9 +69,7 @@ export async function verifyUserCount(
 	userCount: number
 ) {
 	try {
-		const session = await auth.api.getSession({
-			headers: await headers(),
-		});
+		const session = await getSession();
 
 		if (!session) {
 			return { error: "Unauthorized", success: false };
@@ -95,9 +89,7 @@ export async function initiateCheckout(
 	interval: BillingInterval
 ) {
 	try {
-		const session = await auth.api.getSession({
-			headers: await headers(),
-		});
+		const session = await getSession();
 
 		if (!session) {
 			return { error: "Unauthorized", url: null };
@@ -113,13 +105,6 @@ export async function initiateCheckout(
 		if (!userCount || userCount === 0) {
 			return {
 				error: "Please connect an integration (Google, Dropbox, or Slack) to detect your user count before upgrading",
-				url: null,
-			};
-		}
-
-		if (userCount < 350) {
-			return {
-				error: "Your organization has fewer than 350 users. Please stay on the Free plan or contact sales.",
 				url: null,
 			};
 		}

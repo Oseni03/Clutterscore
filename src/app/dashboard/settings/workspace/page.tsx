@@ -1,7 +1,7 @@
 "use client";
 
 import { useOrganization } from "@/hooks/use-organization";
-import { getPlanByTier } from "@/lib/utils";
+import { getPlanByTier } from "@/lib/subscription-plans";
 import { Building2, Crown, Sparkles } from "lucide-react";
 import { OrganizationSkeleton } from "@/components/settings/organization-skeleton";
 import { OrganizationProfileCard } from "@/components/settings/organization-profile-card";
