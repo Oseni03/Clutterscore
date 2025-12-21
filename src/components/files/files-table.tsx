@@ -19,7 +19,7 @@ import {
 import { FileText, MoreHorizontal, Trash2, Download } from "lucide-react";
 import { FileType, ToolSource } from "@prisma/client";
 import Image from "next/image";
-import { FILE_TYPE_ICONS, SOURCE_ICONS } from "@/lib/utils";
+import { FILE_TYPE_ICONS, formatSize, SOURCE_ICONS } from "@/lib/utils";
 
 interface FileItem {
 	id: string;
@@ -40,13 +40,6 @@ interface FilesTableProps {
 }
 
 export function FilesTable({ files, onArchive }: FilesTableProps) {
-	const formatSize = (sizeMb: number) => {
-		if (sizeMb >= 1024) {
-			return `${(sizeMb / 1024).toFixed(2)} GB`;
-		}
-		return `${sizeMb.toFixed(2)} MB`;
-	};
-
 	const formatDate = (date: Date | null) => {
 		if (!date) return "Never";
 		const now = new Date();

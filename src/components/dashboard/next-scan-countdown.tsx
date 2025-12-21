@@ -193,7 +193,9 @@ export function NextScanCountdown({
 								variant="outline"
 								size="sm"
 								className="w-full border-orange-600 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/50"
-								onClick={() => router.push("/pricing")}
+								onClick={() =>
+									router.push("/dashboard/settings/billing")
+								}
 							>
 								<Crown className="mr-2 h-4 w-4" />
 								View Pro Plans

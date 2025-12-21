@@ -12,6 +12,7 @@ import {
 } from "@/lib/connectors/types";
 import { PlaybookWithItems } from "@/types/audit";
 import { logger } from "@/lib/logger";
+import { formatSize } from "@/lib/utils";
 
 export class ConnectorService {
 	/**
@@ -303,7 +304,7 @@ export class ConnectorService {
 							organizationId,
 							title: `Consolidate ${trueDuplicates.length} Duplicate Files (95% Confidence)`,
 							description: `Found ${trueDuplicates.length} duplicate files using hash-based detection. Files with identical content will be archived, keeping the most recently accessed version.`,
-							impact: `Save ${Math.round(totalSizeMb / 1024)} GB of storage`,
+							impact: `Save ${formatSize(totalSizeMb)} of storage`,
 							impactType: "SAVINGS" as ImpactType,
 							source,
 							itemsCount: trueDuplicates.length,
@@ -415,7 +416,7 @@ export class ConnectorService {
 						organizationId,
 						title: `Archive ${oldFiles.length} Untouched Files (>12 Months)`,
 						description: `These files haven't been accessed in over 12 months and are candidates for archival.`,
-						impact: `Save ${Math.round(totalSizeMb / 1024)} GB of active storage`,
+						impact: `Save ${formatSize(totalSizeMb)} of active storage`,
 						impactType: "SAVINGS" as ImpactType,
 						source,
 						itemsCount: oldFiles.length,

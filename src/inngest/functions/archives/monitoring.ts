@@ -4,6 +4,7 @@ import { inngest } from "../../client";
 import { prisma } from "@/lib/prisma";
 import { ArchiveService } from "@/server/archive-service";
 import { logger } from "@/lib/logger";
+import { formatSize } from "@/lib/utils";
 
 /**
  * Daily health check for archive system
@@ -310,7 +311,7 @@ export const weeklyArchiveReport = inngest.createFunction(
 								userId: admin.userId,
 								type: "AUDIT_COMPLETE",
 								title: "Weekly archive report",
-								message: `You have ${org.fileCount} archived files totaling ${org.sizeGb} GB.`,
+								message: `You have ${org.fileCount} archived files totaling ${formatSize(org.sizeMb)}.`,
 								actionUrl: "/dashboard/archives",
 								metadata: {
 									...weeklyStats,

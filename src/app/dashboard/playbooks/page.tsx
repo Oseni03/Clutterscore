@@ -102,7 +102,7 @@ export default function PlaybooksPage() {
 			{isThrottled && throttleInfo && (
 				<ThrottleAlert
 					throttleInfo={throttleInfo}
-					onUpgrade={() => router.push("/pricing")}
+					onUpgrade={() => router.push("/dashboard/settings/billing")}
 				/>
 			)}
 
@@ -128,7 +128,7 @@ export default function PlaybooksPage() {
 					onRunAudit={handleRunAudit}
 					isAuditRunning={isAuditRunning}
 					isThrottled={isThrottled}
-					onUpgrade={() => router.push("/pricing")}
+					onUpgrade={() => router.push("/dashboard/settings/billing")}
 				/>
 			)}
 

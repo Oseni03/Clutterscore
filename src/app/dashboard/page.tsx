@@ -39,7 +39,7 @@ export default function DashboardPage() {
 				throttleInfo={throttleInfo}
 				isRefreshing={isRefreshing}
 				onRunAudit={runAudit}
-				onUpgrade={() => router.push("/pricing")}
+				onUpgrade={() => router.push("/dashboard/settings/billing")}
 			/>
 		);
 	}
@@ -59,7 +59,7 @@ export default function DashboardPage() {
 			{isThrottled && throttleInfo && (
 				<ThrottleAlert
 					throttleInfo={throttleInfo}
-					onUpgrade={() => router.push("/pricing")}
+					onUpgrade={() => router.push("/dashboard/settings/billing")}
 				/>
 			)}
 

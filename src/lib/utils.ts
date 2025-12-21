@@ -23,6 +23,13 @@ export const formatCurrency = (amount: number) => {
 	}).format(amount);
 };
 
+export const formatSize = (sizeMb: number) => {
+	if (sizeMb < 1) return `${(sizeMb * 1024).toFixed(0)} KB`;
+	if (sizeMb > 1024) return `${(sizeMb / 1024).toFixed(2)} GB`;
+	if (sizeMb > 1024 * 2) return `${(sizeMb / 1024).toFixed(2)} TB`;
+	return `${sizeMb.toFixed(2)} MB`;
+};
+
 export const FILE_TYPE_ICONS = {
 	DOCUMENT: FileText,
 	IMAGE: ImageIcon,

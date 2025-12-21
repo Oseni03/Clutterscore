@@ -62,7 +62,10 @@ export function useAudit() {
 						action: data.upgrade
 							? {
 									label: "Upgrade to Pro",
-									onClick: () => router.push("/pricing"),
+									onClick: () =>
+										router.push(
+											"/dashboard/settings/billing"
+										),
 								}
 							: undefined,
 						duration: 7000,

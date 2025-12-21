@@ -13,6 +13,7 @@ import { FilesFilters } from "@/components/files/files-filters";
 import { FilesTable } from "@/components/files/files-table";
 import { FilesPagination } from "@/components/files/files-pagination";
 import { ArchiveFileDialog } from "@/components/files/archive-file-dialog";
+import { formatSize } from "@/lib/utils";
 
 export default function FilesContent() {
 	const {
@@ -71,13 +72,6 @@ export default function FilesContent() {
 		} finally {
 			setIsRefreshing(false);
 		}
-	};
-
-	const formatSize = (sizeMb: number) => {
-		if (sizeMb >= 1024) {
-			return `${(sizeMb / 1024).toFixed(2)} GB`;
-		}
-		return `${sizeMb.toFixed(2)} MB`;
 	};
 
 	const totalPages = Math.ceil(pagination.total / pagination.limit);
