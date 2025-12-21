@@ -8,6 +8,7 @@ import { Organization } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { slugifyWithCounter } from "@sindresorhus/slugify";
 import { createFreeSubscription } from "./subscription";
+import { getUserIdFromSession } from "@/lib/auth-utils";
 
 export async function getOrganizations(userId: string): Promise<{
 	organizations?: Organization[];
@@ -40,7 +41,7 @@ export async function getOrganizations(userId: string): Promise<{
 	}
 }
 
-export async function getActiveOrganization(userId: string) {
+export async function getActiveOrganizationByUserId(userId: string) {
 	const memberUser = await prisma.member.findFirst({
 		where: {
 			userId,
@@ -267,5 +268,65 @@ export async function setActiveOrganization(organizationId: string) {
 	} catch (error) {
 		logger.error("SET_ACTIVE_ORG_ERROR: ", error);
 		return { success: false, error };
+	}
+}
+
+export async function getActiveOrganization() {
+	try {
+		const userId = await getUserIdFromSession();
+
+		if (!userId) return { error: "Unauthorized", success: false };
+
+		const data = await auth.api.getFullOrganization({
+			headers: await headers(),
+		});
+
+		if (!data) {
+			const memberUser = await prisma.member.findFirst({
+				where: {
+					userId,
+				},
+			});
+
+			if (!memberUser) {
+				return {
+					success: false,
+					error: "User doesn't belong to any workspace",
+				};
+			}
+
+			const activeOrganization = await prisma.organization.findFirst({
+				where: { id: memberUser.organizationId },
+				include: {
+					members: {
+						include: {
+							user: true,
+						},
+					},
+					invitations: true,
+					subscription: true,
+				},
+			});
+
+			return { success: true, data: activeOrganization };
+		}
+
+		const activeOrganization = await prisma.organization.findFirst({
+			where: { id: data.id },
+			include: {
+				members: {
+					include: {
+						user: true,
+					},
+				},
+				invitations: true,
+				subscription: true,
+			},
+		});
+
+		return { success: true, data: activeOrganization };
+	} catch (error) {
+		logger.error("GET_ACTIVE_ORG_ERROR: ", error);
+		return { success: false, error: "Failed to get active workspace" };
 	}
 }

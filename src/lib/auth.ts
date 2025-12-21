@@ -4,7 +4,7 @@ import { customSession, organization, magicLink } from "better-auth/plugins";
 import { admin, member } from "./auth/permissions";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
-import { getActiveOrganization } from "@/server/organizations";
+import { getActiveOrganizationByUserId } from "@/server/organizations";
 import { polar, checkout, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { handleSubscriptionWebhook } from "@/server/polar";
@@ -54,7 +54,7 @@ export const auth = betterAuth({
 		session: {
 			create: {
 				before: async (session) => {
-					const organization = await getActiveOrganization(
+					const organization = await getActiveOrganizationByUserId(
 						session.userId
 					);
 					return {
@@ -116,13 +116,52 @@ export const auth = betterAuth({
 							required: false,
 							defaultValue: "free",
 						},
+						detectedUserCount: {
+							type: "number",
+							input: true,
+							required: false,
+						},
+						userCountSource: {
+							type: "string",
+							input: true,
+							required: false,
+						},
+						userCountLastSync: {
+							type: "date",
+							input: true,
+							required: false,
+						},
+						userCountVerified: {
+							type: "boolean",
+							input: true,
+							required: false,
+							defaultValue: false,
+						},
+						lastFreeAuditDate: {
+							type: "date",
+							input: true,
+							required: false,
+						},
+						freeAuditsThisMonth: {
+							type: "number",
+							input: true,
+							required: false,
+							defaultValue: 0,
+						},
+						freeAuditResetDate: {
+							type: "date",
+							input: true,
+							required: false,
+						},
 					},
 				},
 			},
 		}),
 		nextCookies(),
 		customSession(async ({ user, session }) => {
-			const organization = await getActiveOrganization(session.userId);
+			const organization = await getActiveOrganizationByUserId(
+				session.userId
+			);
 			return {
 				user: {
 					...user,
