@@ -11,17 +11,18 @@ interface StorageAnalytics {
 		totalQuotaGb: number;
 		wastedStorageGb: number;
 		estimatedMonthlyCost: number;
+		duplicateCount: number;
+		publicCount: number;
 		largestWaster: {
 			type: string;
 			sizeGb: number;
-			location: string;
+			source: string | null;
 		};
 	};
 	distribution: {
 		name: string;
 		value: number;
 		sizeGb: number;
-		color: string;
 	}[];
 	largeFiles: FileData[];
 }
@@ -68,6 +69,10 @@ export function useStorage() {
 			const errorMsg =
 				(err as Error).message || "Failed to load storage data";
 			setError(errorMsg);
+			setStats(null);
+			setDistribution([]);
+			setLargeFiles([]);
+			setLastUpdated(null);
 			toast.error(errorMsg);
 		} finally {
 			setIsLoading(false);
@@ -77,6 +82,12 @@ export function useStorage() {
 	const exportReport = useCallback(async () => {
 		try {
 			const response = await fetch("/api/storage/export");
+
+			if (!response.ok) {
+				const data = await response.json().catch(() => null);
+				throw new Error(data?.error || "Failed to export storage report");
+			}
+
 			const blob = await response.blob();
 
 			const url = window.URL.createObjectURL(blob);
@@ -90,7 +101,9 @@ export function useStorage() {
 
 			toast.success("Storage report exported successfully");
 		} catch (err) {
-			toast.error("Failed to export storage report");
+			toast.error(
+				(err as Error).message || "Failed to export storage report"
+			);
 			throw err;
 		}
 	}, []);
@@ -103,12 +116,15 @@ export function useStorage() {
 	}, []);
 
 	const getUsagePercentage = useCallback(() => {
-		if (!stats) return 0;
-		return Math.round((stats.totalUsedGb / stats.totalQuotaGb) * 100);
+		if (!stats || stats.totalQuotaGb <= 0) return 0;
+		return Math.min(
+			100,
+			Math.round((stats.totalUsedGb / stats.totalQuotaGb) * 100)
+		);
 	}, [stats]);
 
 	const getWastePercentage = useCallback(() => {
-		if (!stats) return 0;
+		if (!stats || stats.totalUsedGb <= 0) return 0;
 		return Math.round((stats.wastedStorageGb / stats.totalUsedGb) * 100);
 	}, [stats]);
 

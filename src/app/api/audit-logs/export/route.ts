@@ -39,20 +39,33 @@ export async function GET(req: NextRequest) {
 				"Details",
 			];
 
-			const rows = logs.map((log) => [
-				log.timestamp.toISOString(),
-				log.actionType,
-				log.target,
-				log.targetType,
-				log.executor,
-				log.status,
-				log.playbook?.title || "N/A",
-				log.undoExpiresAt && log.undoExpiresAt > new Date()
-					? "Yes"
-					: "No",
-				log.undoExpiresAt?.toISOString() || "N/A",
-				log.details ? JSON.stringify(log.details) : "N/A",
-			]);
+			const rows = logs.map((log) => {
+				const details =
+					log.details &&
+					typeof log.details === "object" &&
+					!Array.isArray(log.details)
+						? (log.details as Record<string, unknown>)
+						: {};
+				const canUndo =
+					details.undone !== true &&
+					Array.isArray(log.undoActions) &&
+					log.undoActions.length > 0 &&
+					!!log.undoExpiresAt &&
+					log.undoExpiresAt > new Date();
+
+				return [
+					log.timestamp.toISOString(),
+					log.actionType,
+					log.target,
+					log.targetType,
+					log.executor,
+					log.status,
+					log.playbook?.title || "N/A",
+					canUndo ? "Yes" : "No",
+					log.undoExpiresAt?.toISOString() || "N/A",
+					log.details ? JSON.stringify(log.details) : "N/A",
+				];
+			});
 
 			// Convert to CSV format
 			const csvContent = [

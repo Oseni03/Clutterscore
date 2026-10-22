@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuditLogsStore } from "@/zustand/providers/audit-logs-store-provider";
-import { AuditLogsListResponse } from "@/types/audit";
-import { AuditLogActionType } from "@prisma/client";
+import type { AuditLogStats, AuditLogsListResponse } from "@/types/audit";
+import type { AuditLogActionType } from "@prisma/client";
 import { toast } from "sonner";
 
 export function useAuditLogs() {
@@ -17,6 +17,13 @@ export function useAuditLogs() {
 
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [stats, setStats] = useState<AuditLogStats | null>(null);
+	const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
+
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedSearch(filters.search), 300);
+		return () => clearTimeout(timer);
+	}, [filters.search]);
 
 	const fetchLogs = useCallback(async () => {
 		try {
@@ -31,11 +38,14 @@ export function useAuditLogs() {
 				limit: String(limit),
 			});
 
-			if (filters.actionType !== "all") {
-				params.set("actionType", filters.actionType);
+			if (filters.category !== "all") {
+				params.set("category", filters.category);
 			}
 			if (filters.status !== "all") {
 				params.set("status", filters.status);
+			}
+			if (debouncedSearch.trim()) {
+				params.set("search", debouncedSearch.trim());
 			}
 
 			const response = await fetch(
@@ -48,6 +58,7 @@ export function useAuditLogs() {
 			}
 
 			setLogs(data.logs);
+			setStats(data.stats ?? null);
 			setPagination({
 				total: data.pagination.total,
 				page: data.pagination.page,
@@ -60,7 +71,15 @@ export function useAuditLogs() {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [filters, pagination.page, pagination.limit, setLogs, setPagination]);
+	}, [
+		filters.category,
+		filters.status,
+		debouncedSearch,
+		pagination.page,
+		pagination.limit,
+		setLogs,
+		setPagination,
+	]);
 
 	const getFilteredLogs = useCallback(() => {
 		if (!filters.search) return logs;
@@ -135,13 +154,17 @@ export function useAuditLogs() {
 
 	const getActionStats = useCallback(() => {
 		return {
-			total: pagination.total,
-			success: logs.filter((l) => l.status === "SUCCESS").length,
-			failed: logs.filter((l) => l.status === "FAILED").length,
+			total: stats?.totalActions ?? pagination.total,
+			success:
+				stats?.successful ??
+				logs.filter((l) => l.status === "SUCCESS").length,
+			failed:
+				stats?.failed ??
+				logs.filter((l) => l.status === "FAILED").length,
 			pending: logs.filter((l) => l.status === "PENDING").length,
-			canUndo: logs.filter((l) => l.canUndo).length,
+			canUndo: stats?.undoable ?? logs.filter((l) => l.canUndo).length,
 		};
-	}, [logs, pagination.total]);
+	}, [logs, pagination.total, stats]);
 
 	const getActionTypeCount = useCallback(
 		(type: AuditLogActionType) => {
@@ -161,6 +184,7 @@ export function useAuditLogs() {
 		allLogs: logs,
 		filters,
 		pagination,
+		stats,
 		isLoading,
 		error,
 

@@ -1,40 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import Link from "next/link";
 import StorageChart from "@/components/storage/storage-chart";
 import FilesTable from "@/components/storage/files-table";
 import StorageSuggestions from "@/components/storage/storage-ai-suggestions";
-import { Download, Film, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { useStorage } from "@/hooks/use-storage";
+import { formatCurrency } from "@/lib/utils";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const FILE_TYPE_ICONS: Record<string, any> = {
-	VIDEO: Film,
-	IMAGE: Film,
-	DOCUMENT: Film,
-	ARCHIVE: Film,
-	DATABASE: Film,
+const SOURCE_LABELS: Record<string, string> = {
+	GOOGLE: "Google Workspace",
+	SLACK: "Slack",
+	DROPBOX: "Dropbox",
+	NOTION: "Notion",
+	MICROSOFT: "Microsoft 365",
+	FIGMA: "Figma",
+	JIRA: "Jira",
 };
 
-const CHART_COLORS = [
-	"hsl(var(--chart-1))",
-	"hsl(var(--chart-2))",
-	"hsl(var(--chart-3))",
-	"hsl(var(--chart-4))",
-	"hsl(var(--chart-5))",
-];
+function updatedLabel(value: Date | null) {
+	if (!value) return "Updated just now.";
+
+	const minutes = Math.floor(
+		(Date.now() - new Date(value).getTime()) / (1000 * 60)
+	);
+
+	if (minutes < 1) return "Updated just now.";
+	if (minutes < 60) return `Updated ${minutes} min ago.`;
+	if (minutes < 24 * 60) {
+		return `Updated ${Math.floor(minutes / 60)} hours ago.`;
+	}
+	return `Updated ${Math.floor(minutes / 1440)} days ago.`;
+}
 
 export default function StoragePage() {
 	const {
 		stats,
 		distribution,
 		largeFiles,
+		lastUpdated,
 		isLoading,
 		error,
 		refresh,
@@ -51,6 +58,8 @@ export default function StoragePage() {
 		setIsExporting(true);
 		try {
 			await exportReport();
+		} catch {
+			// Error handled by hook
 		} finally {
 			setIsExporting(false);
 		}
@@ -65,305 +74,241 @@ export default function StoragePage() {
 		}
 	};
 
-	const getLargestWasterIcon = () => {
-		if (!stats?.largestWaster) return Film;
-		const type = stats.largestWaster.type.toUpperCase();
-		return FILE_TYPE_ICONS[type] || Film;
-	};
-
 	if (isLoading) {
 		return (
-			<div className="p-4 md:p-6 space-y-6">
-				<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+			<div className="space-y-6 p-6 md:p-8">
+				<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 					<div className="space-y-2">
-						<Skeleton className="h-8 w-64" />
-						<Skeleton className="h-4 w-96" />
+						<Skeleton className="h-9 w-56" />
+						<Skeleton className="h-5 w-96" />
 					</div>
-					<Skeleton className="h-10 w-32" />
+					<div className="flex gap-2">
+						<Skeleton className="h-11 w-28 rounded-full" />
+						<Skeleton className="h-11 w-28 rounded-full" />
+					</div>
 				</div>
-
-				<div className="grid md:grid-cols-3 gap-6">
-					{[1, 2, 3].map((i) => (
-						<Skeleton key={i} className="h-32" />
-					))}
+				<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
+					<Skeleton className="h-[180px] rounded-xl bg-background md:col-span-2 xl:col-span-1" />
+					<Skeleton className="h-[180px] rounded-xl bg-background" />
+					<Skeleton className="h-[180px] rounded-xl bg-background" />
 				</div>
-
-				<div className="grid md:grid-cols-3 gap-6">
-					<Skeleton className="h-[400px]" />
-					<Skeleton className="md:col-span-2 h-[400px]" />
+				<div className="grid gap-4 xl:grid-cols-3">
+					<Skeleton className="h-[360px] rounded-xl bg-background" />
+					<Skeleton className="h-[360px] rounded-xl bg-background xl:col-span-2" />
 				</div>
 			</div>
 		);
 	}
 
-	if (error || !stats) {
+	if (!stats) {
 		return (
-			<div className="p-4 md:p-6 space-y-6">
-				<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-					<div>
-						<h1 className="text-xl md:text-2xl font-display font-semibold">
-							Storage Audit
-						</h1>
-						<p className="text-sm text-muted-foreground mt-1">
-							Identify wasted space and optimize your storage
-							costs.
-						</p>
-					</div>
-				</div>
-
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription>
-						{error ||
-							"No storage data available. Run an audit to get started."}
-					</AlertDescription>
-				</Alert>
-
-				<Card className="p-12 text-center">
-					<div className="max-w-md mx-auto space-y-4">
-						<div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center text-3xl">
-							💾
-						</div>
-						<h2 className="text-xl font-semibold">
-							No Storage Data
-						</h2>
-						<p className="text-muted-foreground">
-							Run an audit to analyze your storage usage and
-							identify optimization opportunities.
-						</p>
-						<Button onClick={handleRefresh} disabled={isRefreshing}>
-							{isRefreshing ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Loading...
-								</>
-							) : (
-								<>
-									<RefreshCw className="mr-2 h-4 w-4" />
-									Load Storage Data
-								</>
-							)}
-						</Button>
-					</div>
-				</Card>
-			</div>
-		);
-	}
-
-	const LargestWasterIcon = getLargestWasterIcon();
-	const usagePercentage = getUsagePercentage();
-	const wastePercentage = getWastePercentage();
-
-	// Format distribution data for chart with colors
-	const chartData = distribution.map((item, index) => ({
-		...item,
-		color: CHART_COLORS[index % CHART_COLORS.length],
-	}));
-
-	// Format large files for table
-	const formattedLargeFiles = largeFiles.slice(0, 5).map((file) => ({
-		name: file.name,
-		size: formatSize(file.sizeMb / 1024), // Convert MB to GB
-		type: file.type,
-		location: file.path || "Unknown",
-		lastAccess: file.lastAccessed
-			? new Date(file.lastAccessed).toLocaleDateString()
-			: "Never",
-	}));
-
-	return (
-		<div className="p-4 md:p-6 space-y-6">
-			{/* Header */}
-			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+			<div className="space-y-6 p-6 md:p-8">
 				<div>
-					<h1 className="text-xl md:text-2xl font-display font-semibold">
+					<h1 className="font-display text-[32px] font-semibold leading-none tracking-[-0.04em] md:text-[36px]">
 						Storage Audit
 					</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						Identify wasted space and optimize your storage costs.
+					<p className="mt-1.5 text-sm text-muted-foreground">
+						See where your storage goes and what it costs you.
 					</p>
 				</div>
-				<div className="flex gap-2 w-full md:w-auto">
+
+				<div className="flex flex-col items-center rounded-2xl border border-border bg-background px-6 py-16 text-center">
+					<div
+						className="size-24 rounded-full"
+						style={{
+							background:
+								"radial-gradient(circle at 35% 30%, #F6C09A, #E9A39B 45%, #B7A6D8 100%)",
+						}}
+					/>
+					<h2 className="mt-7 font-display text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">
+						No storage data yet
+					</h2>
+					<p className="mt-3 max-w-[440px] text-sm text-muted-foreground">
+						Load your storage data to see usage against your quota,
+						the cost of waste, and what to clean up first.
+					</p>
+					<Button
+						onClick={handleRefresh}
+						disabled={isRefreshing}
+						className="mt-7 h-12 rounded-full bg-lime px-7 text-[15px] font-semibold text-ink hover:bg-lime/90"
+					>
+						{isRefreshing && (
+							<Loader2 className="size-4 animate-spin" />
+						)}
+						Load Storage Data
+					</Button>
+					{error && (
+						<p className="mt-4 text-xs text-muted-foreground">
+							{error}
+						</p>
+					)}
+				</div>
+			</div>
+		);
+	}
+
+	const usagePercentage = getUsagePercentage();
+	const wastePercentage = getWastePercentage();
+	const freeStorageGb = Math.max(
+		0,
+		stats.totalQuotaGb - stats.totalUsedGb
+	);
+	const largestSource = stats.largestWaster.source
+		? (SOURCE_LABELS[stats.largestWaster.source] ??
+			stats.largestWaster.source)
+		: "multiple sources";
+
+	return (
+		<div className="space-y-6 p-6 md:p-8">
+			<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h1 className="font-display text-[32px] font-semibold leading-none tracking-[-0.04em] md:text-[36px]">
+						Storage Audit
+					</h1>
+					<p className="mt-1.5 text-sm text-muted-foreground">
+						{updatedLabel(lastUpdated)} Refreshes automatically
+						every 10 minutes.
+					</p>
+				</div>
+				<div className="flex flex-wrap gap-3">
 					<Button
 						variant="outline"
 						onClick={handleRefresh}
 						disabled={isRefreshing}
-						size="sm"
+						className="h-11 rounded-full border-border bg-background px-5 text-sm font-semibold"
 					>
-						{isRefreshing ? (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						) : (
-							<RefreshCw className="mr-2 h-4 w-4" />
+						{isRefreshing && (
+							<Loader2 className="size-4 animate-spin" />
 						)}
 						Refresh
 					</Button>
 					<Button
-						variant="outline"
 						onClick={handleExport}
 						disabled={isExporting}
-						size="sm"
+						className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90"
 					>
-						{isExporting ? (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						) : (
-							<Download className="mr-2 h-4 w-4" />
+						{isExporting && (
+							<Loader2 className="size-4 animate-spin" />
 						)}
-						Export
+						Export CSV
 					</Button>
 				</div>
 			</div>
 
-			{/* Stats Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Total Used Storage
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl md:text-3xl font-semibold">
+			{error && (
+				<div className="flex items-center gap-3 rounded-md border border-border bg-background px-5 py-4">
+					<span className="size-2.5 rounded-full bg-[#F4B183]" />
+					<p className="text-sm">{error}</p>
+				</div>
+			)}
+
+			<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
+				<div className="rounded-xl border border-border bg-background p-5 md:col-span-2 xl:col-span-1">
+					<div className="text-[13px] font-medium text-muted-foreground">
+						Storage used
+					</div>
+					<div className="mt-2 flex flex-wrap items-baseline gap-2">
+						<span className="font-display text-[36px] font-semibold leading-none tracking-[-0.03em] md:text-[40px]">
 							{formatSize(stats.totalUsedGb)}
-						</div>
-						<Progress
-							value={usagePercentage}
-							className="h-2 mt-3 mb-2"
+						</span>
+						<span className="text-sm text-muted-foreground">
+							of {formatSize(stats.totalQuotaGb)} quota
+						</span>
+					</div>
+					<div
+						className="mt-4 flex h-3 overflow-hidden rounded-full bg-muted"
+						role="progressbar"
+						aria-valuenow={usagePercentage}
+						aria-valuemin={0}
+						aria-valuemax={100}
+					>
+						<span
+							className="h-full rounded-full bg-ink"
+							style={{ width: `${usagePercentage}%` }}
 						/>
-						<p className="text-xs text-muted-foreground">
-							{usagePercentage}% of{" "}
-							{formatSize(stats.totalQuotaGb)} quota used
-						</p>
-					</CardContent>
-				</Card>
+					</div>
+					<div className="mt-2 flex justify-between text-xs text-muted-foreground">
+						<span>{usagePercentage}% used</span>
+						<span>{formatSize(freeStorageGb)} free</span>
+					</div>
+				</div>
 
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Wasted Storage
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl md:text-3xl font-semibold text-destructive">
-							{formatSize(stats.wastedStorageGb)}
-						</div>
-						<p className="text-xs text-muted-foreground mt-2">
-							Est. cost:{" "}
-							<span className="font-medium text-foreground">
-								${stats.estimatedMonthlyCost.toFixed(0)}/month
-							</span>
-						</p>
-						<p className="text-xs text-muted-foreground">
-							{wastePercentage}% of total storage
-						</p>
-					</CardContent>
-				</Card>
+				<div className="rounded-xl bg-night p-5 text-paper">
+					<div className="text-[13px] font-medium text-[#A8A8A2]">
+						Wasted storage
+					</div>
+					<div className="mt-2 font-display text-[36px] font-semibold leading-none tracking-[-0.03em] text-lime md:text-[40px]">
+						{formatSize(stats.wastedStorageGb)}
+					</div>
+					<div className="mt-2 text-[13px] text-[#A8A8A2]">
+						{wastePercentage}% of used storage
+					</div>
+					<div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[13px]">
+						<span className="text-[#A8A8A2]">Est. monthly cost</span>
+						<span className="font-semibold">
+							{formatCurrency(stats.estimatedMonthlyCost)}
+						</span>
+					</div>
+				</div>
 
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Largest Waster
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="flex items-center gap-2">
-							<div className="h-8 w-8 rounded-md bg-ink text-lime flex items-center justify-center">
-								<LargestWasterIcon className="h-4 w-4" />
-							</div>
-							<div className="text-lg md:text-xl font-display font-semibold">
-								{stats.largestWaster.type}
-							</div>
-						</div>
-						<p className="text-xs text-muted-foreground mt-2">
-							{stats.largestWaster.location} contains{" "}
-							{formatSize(stats.largestWaster.sizeGb)}.
-						</p>
-					</CardContent>
-				</Card>
+				<div className="rounded-xl border border-border bg-background p-5">
+					<div className="text-[13px] font-medium text-muted-foreground">
+						Largest waster
+					</div>
+					<div className="mt-2 font-display text-[28px] font-semibold leading-none tracking-[-0.03em]">
+						{stats.largestWaster.type}
+					</div>
+					<div className="mt-1 text-[13px] text-muted-foreground">
+						{formatSize(stats.largestWaster.sizeGb)}, mostly in{" "}
+						{largestSource}
+					</div>
+					<div className="mt-4 flex flex-wrap gap-2">
+						<span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium">
+							By type
+						</span>
+						<span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium">
+							{largestSource}
+						</span>
+					</div>
+				</div>
 			</div>
 
-			{/* Charts and Files */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-				{/* Chart Section */}
-				<Card className="md:col-span-1">
-					<CardHeader>
-						<CardTitle>File Type Distribution</CardTitle>
-					</CardHeader>
-					<CardContent className="h-[350px] flex flex-col">
-						<div className="flex-1">
-							<StorageChart storageData={chartData} />
-						</div>
+			<div className="grid gap-4 xl:grid-cols-3">
+				<div className="rounded-xl border border-border bg-background p-6">
+					<h2 className="font-display text-xl font-semibold">
+						File type distribution
+					</h2>
+					<div className="mt-5">
+						<StorageChart
+							distribution={distribution}
+							totalUsedGb={stats.totalUsedGb}
+						/>
+					</div>
+				</div>
 
-						{/* Legend */}
-						<div className="mt-4 space-y-2 max-h-32 overflow-y-auto pr-1">
-							{chartData.map((item) => (
-								<div
-									key={item.name}
-									className="flex items-center justify-between text-sm"
-								>
-									<div className="flex items-center gap-2">
-										<div
-											className="h-3 w-3 rounded-sm border flex-shrink-0"
-											style={{
-												backgroundColor: item.color,
-												borderColor:
-													"hsl(var(--border))",
-											}}
-										/>
-										<span className="text-foreground">
-											{item.name}
-										</span>
-									</div>
-									<div className="flex items-center gap-2">
-										<span className="text-muted-foreground">
-											{item.value}%
-										</span>
-										<span className="text-xs text-muted-foreground">
-											({formatSize(item.sizeGb)})
-										</span>
-									</div>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* File List Section */}
-				<Card className="md:col-span-2">
-					<CardHeader>
-						<CardTitle>
+				<div className="rounded-xl border border-border bg-background p-6 xl:col-span-2">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<h2 className="font-display text-xl font-semibold">
 							Largest Unused Files ({">"}1 Year)
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						{formattedLargeFiles.length > 0 ? (
-							<>
-								<FilesTable files={formattedLargeFiles} />
-								<Button
-									variant="outline"
-									className="w-full mt-4"
-									asChild
-								>
-									<Link href="/dashboard/files">
-										View All Files
-									</Link>
-								</Button>
-							</>
-						) : (
-							<div className="text-center py-8 text-muted-foreground">
-								<p className="text-sm">
-									No large unused files found
-								</p>
-							</div>
-						)}
-					</CardContent>
-				</Card>
+						</h2>
+						<Link
+							href="/dashboard/files"
+							className="text-sm font-medium transition-opacity hover:opacity-75"
+						>
+							View all files →
+						</Link>
+					</div>
+					<div className="mt-3">
+						<FilesTable files={largeFiles.slice(0, 5)} />
+					</div>
+				</div>
 			</div>
 
-			{/* AI Suggestions */}
 			<StorageSuggestions
 				wastedStorageGb={stats.wastedStorageGb}
+				duplicateCount={stats.duplicateCount}
+				publicCount={stats.publicCount}
 				largestWaster={stats.largestWaster}
-				distribution={distribution}
 			/>
 		</div>
 	);

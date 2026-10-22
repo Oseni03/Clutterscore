@@ -4,7 +4,7 @@ import { StorageStoreProvider } from "@/zustand/providers/storage-store-provider
 export default function StorageLayout({ children }: { children: ReactNode }) {
 	return (
 		<StorageStoreProvider>
-			<div className="min-h-screen bg-background">{children}</div>
+			<div className="min-h-full">{children}</div>
 		</StorageStoreProvider>
 	);
 }

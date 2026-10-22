@@ -178,6 +178,9 @@ export async function POST(
 			const someSucceeded = undoResults.some(
 				(r) => r.status === "restored"
 			);
+			const allSucceeded =
+				undoResults.length > 0 &&
+				undoResults.every((r) => r.status === "restored");
 
 			// Update audit log status
 			const updatedLog = await prisma.auditLog.update({
@@ -190,15 +193,17 @@ export async function POST(
 							: AuditLogStatus.PENDING,
 					details: {
 						...(auditLog.details as object),
-						undone: someSucceeded,
+						undone: allSucceeded,
 						undoTimestamp: new Date().toISOString(),
 						undoResults,
 						undoneBy: user.id,
 						partialUndo:
 							someSucceeded &&
-							!allFailed &&
 							undoResults.some((r) => r.status === "failed"),
 					},
+					...(allSucceeded
+						? { undoActions: [], undoExpiresAt: null }
+						: {}),
 				},
 			});
 
@@ -220,7 +225,7 @@ export async function POST(
 			});
 
 			return NextResponse.json({
-				success: someSucceeded,
+				success: allSucceeded,
 				message: allFailed
 					? "All undo actions failed"
 					: someSucceeded

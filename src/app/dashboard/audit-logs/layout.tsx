@@ -4,7 +4,7 @@ import { AuditLogsStoreProvider } from "@/zustand/providers/audit-logs-store-pro
 export default function AuditLogsLayout({ children }: { children: ReactNode }) {
 	return (
 		<AuditLogsStoreProvider>
-			<div className="min-h-screen bg-background">{children}</div>
+			<div className="min-h-full">{children}</div>
 		</AuditLogsStoreProvider>
 	);
 }
