@@ -1,25 +1,27 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Search, Filter } from "lucide-react";
-import { FileType, ToolSource } from "@prisma/client";
-import Image from "next/image";
-import { FILE_TYPE_ICONS, SOURCE_ICONS } from "@/lib/utils";
+import { FileType } from "@prisma/client";
+
+const SOURCE_LABELS: Record<string, string> = {
+	GOOGLE: "Google",
+	SLACK: "Slack",
+	DROPBOX: "Dropbox",
+	NOTION: "Notion",
+	MICROSOFT: "Microsoft",
+	FIGMA: "Figma",
+	JIRA: "Jira",
+};
+
+const TYPE_LABELS: Record<string, string> = {
+	DOCUMENT: "Docs",
+	IMAGE: "Images",
+	VIDEO: "Video",
+	MUSIC: "Audio",
+	ARCHIVE: "Archives",
+	DATABASE: "Databases",
+	OTHER: "Other",
+};
 
 interface FilesFiltersProps {
 	search: string;
@@ -49,80 +51,131 @@ export function FilesFilters({
 	onClearFilters,
 }: FilesFiltersProps) {
 	return (
-		<div className="flex flex-col md:flex-row gap-4 justify-between">
-			{/* Search */}
-			<div className="relative flex-1 md:max-w-sm">
-				<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-				<Input
-					placeholder="Search files..."
-					className="pl-9"
-					value={search}
-					onChange={(e) => onSearchChange(e.target.value)}
-				/>
-			</div>
+		<div className="rounded-md border border-border bg-background p-5">
+			<div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+				<div className="w-full max-w-[320px] flex-1">
+					<label
+						htmlFor="file-search"
+						className="mb-1.5 block text-xs text-muted-foreground"
+					>
+						Search
+					</label>
+					<Input
+						id="file-search"
+						placeholder="Search files..."
+						className="h-11 rounded-sm border-border bg-background"
+						value={search}
+						onChange={(event) =>
+							onSearchChange(event.target.value)
+						}
+					/>
+				</div>
 
-			{/* Filters */}
-			<div className="flex gap-2 flex-wrap">
-				{/* Source Filter */}
-				<Select value={source} onValueChange={onSourceChange}>
-					<SelectTrigger className="w-[140px]">
-						<SelectValue placeholder="Source" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Sources</SelectItem>
-						{Object.keys(SOURCE_ICONS).map((src) => (
-							<SelectItem key={src} value={src}>
-								<div className="flex items-center gap-2">
-									<Image
-										src={SOURCE_ICONS[src as ToolSource]}
-										alt={`${src} icon`}
-										width={16}
-										height={16}
-									/>
-									{src}
-								</div>
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+				<div className="flex flex-1 flex-wrap items-end gap-x-5 gap-y-3">
+					<div>
+						<div className="mb-1.5 text-xs text-muted-foreground">
+							Source
+						</div>
+						<div className="inline-flex flex-wrap gap-1 rounded-full bg-muted p-1">
+							<button
+								type="button"
+								onClick={() => onSourceChange("all")}
+								className={`h-9 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+									source === "all"
+										? "bg-ink text-paper"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+							>
+								All
+							</button>
+							{Object.entries(SOURCE_LABELS).map(
+								([value, label]) => (
+									<button
+										key={value}
+										type="button"
+										onClick={() => onSourceChange(value)}
+										className={`h-9 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+											source === value
+												? "bg-ink text-paper"
+												: "text-muted-foreground hover:text-foreground"
+										}`}
+									>
+										{label}
+									</button>
+								)
+							)}
+						</div>
+					</div>
 
-				{/* Type Filter */}
-				<Select value={type} onValueChange={onTypeChange}>
-					<SelectTrigger className="w-[140px]">
-						<SelectValue placeholder="Type" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Types</SelectItem>
-						{Object.keys(FILE_TYPE_ICONS).map((fileType) => (
-							<SelectItem key={fileType} value={fileType}>
-								{fileType}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+					<div>
+						<div className="mb-1.5 text-xs text-muted-foreground">
+							Type
+						</div>
+						<div className="inline-flex flex-wrap gap-1 rounded-full bg-muted p-1">
+							<button
+								type="button"
+								onClick={() => onTypeChange("all")}
+								className={`h-9 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+									type === "all"
+										? "bg-ink text-paper"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+							>
+								All
+							</button>
+							{Object.entries(TYPE_LABELS).map(
+								([value, label]) => (
+									<button
+										key={value}
+										type="button"
+										onClick={() => onTypeChange(value)}
+										className={`h-9 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+											type === value
+												? "bg-ink text-paper"
+												: "text-muted-foreground hover:text-foreground"
+										}`}
+									>
+										{label}
+									</button>
+								)
+							)}
+						</div>
+					</div>
 
-				{/* Special Filters */}
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="outline" size="icon">
-							<Filter className="h-4 w-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem onClick={onToggleDuplicate}>
-							{isDuplicate === true && "✓ "}
-							Duplicates Only
-						</DropdownMenuItem>
-						<DropdownMenuItem onClick={onTogglePublic}>
-							{isPubliclyShared === true && "✓ "}
-							Public Files Only
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={onClearFilters}>
-							Clear All Filters
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+					<div className="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							aria-pressed={isDuplicate === true}
+							onClick={onToggleDuplicate}
+							className={`h-11 rounded-sm px-4 text-xs font-semibold transition-colors ${
+								isDuplicate === true
+									? "bg-ink text-paper"
+									: "bg-muted text-muted-foreground hover:text-foreground"
+							}`}
+						>
+							Duplicates only
+						</button>
+						<button
+							type="button"
+							aria-pressed={isPubliclyShared === true}
+							onClick={onTogglePublic}
+							className={`h-11 rounded-sm px-4 text-xs font-semibold transition-colors ${
+								isPubliclyShared === true
+									? "bg-ink text-paper"
+									: "bg-muted text-muted-foreground hover:text-foreground"
+							}`}
+						>
+							Public only
+						</button>
+						<button
+							type="button"
+							onClick={onClearFilters}
+							className="h-11 px-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+						>
+							Clear
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	);

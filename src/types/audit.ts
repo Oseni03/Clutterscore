@@ -210,10 +210,21 @@ export interface PaginatedResponse<T> {
 }
 
 /**
+ * File stats across the latest audit
+ */
+export interface FileStats {
+	totalFiles: number;
+	totalSizeMb: number;
+	duplicatesCount: number;
+	publicFilesCount: number;
+}
+
+/**
  * Files list response
  */
 export interface FilesListResponse extends PaginatedResponse<FileData> {
 	files: FileData[];
+	stats?: FileStats;
 }
 
 /**

@@ -4,7 +4,7 @@ import { FilesStoreProvider } from "@/zustand/providers/files-store-provider";
 export default function FilesLayout({ children }: { children: ReactNode }) {
 	return (
 		<FilesStoreProvider>
-			<div className="min-h-screen bg-background">{children}</div>
+			<div className="min-h-full">{children}</div>
 		</FilesStoreProvider>
 	);
 }

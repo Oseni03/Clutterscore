@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
 	Table,
 	TableBody,
@@ -10,16 +9,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { FileText, MoreHorizontal, Trash2, Download } from "lucide-react";
 import { FileType, ToolSource } from "@prisma/client";
-import Image from "next/image";
-import { FILE_TYPE_ICONS, formatSize, SOURCE_ICONS } from "@/lib/utils";
+import { formatSize } from "@/lib/utils";
 
 interface FileItem {
 	id: string;
@@ -39,6 +30,36 @@ interface FilesTableProps {
 	onArchive: (fileId: string) => void;
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+	GOOGLE: "Google",
+	SLACK: "Slack",
+	DROPBOX: "Dropbox",
+	NOTION: "Notion",
+	MICROSOFT: "Microsoft",
+	FIGMA: "Figma",
+	JIRA: "Jira",
+};
+
+const SOURCE_TINTS: Record<string, string> = {
+	GOOGLE: "bg-[#DDF35B] text-ink",
+	SLACK: "bg-[#B9A9D6] text-ink",
+	DROPBOX: "bg-[#8FA9A8] text-ink",
+	NOTION: "bg-[#F4B183] text-ink",
+	MICROSOFT: "bg-[#E4DDF1] text-ink",
+	FIGMA: "bg-[#F4B183] text-ink",
+	JIRA: "bg-[#8FA9A8] text-ink",
+};
+
+const TYPE_LABELS: Record<string, string> = {
+	DOCUMENT: "Docs",
+	IMAGE: "Images",
+	VIDEO: "Video",
+	MUSIC: "Audio",
+	ARCHIVE: "Archives",
+	DATABASE: "Databases",
+	OTHER: "Other",
+};
+
 export function FilesTable({ files, onArchive }: FilesTableProps) {
 	const formatDate = (date: Date | null) => {
 		if (!date) return "Never";
@@ -53,135 +74,138 @@ export function FilesTable({ files, onArchive }: FilesTableProps) {
 		return "Today";
 	};
 
-	const getFileIcon = (type: FileType) => {
-		const Icon = FILE_TYPE_ICONS[type] || FileText;
-		const colors = {
-			DOCUMENT: "text-muted-foreground",
-			IMAGE: "text-foreground",
-			VIDEO: "text-foreground",
-			MUSIC: "text-muted-foreground",
-			ARCHIVE: "text-muted-foreground",
-			DATABASE: "text-foreground",
-			OTHER: "text-muted-foreground",
-		};
-		return <Icon className={`h-4 w-4 ${colors[type]}`} />;
-	};
-
-	if (files.length === 0) {
-		return (
-			<div className="text-center py-12 text-muted-foreground">
-				<FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-				<h3 className="text-lg font-medium mb-2">No files found</h3>
-				<p className="text-sm">
-					Try adjusting your filters or run an audit to discover files
-				</p>
-			</div>
-		);
-	}
-
 	return (
 		<div className="overflow-x-auto">
 			<Table>
 				<TableHeader>
-					<TableRow>
-						<TableHead>Name</TableHead>
-						<TableHead>Size</TableHead>
-						<TableHead>Source</TableHead>
-						<TableHead>Last Accessed</TableHead>
-						<TableHead>Owner</TableHead>
-						<TableHead className="text-right">Actions</TableHead>
+					<TableRow className="border-border hover:bg-transparent">
+						<TableHead className="h-10 pl-5 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Name
+						</TableHead>
+						<TableHead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Size
+						</TableHead>
+						<TableHead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Source
+						</TableHead>
+						<TableHead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Type
+						</TableHead>
+						<TableHead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Last accessed
+						</TableHead>
+						<TableHead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Flags
+						</TableHead>
+						<TableHead className="pr-5 text-right text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+							Actions
+						</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{files.map((file) => (
-						<TableRow key={file.id}>
-							<TableCell>
-								<div className="flex items-center gap-3">
-									<div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
-										{getFileIcon(file.type)}
-									</div>
-									<div className="min-w-0">
-										<div
-											className="font-medium truncate max-w-[200px]"
-											title={file.name}
-										>
-											{file.name}
-										</div>
-										<div className="flex gap-1 mt-1">
-											{file.isDuplicate && (
-												<Badge
-													variant="secondary"
-													className="text-[10px] bg-muted text-muted-foreground"
-												>
-													Duplicate
-												</Badge>
-											)}
-											{file.isPubliclyShared && (
-												<Badge
-													variant="secondary"
-													className="text-[10px] bg-destructive/10 text-destructive"
-												>
-													Public
-												</Badge>
-											)}
-										</div>
-									</div>
+					{files.length === 0 ? (
+						<TableRow className="hover:bg-transparent">
+							<TableCell
+								colSpan={7}
+								className="px-5 py-14 text-center"
+							>
+								<div className="font-semibold">
+									No files match these filters
+								</div>
+								<div className="mt-1 text-sm text-muted-foreground">
+									Try a different source or type, or clear your
+									filters.
 								</div>
 							</TableCell>
-							<TableCell>
-								<Badge
-									variant="secondary"
-									className="font-mono text-xs"
-								>
-									{formatSize(file.sizeMb)}
-								</Badge>
-							</TableCell>
-							<TableCell>
-								<Image
-									src={SOURCE_ICONS[file.source]}
-									alt={`${file.source} icon`}
-									width={20}
-									height={20}
-								/>
-							</TableCell>
-							<TableCell className="text-muted-foreground text-sm">
-								{formatDate(file.lastAccessed)}
-							</TableCell>
-							<TableCell className="text-muted-foreground text-sm">
-								{file.ownerEmail || "Unknown"}
-							</TableCell>
-							<TableCell className="text-right">
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button variant="ghost" size="icon">
-											<MoreHorizontal className="h-4 w-4" />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										{file.url && (
-											<DropdownMenuItem asChild>
-												<a
-													href={file.url}
-													target="_blank"
-													rel="noopener noreferrer"
-												>
-													<Download className="mr-2 h-4 w-4" />
-													View File
-												</a>
-											</DropdownMenuItem>
-										)}
-										<DropdownMenuItem
-											className="text-destructive"
-											onClick={() => onArchive(file.id)}
-										>
-											<Trash2 className="mr-2 h-4 w-4" />
-											Archive File
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</TableCell>
 						</TableRow>
-					))}
+					) : (
+						files.map((file) => {
+							const sourceLabel =
+								SOURCE_LABELS[file.source] ?? file.source;
+							const sourceTint =
+								SOURCE_TINTS[file.source] ??
+								"bg-muted text-foreground";
+
+							return (
+								<TableRow
+									key={file.id}
+									className="border-border hover:bg-muted/40"
+								>
+									<TableCell className="max-w-[280px] py-3.5 pl-5 pr-3">
+										{file.url ? (
+											<a
+												href={file.url}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="block truncate font-semibold underline-offset-4 hover:underline"
+												title={file.name}
+											>
+												{file.name}
+											</a>
+										) : (
+											<span
+												className="block truncate font-semibold"
+												title={file.name}
+											>
+												{file.name}
+											</span>
+										)}
+									</TableCell>
+									<TableCell className="whitespace-nowrap text-muted-foreground">
+										{formatSize(file.sizeMb)}
+									</TableCell>
+									<TableCell>
+										<div className="flex items-center gap-2">
+											<span
+												className={`flex size-[22px] shrink-0 items-center justify-center rounded-sm text-[10px] font-semibold ${sourceTint}`}
+											>
+												{file.source.charAt(0)}
+											</span>
+											<span className="text-muted-foreground">
+												{sourceLabel}
+											</span>
+										</div>
+									</TableCell>
+									<TableCell className="text-muted-foreground">
+										{TYPE_LABELS[file.type] ?? file.type}
+									</TableCell>
+									<TableCell className="whitespace-nowrap text-muted-foreground">
+										{formatDate(file.lastAccessed)}
+									</TableCell>
+									<TableCell>
+										<div className="flex flex-wrap gap-1.5">
+											{file.isDuplicate && (
+												<span className="rounded-sm bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+													Duplicate
+												</span>
+											)}
+											{file.isPubliclyShared && (
+												<span className="rounded-sm bg-[#F4B183] px-2 py-1 text-[11px] font-medium text-ink">
+													Public
+												</span>
+											)}
+											{!file.isDuplicate &&
+												!file.isPubliclyShared && (
+													<span className="text-muted-foreground">
+														—
+													</span>
+												)}
+										</div>
+									</TableCell>
+									<TableCell className="py-3.5 pl-3 pr-5 text-right">
+										<Button
+											variant="secondary"
+											size="sm"
+											onClick={() => onArchive(file.id)}
+											className="h-9 rounded-full bg-muted px-4 text-xs font-semibold"
+										>
+											Archive
+										</Button>
+									</TableCell>
+								</TableRow>
+							);
+						})
+					)}
 				</TableBody>
 			</Table>
 		</div>

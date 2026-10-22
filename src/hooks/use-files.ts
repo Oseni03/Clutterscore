@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useFilesStore } from "@/zustand/providers/files-store-provider";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
-import { FilesListResponse } from "@/types/audit";
+import { FileStats, FilesListResponse } from "@/types/audit";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { showUpgradeToast } from "@/components/upgrade-toast";
@@ -28,6 +28,7 @@ export function useFiles() {
 
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [stats, setStats] = useState<FileStats | null>(null);
 
 	// Initialize filters from URL params on mount
 	useEffect(() => {
@@ -71,6 +72,9 @@ export function useFiles() {
 			if (filters.type && filters.type !== "all") {
 				params.set("type", filters.type);
 			}
+			if (filters.search.trim()) {
+				params.set("search", filters.search.trim());
+			}
 			if (
 				filters.isDuplicate !== null &&
 				filters.isDuplicate !== undefined
@@ -95,6 +99,7 @@ export function useFiles() {
 			}
 
 			setFiles(data.files);
+			setStats(data.stats ?? null);
 			setPagination({
 				total: data.pagination.total,
 				page: data.pagination.page,
@@ -189,6 +194,31 @@ export function useFiles() {
 					total: pagination.total - 1,
 				});
 
+				const archivedFile = allFiles.find(
+					(file) => file.id === fileId
+				);
+				setStats((previous) => {
+					if (!previous || !archivedFile) return previous;
+
+					return {
+						totalFiles: Math.max(0, previous.totalFiles - 1),
+						totalSizeMb: Math.max(
+							0,
+							previous.totalSizeMb - archivedFile.sizeMb
+						),
+						duplicatesCount: Math.max(
+							0,
+							previous.duplicatesCount -
+								(archivedFile.isDuplicate ? 1 : 0)
+						),
+						publicFilesCount: Math.max(
+							0,
+							previous.publicFilesCount -
+								(archivedFile.isPubliclyShared ? 1 : 0)
+						),
+					};
+				});
+
 				toast.success(
 					data.externalDeletionSuccess
 						? "File archived successfully"
@@ -224,6 +254,15 @@ export function useFiles() {
 	const exportFiles = useCallback(async () => {
 		try {
 			const response = await fetch("/api/files/export");
+
+			if (!response.ok) {
+				const data = await response.json().catch(() => null);
+				throw new Error(data?.error || "Failed to export files");
+			}
+
+			const exportCount = Number(
+				response.headers.get("X-Export-Count") || 0
+			);
 			const blob = await response.blob();
 
 			const url = window.URL.createObjectURL(blob);
@@ -236,8 +275,9 @@ export function useFiles() {
 			window.URL.revokeObjectURL(url);
 
 			toast.success("Files exported successfully");
+			return exportCount;
 		} catch (err) {
-			toast.error("Failed to export files");
+			toast.error((err as Error).message || "Failed to export files");
 			throw err;
 		}
 	}, []);
@@ -264,6 +304,7 @@ export function useFiles() {
 		allFiles,
 		filters,
 		pagination,
+		stats,
 		isLoading,
 		error,
 		subscriptionTier,
