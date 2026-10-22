@@ -21,7 +21,6 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Skeleton } from "../ui/skeleton";
-import Logo from "../logo";
 import { logger } from "@/lib/logger";
 
 const formSchema = z.object({
@@ -33,6 +32,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 	const params = useSearchParams();
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [googleLoading, setGoogleLoading] = useState<boolean>(false);
+	const [sentEmail, setSentEmail] = useState<string | null>(null);
 
 	const coupon = params.get("coupon");
 	const isLogin = pathname === "/login";
@@ -80,7 +80,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 					: "/onboarding",
 			});
 
-			toast.success("Magic link sent! Check your email.");
+			setSentEmail(values.email);
 		} catch (error) {
 			toast.error("Failed to send magic link");
 			logger.error("Magic link sign-in error:", error as Error);
@@ -89,165 +89,164 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 		}
 	}
 
+	if (sentEmail) {
+		return (
+			<div className={cn("w-full", className)} {...props}>
+				<div className="h-14 w-14 rounded-full bg-orb" />
+				<h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-[-0.035em] md:text-[40px]">
+					Check your email
+				</h1>
+				<p className="mt-3 text-muted-foreground">
+					We sent a {isLogin ? "sign-in" : "sign-up"} link to{" "}
+					<span className="font-semibold text-foreground">
+						{sentEmail}
+					</span>
+					.{" "}
+					{isLogin
+						? "It opens your dashboard."
+						: "It takes you to set up your workspace."}
+				</p>
+				<Button
+					type="button"
+					variant="secondary"
+					className="mt-7 h-11 px-6"
+					onClick={() => setSentEmail(null)}
+				>
+					Use a different email
+				</Button>
+			</div>
+		);
+	}
+
 	return (
-		<div className={cn("flex flex-col gap-6", className)} {...props}>
+		<div className={cn("w-full", className)} {...props}>
 			<Form {...form}>
 				<form onSubmit={form.handleSubmit(onSubmit)}>
-					<div className="flex flex-col gap-6">
-						<div className="flex flex-col items-center gap-2">
-							<Link
-								href="/"
-								className="flex flex-col items-center gap-2 font-medium"
-							>
-								<div className="flex size-8 items-center justify-center rounded-md">
-									<Logo className="size-6" />
-								</div>
-								<span className="sr-only">Clusterscore</span>
-							</Link>
-							<h1 className="text-xl font-semibold">
-								Welcome to Clusterscore.
-							</h1>
-							{isLogin ? (
-								<div className="text-center text-sm">
-									Don&apos;t have an account?{" "}
-									<Link
-										href="/signup"
-										className="underline underline-offset-4"
-									>
-										Sign up
-									</Link>
-								</div>
-							) : (
-								<div className="text-center text-sm">
-									Already have an account?{" "}
-									<Link
-										href="/login"
-										className="underline underline-offset-4"
-									>
-										Login
-									</Link>
-								</div>
-							)}
+					{coupon && !isLogin && (
+						<div className="mb-6 rounded-md bg-lime px-3.5 py-2.5 text-[13px] font-medium text-ink">
+							Coupon{" "}
+							<span className="font-semibold">{coupon}</span>{" "}
+							applied. It will be added to your free workspace.
 						</div>
-						<div className="flex flex-col gap-6">
-							<FormField
-								control={form.control}
-								name="email"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Email</FormLabel>
-										<FormControl>
-											<Input
-												type="email"
-												placeholder="you@example.com"
-												{...field}
-												className="border-border bg-background dark:border-border dark:bg-input/20"
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
+					)}
+
+					<h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-[-0.035em] md:text-[40px]">
+						{isLogin ? "Welcome back" : "Start your free audit"}
+					</h1>
+					<p className="mt-3 text-muted-foreground">
+						{isLogin
+							? "Log in to see your ClutterScore and review your playbooks."
+							: "Create an account, connect a tool, and see your ClutterScore in about 90 seconds."}
+					</p>
+
+					<Button
+						variant="secondary"
+						type="button"
+						className="mt-8 w-full gap-2.5"
+						onClick={signInWithGoogle}
+						disabled={googleLoading}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							className="h-[18px] w-[18px]"
+							aria-hidden="true"
+						>
+							<path
+								d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
+								fill="currentColor"
 							/>
-							<Button
-								type="submit"
-								className="w-full"
-								disabled={isLoading}
-							>
-								{isLogin ? "Send Magic Link" : "Sign up"}
-								{isLoading && (
-									<Loader2 className="ml-2 h-4 w-4 animate-spin" />
-								)}
-							</Button>
-						</div>
-						<div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-							<span className="bg-background text-muted-foreground relative z-10 px-2">
-								Or
-							</span>
-						</div>
-						<div className="flex w-full">
-							<Button
-								variant="outline"
-								type="button"
-								className="w-full"
-								onClick={signInWithGoogle}
-								disabled={googleLoading}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									className="mr-2 h-4 w-4"
-								>
-									<path
-										d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-										fill="currentColor"
-									/>
-								</svg>
-								Continue with Google
-								{googleLoading && (
-									<Loader2 className="ml-2 h-4 w-4 animate-spin" />
-								)}
-							</Button>
-						</div>
+						</svg>
+						{isLogin ? "Continue with Google" : "Sign up with Google"}
+						{googleLoading && (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						)}
+					</Button>
+
+					<div className="my-6 flex items-center gap-3 text-[13px] text-muted-foreground">
+						<span className="h-px flex-1 bg-border" />
+						or
+						<span className="h-px flex-1 bg-border" />
 					</div>
+
+					<FormField
+						control={form.control}
+						name="email"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel className="text-[13px] font-medium">
+									Work email
+								</FormLabel>
+								<FormControl>
+									<Input
+										type="email"
+										placeholder="you@company.com"
+										className="h-12 px-4"
+										{...field}
+									/>
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
+					<Button
+						type="submit"
+						className="mt-3 w-full"
+						disabled={isLoading}
+					>
+						Send magic link
+						{isLoading && (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						)}
+					</Button>
 				</form>
 			</Form>
-			<div className="text-muted-foreground text-center text-xs text-balance">
-				By clicking continue, you agree to our{" "}
-				<Link
-					href="/terms"
-					className="underline underline-offset-4 hover:text-primary"
-				>
-					Terms of Service
-				</Link>{" "}
-				and{" "}
-				<a
-					href="/privacy-policy"
-					className="underline underline-offset-4 hover:text-primary"
-				>
-					Privacy Policy
-				</a>
-				.
-			</div>
+
+			<p className="mt-6 text-center text-[14px] text-muted-foreground">
+				{isLogin ? (
+					<>
+						New to Clutterscore?{" "}
+						<Link
+							href="/signup"
+							className="font-semibold text-foreground transition-opacity hover:opacity-70"
+						>
+							Sign up
+						</Link>
+					</>
+				) : (
+					<>
+						Already have an account?{" "}
+						<Link
+							href="/login"
+							className="font-semibold text-foreground transition-opacity hover:opacity-70"
+						>
+							Log in
+						</Link>
+					</>
+				)}
+			</p>
+			<p className="mt-4 text-center text-[12px] text-muted-foreground">
+				By continuing you agree to the Terms and Privacy Policy.
+			</p>
 		</div>
 	);
 };
 
 const AuthLoading = ({ className, ...props }: React.ComponentProps<"div">) => {
 	return (
-		<div className={cn("flex flex-col gap-6", className)} {...props}>
-			<div className="flex flex-col gap-6">
-				<div className="flex flex-col items-center gap-2">
-					<div className="flex flex-col items-center gap-2 font-medium">
-						<div className="flex size-8 items-center justify-center rounded-md">
-							<Logo className="size-6" />
-						</div>
-					</div>
-					<Skeleton className="h-7 w-48" />
-					<Skeleton className="h-4 w-56" />
-				</div>
-
-				<div className="flex flex-col gap-6">
-					<div className="space-y-2">
-						<Skeleton className="h-4 w-12" />
-						<Skeleton className="h-10 w-full" />
-					</div>
-
-					<Skeleton className="h-10 w-full" />
-				</div>
-
-				<div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-					<span className="bg-background text-muted-foreground relative z-10 px-2">
-						Or
-					</span>
-				</div>
-
-				<Skeleton className="h-10 w-full" />
+		<div className={cn("w-full", className)} {...props}>
+			<Skeleton className="h-10 w-56" />
+			<Skeleton className="mt-3 h-5 w-full" />
+			<Skeleton className="mt-8 h-12 w-full" />
+			<div className="my-6 flex items-center gap-3">
+				<span className="h-px flex-1 bg-border" />
+				<Skeleton className="h-4 w-4 rounded-full" />
+				<span className="h-px flex-1 bg-border" />
 			</div>
-
-			<div className="text-center">
-				<Skeleton className="mx-auto h-4 w-64" />
-				<Skeleton className="mx-auto mt-1 h-4 w-48" />
-			</div>
+			<Skeleton className="h-4 w-24" />
+			<Skeleton className="mt-2 h-12 w-full" />
+			<Skeleton className="mt-3 h-12 w-full" />
 		</div>
 	);
 };
