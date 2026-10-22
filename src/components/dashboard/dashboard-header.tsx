@@ -1,7 +1,8 @@
 "use client";
 
+import { formatDistanceToNow } from "date-fns";
+import { Crown, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { History, Loader2, RefreshCw, Crown } from "lucide-react";
 
 interface DashboardHeaderProps {
 	auditedAt: string | Date;
@@ -19,40 +20,47 @@ export default function DashboardHeader({
 	onViewLogs,
 }: DashboardHeaderProps) {
 	return (
-		<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+		<div className="flex flex-wrap items-end justify-between gap-4">
 			<div>
-				<h1 className="text-xl md:text-2xl font-semibold text-foreground">
-					Dashboard
+				<h1 className="font-display text-[28px] font-semibold leading-[1.05] tracking-[-0.035em] md:text-[36px]">
+					Overview
 				</h1>
-				<p className="text-xs md:text-sm text-muted-foreground mt-1">
-					Last updated {new Date(auditedAt).toLocaleString()}
+				<p className="mt-2 text-sm text-muted-foreground">
+					Last audit{" "}
+					{formatDistanceToNow(new Date(auditedAt), {
+						addSuffix: true,
+					})}
+					. Data refreshes automatically if it is more than 5 minutes
+					old.
 				</p>
 			</div>
-			<div className="flex gap-2">
-				<Button onClick={onViewLogs} variant="outline" size="sm">
-					<History className="mr-2 h-4 w-4" />
-					Audit Logs
+			<div className="flex flex-wrap gap-3">
+				<Button
+					variant="outline"
+					onClick={onViewLogs}
+					className="h-11 rounded-full border-border bg-background px-5 text-sm font-semibold"
+				>
+					View logs
 				</Button>
 				<Button
 					onClick={onRunAudit}
 					disabled={isRefreshing || isThrottled}
-					variant={isThrottled ? "outline" : "outline"}
-					size="sm"
+					className="h-11 rounded-full px-5 text-sm font-semibold"
 				>
 					{isRefreshing ? (
 						<>
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							<Loader2 className="size-4 animate-spin" />
 							Running...
 						</>
 					) : isThrottled ? (
 						<>
-							<Crown className="mr-2 h-4 w-4" />
+							<Crown className="size-4" />
 							Upgrade
 						</>
 					) : (
 						<>
-							<RefreshCw className="mr-2 h-4 w-4" />
-							Run Audit
+							<RefreshCw className="size-4" />
+							Run audit
 						</>
 					)}
 				</Button>

@@ -1,17 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown } from "lucide-react";
-import {
-	LineChart,
-	Line,
-	XAxis,
-	YAxis,
-	CartesianGrid,
-	Tooltip,
-	ResponsiveContainer,
-} from "recharts";
 import { useEffect, useState } from "react";
 import { ScoreTrendsResponse } from "@/types/audit";
 
@@ -25,148 +13,189 @@ interface ClutterscoreTrendProps {
 	className?: string;
 }
 
+const PERIODS = [
+	{ label: "3 months", months: 3 },
+	{ label: "6 months", months: 6 },
+];
+
 export default function ClutterscoreTrend({
 	className,
 }: ClutterscoreTrendProps) {
 	const [trends, setTrends] = useState<TrendData[]>([]);
-	const [period, setPeriod] = useState<"30" | "90">("30");
+	const [months, setMonths] = useState(6);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		fetch(`/api/dashboard/trends?months=${period === "30" ? 3 : 6}`)
+		let cancelled = false;
+
+		setLoading(true);
+		fetch(`/api/dashboard/trends?months=${months}`)
 			.then((res) => res.json())
 			.then((data: ScoreTrendsResponse) => {
+				if (cancelled) return;
+
+				const list = Array.isArray(data.trends) ? data.trends : [];
 				setTrends(
-					data.trends.map((t) => ({
-						month: new Date(t.month + "-01").toLocaleDateString(
-							"en-US",
-							{ month: "short" }
-						),
-						score: t.score,
-						waste: t.waste,
-					}))
+					list.map((trend) => {
+						const parsed = new Date(`${trend.month}-01`);
+						const month = Number.isNaN(parsed.getTime())
+							? trend.month
+							: parsed.toLocaleDateString("en-US", {
+									month: "short",
+								});
+
+						return {
+							month,
+							score: trend.score,
+							waste: trend.waste,
+						};
+					})
 				);
 				setLoading(false);
 			})
 			.catch((err) => {
 				console.error("Failed to fetch trends:", err);
-				setLoading(false);
+				if (!cancelled) {
+					setTrends([]);
+					setLoading(false);
+				}
 			});
-	}, [period]);
 
-	if (loading) {
-		return (
-			<Card className={className}>
-				<CardHeader>
-					<CardTitle className="text-sm font-medium text-muted-foreground">
-						Hygiene Trend
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="h-[200px] animate-pulse bg-muted rounded-sm" />
-				</CardContent>
-			</Card>
-		);
-	}
+		return () => {
+			cancelled = true;
+		};
+	}, [months]);
 
-	const latestScore = trends[trends.length - 1]?.score || 0;
-	const previousScore = trends[trends.length - 2]?.score || 0;
-	const scoreDelta = latestScore - previousScore;
-	const isImproving = scoreDelta > 0;
+	const maxWaste = Math.max(...trends.map((trend) => trend.waste), 1);
+	const points = trends.map((trend, index) => ({
+		...trend,
+		left: ((index + 0.5) / trends.length) * 100,
+		top: 85 - Math.max(0, Math.min(100, trend.score)) * 0.75,
+		barHeight: Math.max(0, (trend.waste / maxWaste) * 60),
+	}));
+	const linePath = points
+		.map(
+			(point, index) =>
+				`${index === 0 ? "M" : "L"}${point.left} ${point.top}`
+		)
+		.join(" ");
 
 	return (
-		<Card className={className}>
-			<CardHeader>
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-						Weekly Clutterscore Trend
-						{scoreDelta !== 0 && (
-							<span
-								className={`flex items-center gap-1 text-xs ${isImproving ? "text-foreground" : "text-destructive"}`}
+		<div
+			className={`rounded-md border border-border bg-background p-6 ${className ?? ""}`}
+		>
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div>
+					<h3 className="font-display text-[20px] font-semibold">
+						ClutterScore trend
+					</h3>
+					<p className="text-[13px] text-muted-foreground">
+						Monthly score and projected waste
+					</p>
+				</div>
+				<div className="inline-flex gap-1 rounded-full bg-muted p-1">
+					{PERIODS.map((period) => {
+						const active = months === period.months;
+						return (
+							<button
+								key={period.months}
+								type="button"
+								onClick={() => setMonths(period.months)}
+								aria-pressed={active}
+								className={`min-h-9 rounded-full px-4 text-[13px] font-medium transition-colors ${
+									active
+										? "bg-primary text-primary-foreground"
+										: "text-foreground hover:bg-background"
+								}`}
 							>
-								{isImproving ? (
-									<TrendingUp className="h-3 w-3" />
-								) : (
-									<TrendingDown className="h-3 w-3" />
-								)}
-								{Math.abs(scoreDelta)} pts
+								{period.label}
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			<div className="mt-4 flex flex-wrap gap-5 text-xs text-muted-foreground">
+				<span className="flex items-center gap-2">
+					<span className="h-[3px] w-3.5 bg-foreground" />
+					ClutterScore
+				</span>
+				<span className="flex items-center gap-2">
+					<span className="size-2.5 rounded-sm bg-[#E4DDF1]" />
+					Projected waste ($K)
+				</span>
+			</div>
+
+			{loading ? (
+				<div className="mt-3 h-[240px] animate-pulse rounded-md bg-muted" />
+			) : points.length === 0 ? (
+				<div className="mt-3 flex h-[240px] items-center justify-center text-sm text-muted-foreground">
+					No trend data available yet
+				</div>
+			) : (
+				<div className="relative mt-3 h-[240px]">
+					<div className="absolute inset-x-0 bottom-[15%] top-0 flex">
+						{points.map((point) => (
+							<div
+								key={point.month}
+								className="relative flex flex-1 items-end justify-center"
+							>
+								<div
+									className={`rounded-t-sm bg-[#E4DDF1] ${
+										months === 3 ? "w-14" : "w-8"
+									}`}
+									style={{
+										height: `${point.barHeight}%`,
+									}}
+								/>
+							</div>
+						))}
+					</div>
+
+					<svg
+						viewBox="0 0 100 100"
+						preserveAspectRatio="none"
+						className="pointer-events-none absolute inset-0 h-full w-full text-foreground"
+						aria-hidden="true"
+					>
+						<path
+							d={linePath}
+							fill="none"
+							stroke="currentColor"
+							strokeWidth={2}
+							vectorEffect="non-scaling-stroke"
+							strokeLinejoin="round"
+						/>
+					</svg>
+
+					{points.map((point) => (
+						<div
+							key={point.month}
+							className="absolute -translate-x-1/2 -translate-y-1/2"
+							style={{
+								left: `${point.left}%`,
+								top: `${point.top}%`,
+							}}
+						>
+							<span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold">
+								{point.score}
 							</span>
-						)}
-					</CardTitle>
-					<div className="flex gap-2">
-						<Button
-							variant={period === "30" ? "outline" : "ghost"}
-							size="sm"
-							className="h-7 text-xs"
-							onClick={() => setPeriod("30")}
-						>
-							30d
-						</Button>
-						<Button
-							variant={period === "90" ? "outline" : "ghost"}
-							size="sm"
-							className="h-7 text-xs"
-							onClick={() => setPeriod("90")}
-						>
-							90d
-						</Button>
+							<span className="block size-3 rounded-full border-2 border-foreground bg-lime" />
+						</div>
+					))}
+
+					<div className="absolute inset-x-0 bottom-0 flex h-[15%] items-center">
+						{points.map((point) => (
+							<div
+								key={point.month}
+								className="flex-1 text-center text-xs text-muted-foreground"
+							>
+								{point.month}
+							</div>
+						))}
 					</div>
 				</div>
-			</CardHeader>
-			<CardContent>
-				<div className="h-[200px] w-full">
-					{trends.length > 0 ? (
-						<ResponsiveContainer width="100%" height="100%">
-							<LineChart data={trends}>
-								<CartesianGrid
-									strokeDasharray="3 3"
-									stroke="hsl(var(--border))"
-								/>
-								<XAxis
-									dataKey="month"
-									stroke="hsl(var(--muted-foreground))"
-									fontSize={12}
-									tickLine={false}
-								/>
-								<YAxis
-									stroke="hsl(var(--muted-foreground))"
-									fontSize={12}
-									tickLine={false}
-									domain={[0, 100]}
-								/>
-								<Tooltip
-									contentStyle={{
-										backgroundColor: "hsl(var(--card))",
-										border: "1px solid hsl(var(--border))",
-										borderRadius: "8px",
-									}}
-									formatter={(
-										value: number,
-										name: string
-									) => [
-										name === "score"
-											? `${value}/100`
-											: `$${value.toLocaleString()}`,
-										name === "score" ? "Score" : "Waste",
-									]}
-								/>
-								<Line
-									type="monotone"
-									dataKey="score"
-									stroke="hsl(var(--primary))"
-									strokeWidth={2}
-									dot={{ fill: "hsl(var(--primary))", r: 4 }}
-									activeDot={{ r: 6 }}
-								/>
-							</LineChart>
-						</ResponsiveContainer>
-					) : (
-						<div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-							No trend data available yet
-						</div>
-					)}
-				</div>
-			</CardContent>
-		</Card>
+			)}
+		</div>
 	);
 }

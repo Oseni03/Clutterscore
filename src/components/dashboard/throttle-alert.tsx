@@ -1,9 +1,7 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, Calendar, Crown } from "lucide-react";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 interface ThrottleInfo {
 	error: string;
@@ -20,34 +18,24 @@ export default function ThrottleAlert({
 	onUpgrade,
 }: ThrottleAlertProps) {
 	return (
-		<Alert variant="destructive">
-			<AlertCircle className="h-4 w-4 text-destructive" />
-			<AlertDescription className="text-foreground">
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-					<div className="space-y-1">
-						<p className="font-medium">{throttleInfo.error}</p>
-						{throttleInfo.resetDate && (
-							<p className="text-sm flex items-center gap-1 text-muted-foreground">
-								<Calendar className="h-3 w-3" />
-								Next audit available:{" "}
-								{format(
-									new Date(throttleInfo.resetDate),
-									"MMM d, yyyy"
-								)}
-							</p>
-						)}
-					</div>
-					<Button
-						size="sm"
-						variant="outline"
-						className="w-full md:w-auto"
-						onClick={onUpgrade}
-					>
-						<Crown className="mr-2 h-4 w-4" />
-						Upgrade to Pro
-					</Button>
-				</div>
-			</AlertDescription>
-		</Alert>
+		<div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-background px-5 py-4">
+			<span className="size-2.5 rounded-full bg-[#F4B183]" />
+			<div className="min-w-0 flex-1 basis-[320px] text-sm">
+				<span className="font-semibold">{throttleInfo.error}</span>{" "}
+				{throttleInfo.resetDate && (
+					<span className="text-muted-foreground">
+						Your next audit is available{" "}
+						{format(new Date(throttleInfo.resetDate), "MMM d, yyyy")}.
+					</span>
+				)}
+			</div>
+			<Button
+				size="sm"
+				onClick={onUpgrade}
+				className="h-9 rounded-full px-[18px] text-[13px]"
+			>
+				Upgrade
+			</Button>
+		</div>
 	);
 }

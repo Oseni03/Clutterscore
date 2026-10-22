@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePlaybooks } from "@/hooks/use-playbooks";
 import { useAudit } from "@/hooks/use-audit";
 import { useRouter } from "next/navigation";
@@ -35,6 +35,10 @@ export default function PlaybooksPage() {
 
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
+	useEffect(() => {
+		setFilters({ status: "all" });
+	}, [setFilters]);
+
 	const handleRunAudit = async () => {
 		try {
 			await runAudit(refresh);
@@ -63,23 +67,36 @@ export default function PlaybooksPage() {
 		setFilters({ search: value });
 	};
 
-	const filteredPlaybooks = getFilteredPlaybooks();
-
-	// Stats with safe array checks
-	const stats = {
-		total: Array.isArray(playbooks) ? playbooks.length : 0,
-		security: Array.isArray(playbooks)
-			? playbooks.filter((p) => p?.impactType === "SECURITY").length
-			: 0,
-		savings: Array.isArray(playbooks)
-			? playbooks.filter((p) => p?.impactType === "SAVINGS").length
-			: 0,
-		efficiency: Array.isArray(playbooks)
-			? playbooks.filter((p) => p?.impactType === "EFFICIENCY").length
-			: 0,
+	const handleClearFilters = () => {
+		setFilters({ search: "", status: "all", impactType: "all" });
 	};
 
-	// Get current tab value safely
+	const filteredPlaybooks = getFilteredPlaybooks();
+
+	const safePlaybooks = Array.isArray(playbooks) ? playbooks : [];
+	const pendingItems = safePlaybooks
+		.filter((playbook) => playbook.status === "PENDING")
+		.reduce((total, playbook) => total + (playbook.itemsCount || 0), 0);
+	const estimatedSavings = safePlaybooks.reduce(
+		(total, playbook) => total + (playbook.estimatedSavings || 0),
+		0
+	);
+
+	const stats = {
+		total: safePlaybooks.length,
+		security: safePlaybooks.filter(
+			(playbook) => playbook?.impactType === "SECURITY"
+		).length,
+		savings: safePlaybooks.filter(
+			(playbook) => playbook?.impactType === "SAVINGS"
+		).length,
+		efficiency: safePlaybooks.filter(
+			(playbook) => playbook?.impactType === "EFFICIENCY"
+		).length,
+		pendingItems,
+		estimatedSavings,
+	};
+
 	const currentTabValue =
 		filters?.impactType === "all" || !filters?.impactType
 			? "all"
@@ -90,7 +107,7 @@ export default function PlaybooksPage() {
 	}
 
 	return (
-		<div className="p-4 md:p-6 space-y-6">
+		<div className="space-y-6 p-6 md:p-8">
 			<PlaybooksHeader
 				onRunAudit={handleRunAudit}
 				onRefresh={handleRefresh}
@@ -108,22 +125,30 @@ export default function PlaybooksPage() {
 
 			{error && <ErrorAlert message={error} />}
 
-			<PlaybooksFilters
-				currentValue={currentTabValue}
-				onTabChange={handleTabChange}
-				searchValue={filters?.search || ""}
-				onSearchChange={handleSearchChange}
-				stats={stats}
-			/>
+			{stats.total > 0 ? (
+				<>
+					<SummaryStats stats={stats} />
 
-			<PlaybooksGrid
-				playbooks={filteredPlaybooks}
-				onPlaybookClick={(id) =>
-					router.push(`/dashboard/playbooks/${id}`)
-				}
-			/>
+					<PlaybooksFilters
+						currentValue={currentTabValue}
+						onTabChange={handleTabChange}
+						searchValue={filters?.search || ""}
+						onSearchChange={handleSearchChange}
+						stats={stats}
+					/>
 
-			{stats.total === 0 && (
+					{filteredPlaybooks.length > 0 ? (
+						<PlaybooksGrid
+							playbooks={filteredPlaybooks}
+							onPlaybookClick={(id) =>
+								router.push(`/dashboard/playbooks/${id}`)
+							}
+						/>
+					) : (
+						<NoFilteredMessage onClear={handleClearFilters} />
+					)}
+				</>
+			) : (
 				<NoPlaybooksMessage
 					onRunAudit={handleRunAudit}
 					isAuditRunning={isAuditRunning}
@@ -131,12 +156,6 @@ export default function PlaybooksPage() {
 					onUpgrade={() => router.push("/dashboard/settings/billing")}
 				/>
 			)}
-
-			{stats.total > 0 && filteredPlaybooks.length === 0 && (
-				<NoFilteredMessage />
-			)}
-
-			{stats.total > 0 && <SummaryStats stats={stats} />}
 		</div>
 	);
 }

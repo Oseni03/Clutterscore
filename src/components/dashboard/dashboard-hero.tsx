@@ -1,10 +1,7 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { ScoreRing } from "@/components/ui/score-ring";
-import { SavingsTracker } from "@/components/dashboard/savings-tracker";
-import { NextScanCountdown } from "@/components/dashboard/next-scan-countdown";
-import { TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface DashboardHeroProps {
@@ -17,9 +14,25 @@ interface DashboardHeroProps {
 	activeRisks: number;
 	criticalRisks: number;
 	moderateRisks: number;
-	isThrottled: boolean;
-	isRefreshing: boolean;
-	onRunAudit: () => void;
+	monthlySavings: number;
+	estimatedAnnualSavings: number;
+	nextScanDate: string | Date | null;
+}
+
+function getTimeLeft(date: string | Date) {
+	const diff = new Date(date).getTime() - Date.now();
+
+	if (diff <= 0) return "ready";
+
+	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+	const hours = Math.floor(
+		(diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+	);
+	const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+	if (days > 0) return `${days}d ${hours}h`;
+	if (hours > 0) return `${hours}h ${minutes}m`;
+	return `${minutes}m`;
 }
 
 export default function DashboardHero({
@@ -32,99 +45,165 @@ export default function DashboardHero({
 	activeRisks,
 	criticalRisks,
 	moderateRisks,
-	isThrottled,
-	isRefreshing,
-	onRunAudit,
+	monthlySavings,
+	estimatedAnnualSavings,
+	nextScanDate,
 }: DashboardHeroProps) {
+	const [timeLeft, setTimeLeft] = useState("");
+
+	useEffect(() => {
+		if (!nextScanDate) return;
+
+		const update = () => setTimeLeft(getTimeLeft(nextScanDate));
+		update();
+
+		const interval = setInterval(update, 60_000);
+		return () => clearInterval(interval);
+	}, [nextScanDate]);
+
+	const totalWaste = storageWaste + licenseWaste;
+	const storageShare = totalWaste > 0 ? (storageWaste / totalWaste) * 100 : 0;
+	const licenseShare = totalWaste > 0 ? (licenseWaste / totalWaste) * 100 : 0;
+	const criticalShare =
+		activeRisks > 0 ? (criticalRisks / activeRisks) * 100 : 0;
+	const scoreProgress =
+		targetScore > 0
+			? Math.min(100, Math.round((score / targetScore) * 100))
+			: 0;
+
 	return (
-		<div className="grid md:grid-cols-12 gap-4 md:gap-6">
-			{/* Score Card */}
-			<Card className="md:col-span-3 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-				<h3 className="text-eyebrow text-muted-foreground mb-4 w-full text-center uppercase tracking-wider">
-					Clutterscore
-				</h3>
-				<ScoreRing score={score} size={140} />
-				<div className="mt-4 flex gap-4 text-center">
-					{previousScore !== undefined && (
-						<>
-							<div>
-								<p className="text-xs text-muted-foreground">
-									Last
-								</p>
-								<p className="text-sm font-semibold text-muted-foreground">
-									{previousScore}
-								</p>
-							</div>
-							<div className="w-px h-8 bg-border" />
-						</>
-					)}
-					<div>
-						<p className="text-xs text-muted-foreground">Target</p>
-						<p className="text-sm font-semibold">
-							<span className="inline-block rounded-sm bg-lime px-2 py-0.5 text-ink">
-								{targetScore}
-							</span>
-						</p>
-					</div>
+		<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+			<div className="rounded-md border border-border bg-background p-5">
+				<p className="text-[13px] font-medium text-muted-foreground">
+					ClutterScore
+				</p>
+				<div className="mt-3 flex justify-center">
+					<ScoreRing score={score} size={140} />
 				</div>
-			</Card>
-
-			{/* Waste Metrics */}
-			<div className="md:col-span-5 grid grid-cols-1 gap-4">
-				<Card className="p-4">
-					<div className="flex justify-between items-start">
-						<div>
-							<p className="text-eyebrow font-medium text-muted-foreground mb-1">
-								Projected Annual Waste
-							</p>
-							<h3 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
-								{formatCurrency(estimatedSavings)}
-							</h3>
-						</div>
-						<div className="h-10 w-10 rounded-md bg-lime text-ink flex items-center justify-center">
-							<TrendingUp className="h-5 w-5" />
-						</div>
-					</div>
-					<div className="mt-3 flex justify-between text-xs text-muted-foreground">
-						<span>Storage: {formatCurrency(storageWaste)}</span>
-						<span>Licenses: {formatCurrency(licenseWaste)}</span>
-					</div>
-				</Card>
-
-				<Card className="p-4">
-					<div className="flex justify-between items-start">
-						<div>
-							<p className="text-eyebrow font-medium text-muted-foreground mb-1">
-								Active Risks
-							</p>
-							<h3 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
-								{activeRisks}
-							</h3>
-						</div>
-						<div className="h-10 w-10 rounded-md bg-ink text-lime flex items-center justify-center">
-							<AlertTriangle className="h-5 w-5" />
-						</div>
-					</div>
-					<div className="mt-3 text-xs text-muted-foreground">
-						<span className="text-destructive font-medium">
-							{criticalRisks} Critical
-						</span>{" "}
-						•{" "}
-						<span className="text-muted-foreground font-medium">
-							{moderateRisks} Moderate
+				<div className="mt-4 flex flex-wrap justify-center gap-2 text-xs font-medium">
+					{previousScore !== undefined && (
+						<span className="rounded-sm bg-muted px-2.5 py-1">
+							Previous {previousScore}
 						</span>
-					</div>
-				</Card>
+					)}
+					<span className="rounded-sm bg-lime px-2.5 py-1 text-ink">
+						Target {targetScore}
+					</span>
+				</div>
 			</div>
 
-			{/* Right Column */}
-			<div className="md:col-span-4 grid grid-cols-1 gap-4">
-				<SavingsTracker />
-				<NextScanCountdown
-					onRunAudit={onRunAudit}
-					isRunning={isRefreshing}
-					isThrottled={isThrottled}
-				/>
+			<div className="rounded-md border border-border bg-background p-5">
+				<p className="text-[13px] font-medium text-muted-foreground">
+					Projected annual waste
+				</p>
+				<p className="mt-3 font-display text-[40px] font-semibold leading-none tracking-[-0.03em]">
+					{formatCurrency(estimatedSavings)}
+				</p>
+				<div className="mt-5 flex h-2.5 overflow-hidden rounded-full bg-muted">
+					<span
+						className="bg-[#8FA9A8]"
+						style={{ width: `${storageShare}%` }}
+					/>
+					<span
+						className="bg-[#B9A9D6]"
+						style={{ width: `${licenseShare}%` }}
+					/>
+				</div>
+				<div className="mt-4 space-y-2 text-[13px]">
+					<div className="flex items-center justify-between">
+						<span className="flex items-center gap-2">
+							<span className="size-2 rounded-full bg-[#8FA9A8]" />
+							Storage
+						</span>
+						<span className="font-semibold">
+							{formatCurrency(storageWaste)}
+						</span>
+					</div>
+					<div className="flex items-center justify-between">
+						<span className="flex items-center gap-2">
+							<span className="size-2 rounded-full bg-[#B9A9D6]" />
+							Licenses
+						</span>
+						<span className="font-semibold">
+							{formatCurrency(licenseWaste)}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="rounded-md border border-border bg-background p-5">
+				<p className="text-[13px] font-medium text-muted-foreground">
+					Active risks
+				</p>
+				<p className="mt-3 font-display text-[40px] font-semibold leading-none tracking-[-0.03em]">
+					{activeRisks}
+				</p>
+				<div className="mt-5 flex h-2.5 overflow-hidden rounded-full bg-muted">
+					<span
+						className="bg-[#F4B183]"
+						style={{ width: `${criticalShare}%` }}
+					/>
+				</div>
+				<div className="mt-4 space-y-2 text-[13px]">
+					<div className="flex items-center justify-between">
+						<span className="flex items-center gap-2">
+							<span className="size-2 rounded-full bg-[#F4B183]" />
+							Critical
+						</span>
+						<span className="font-semibold">{criticalRisks}</span>
+					</div>
+					<div className="flex items-center justify-between">
+						<span className="flex items-center gap-2">
+							<span className="size-2 rounded-full bg-border" />
+							Moderate
+						</span>
+						<span className="font-semibold">{moderateRisks}</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="rounded-md bg-night p-5 text-paper">
+				<p className="text-[13px] font-medium text-[#A8A8A2]">
+					Savings tracker
+				</p>
+				<p className="mt-3 font-display text-[40px] font-semibold leading-none tracking-[-0.03em] text-lime">
+					{formatCurrency(monthlySavings)}
+				</p>
+				<p className="text-xs text-[#A8A8A2]">saved this month</p>
+				<div className="mt-4 flex items-center justify-between text-[13px]">
+					<span className="text-[#A8A8A2]">
+						Est. annual savings
+					</span>
+					<span className="font-semibold">
+						{formatCurrency(estimatedAnnualSavings)}
+					</span>
+				</div>
+				<div className="mt-4 flex items-center justify-between text-xs text-[#A8A8A2]">
+					<span>Progress to target</span>
+					<span>{scoreProgress}%</span>
+				</div>
+				<div className="mt-2 h-2 rounded-full bg-[#2A2A2A]">
+					<div
+						className="h-2 rounded-full bg-lime"
+						style={{ width: `${scoreProgress}%` }}
+					/>
+				</div>
+				<div className="mt-4 border-t border-[#2A2A2A] pt-3 text-xs text-[#A8A8A2]">
+					{nextScanDate ? (
+						timeLeft === "ready" ? (
+							"Next scan ready"
+						) : (
+							<>
+								Next scan in{" "}
+								<span className="font-semibold text-paper">
+									{timeLeft || "…"}
+								</span>
+							</>
+						)
+					) : (
+						"Next scan not scheduled"
+					)}
+				</div>
 			</div>
 		</div>
 	);

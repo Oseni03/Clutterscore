@@ -1,10 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { PlaybookCard } from "@/components/playbooks/playbook-card";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ToolSource } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 
 interface Playbook {
 	id: string;
@@ -26,52 +24,64 @@ export default function RecommendedPlaybooks({
 	const router = useRouter();
 
 	return (
-		<div>
-			<div className="flex items-center justify-between mb-6">
-				<h2 className="text-lg md:text-2xl font-display font-semibold">
-					Recommended Actions
-				</h2>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={() => router.push("/dashboard/playbooks")}
+		<div className="rounded-md border border-border bg-background p-6">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div>
+					<h3 className="font-display text-[20px] font-semibold">
+						Recommended playbooks
+					</h3>
+					<p className="text-[13px] text-muted-foreground">
+						From your latest audit. Review each one before it runs.
+					</p>
+				</div>
+				<Link
+					href="/dashboard/playbooks"
+					className="text-sm font-medium transition-opacity hover:opacity-70"
 				>
-					View All
-				</Button>
+					View all →
+				</Link>
 			</div>
 
 			{playbooks.length > 0 ? (
-				<div className="grid lg:grid-cols-2 gap-4 md:gap-6">
+				<div className="mt-4 border-t border-border">
 					{playbooks.slice(0, 4).map((playbook) => (
-						<PlaybookCard
+						<div
 							key={playbook.id}
-							title={playbook.title}
-							description={playbook.description}
-							impact={playbook.impact}
-							impactType={playbook.impactType}
-							source={playbook.source as ToolSource}
-							itemsCount={playbook.itemsCount}
-							onAction={() =>
-								router.push(
-									`/dashboard/playbooks/${playbook.id}`
-								)
-							}
-						/>
+							className="flex flex-wrap items-center gap-3 border-b border-border py-4 last:border-b-0"
+						>
+							<div className="min-w-0 flex-1 basis-[280px]">
+								<div className="text-[15px] font-semibold">
+									{playbook.title}
+								</div>
+								<div className="text-[13px] text-muted-foreground">
+									{playbook.description}
+								</div>
+							</div>
+							<span className="rounded-sm bg-muted px-2.5 py-1 text-xs font-medium capitalize">
+								{playbook.source.toLowerCase()}
+							</span>
+							<span className="min-w-20 text-right text-sm font-semibold">
+								{playbook.impact}
+							</span>
+							<Button
+								size="sm"
+								onClick={() =>
+									router.push(
+										`/dashboard/playbooks/${playbook.id}`
+									)
+								}
+								className="h-9 rounded-full px-[18px] text-[13px]"
+							>
+								Review
+							</Button>
+						</div>
 					))}
 				</div>
 			) : (
-				<Card className="p-8 md:p-12 text-center">
-					<div className="max-w-md mx-auto space-y-2">
-						<div className="text-3xl md:text-4xl mb-2">✨</div>
-						<h3 className="text-base md:text-lg font-semibold">
-							No Recommendations Yet
-						</h3>
-						<p className="text-xs md:text-sm text-muted-foreground">
-							Your workspace is clean! We&apos;ll notify you when
-							we find optimization opportunities.
-						</p>
-					</div>
-				</Card>
+				<div className="mt-4 border-t border-border pt-6 text-sm text-muted-foreground">
+					No recommendations yet. Run an audit to generate cleanup
+					playbooks.
+				</div>
 			)}
 		</div>
 	);

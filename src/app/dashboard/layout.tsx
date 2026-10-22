@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -13,11 +13,23 @@ import { authClient } from "@/lib/auth-client";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { Member } from "@/types";
 import { DashboardStoreProvider } from "@/zustand/providers/dashboard-store-provider";
-import { useRouter } from "next/navigation";
 import { getOrganizations } from "@/server/organizations";
 import { Organization } from "@prisma/client";
 import { toast } from "sonner";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+
+const ROUTE_LABELS = [
+	{ prefix: "/dashboard/playbooks", label: "Playbooks" },
+	{ prefix: "/dashboard/audit-logs", label: "Audit logs" },
+	{ prefix: "/dashboard/files", label: "Files" },
+	{ prefix: "/dashboard/storage", label: "Storage" },
+	{ prefix: "/dashboard/settings/integrations", label: "Integrations" },
+	{ prefix: "/dashboard/settings/users", label: "Members" },
+	{ prefix: "/dashboard/settings/billing", label: "Billing" },
+	{ prefix: "/dashboard/settings", label: "Settings" },
+	{ prefix: "/dashboard/account", label: "Account" },
+	{ prefix: "/dashboard/notifications", label: "Notifications" },
+];
 
 export default function Page({
 	children,
@@ -25,6 +37,7 @@ export default function Page({
 	children: React.ReactNode;
 }>) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const {
 		setAdmin,
 		setOrganizations,
@@ -34,6 +47,10 @@ export default function Page({
 	} = useOrganizationStore((state) => state);
 	const { data: session } = authClient.useSession();
 	const [organizations, setLocalOrganizations] = useState<Organization[]>([]);
+
+	const pageLabel =
+		ROUTE_LABELS.find((route) => pathname.startsWith(route.prefix))
+			?.label ?? "Overview";
 
 	useEffect(() => {
 		const fetchOrgs = async () => {
@@ -107,20 +124,16 @@ export default function Page({
 	return (
 		<SidebarProvider>
 			<AppSidebar />
-			<SidebarInset>
-				<header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-					<div className="flex items-center gap-2 px-4">
-						<SidebarTrigger className="-ml-1" />
-						<Separator
-							orientation="vertical"
-							className="mr-2 data-[orientation=vertical]:h-4"
-						/>
-						<div className="ml-auto">
-							<NotificationDropdown />
-						</div>
-					</div>
+			<SidebarInset className="bg-muted">
+				<header className="flex h-[68px] shrink-0 items-center gap-4 border-b border-border bg-background px-4 transition-[width,height] ease-linear md:px-8 group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
+					<SidebarTrigger className="size-11 rounded-[8px] bg-muted text-foreground hover:bg-border" />
+					<span className="text-sm font-medium">{pageLabel}</span>
+					<span className="ml-auto rounded-sm bg-lime px-2.5 py-1 text-xs font-medium text-ink">
+						Live data
+					</span>
+					<NotificationDropdown />
 				</header>
-				<div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+				<div className="flex flex-1 flex-col">
 					<DashboardStoreProvider>{children}</DashboardStoreProvider>
 				</div>
 			</SidebarInset>

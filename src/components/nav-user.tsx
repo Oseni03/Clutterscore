@@ -55,26 +55,21 @@ export function NavUser() {
 					<DropdownMenuTrigger asChild>
 						<SidebarMenuButton
 							size="lg"
-							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+							className="h-12 rounded-md px-2.5 hover:bg-muted data-[state=open]:bg-muted"
 						>
-							<Avatar className="h-8 w-8 rounded-lg">
+							<Avatar className="size-8">
 								<AvatarImage
 									src={user?.image || ""}
 									alt={user?.name}
 								/>
-								<AvatarFallback className="rounded-lg">
-									CN
-								</AvatarFallback>
+								<AvatarFallback className="bg-orb" />
 							</Avatar>
 							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-medium">
-									{user?.name}
-								</span>
-								<span className="truncate text-xs">
+								<span className="truncate text-[13px]">
 									{user?.email}
 								</span>
 							</div>
-							<ChevronsUpDown className="ml-auto size-4" />
+							<ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
 						</SidebarMenuButton>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
@@ -85,14 +80,12 @@ export function NavUser() {
 					>
 						<DropdownMenuLabel className="p-0 font-normal">
 							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-								<Avatar className="h-8 w-8 rounded-lg">
+								<Avatar className="size-8">
 									<AvatarImage
 										src={user?.image || ""}
 										alt={user?.name}
 									/>
-									<AvatarFallback className="rounded-lg">
-										CN
-									</AvatarFallback>
+									<AvatarFallback className="bg-orb" />
 								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-medium">

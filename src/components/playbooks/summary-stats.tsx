@@ -1,8 +1,9 @@
+import { formatCurrency } from "@/lib/utils";
+
 interface Stats {
 	total: number;
-	security: number;
-	savings: number;
-	efficiency: number;
+	pendingItems: number;
+	estimatedSavings: number;
 }
 
 interface SummaryStatsProps {
@@ -11,40 +12,31 @@ interface SummaryStatsProps {
 
 export default function SummaryStats({ stats }: SummaryStatsProps) {
 	return (
-		<div className="mt-8 pt-6 border-t border-border">
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-				<div className="text-center">
-					<p className="text-2xl md:text-3xl font-semibold">
-						{stats.total}
-					</p>
-					<p className="text-xs md:text-sm text-muted-foreground">
-						Total Playbooks
-					</p>
-				</div>
-				<div className="text-center">
-					<p className="text-2xl md:text-3xl font-semibold text-destructive">
-						{stats.security}
-					</p>
-					<p className="text-xs md:text-sm text-muted-foreground">
-						Security Risks
-					</p>
-				</div>
-				<div className="text-center">
-					<p className="text-2xl md:text-3xl font-semibold text-foreground">
-						{stats.savings}
-					</p>
-					<p className="text-xs md:text-sm text-muted-foreground">
-						Cost Savings
-					</p>
-				</div>
-				<div className="text-center">
-					<p className="text-2xl md:text-3xl font-semibold text-muted-foreground">
-						{stats.efficiency}
-					</p>
-					<p className="text-xs md:text-sm text-muted-foreground">
-						Efficiency Gains
-					</p>
-				</div>
+		<div className="grid gap-4 sm:grid-cols-3">
+			<div className="rounded-md border border-border bg-background p-5">
+				<p className="text-[13px] font-medium text-muted-foreground">
+					Playbooks
+				</p>
+				<p className="mt-2 font-display text-[32px] font-semibold leading-none tracking-[-0.03em]">
+					{stats.total}
+				</p>
+			</div>
+			<div className="rounded-md border border-border bg-background p-5">
+				<p className="text-[13px] font-medium text-muted-foreground">
+					Items awaiting review
+				</p>
+				<p className="mt-2 font-display text-[32px] font-semibold leading-none tracking-[-0.03em]">
+					{stats.pendingItems}
+				</p>
+			</div>
+			<div className="rounded-md bg-night p-5 text-paper">
+				<p className="text-[13px] font-medium text-[#A8A8A2]">
+					Est. annual savings
+				</p>
+				<p className="mt-2 font-display text-[32px] font-semibold leading-none tracking-[-0.03em] text-lime">
+					{formatCurrency(stats.estimatedSavings)}
+					<span className="text-sm font-medium">/yr</span>
+				</p>
 			</div>
 		</div>
 	);

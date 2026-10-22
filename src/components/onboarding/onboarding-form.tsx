@@ -6,17 +6,10 @@ import { z } from "zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Building2, Target } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import {
 	Form,
 	FormControl,
@@ -26,7 +19,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import Logo from "@/components/logo";
 import { createOrganization } from "@/server/organizations";
 import { APP_NAME } from "@/lib/config";
 import { logger } from "@/lib/logger";
@@ -56,18 +48,16 @@ interface OnboardingFormProps {
 
 export function OnboardingFormContent({ user }: OnboardingFormProps) {
 	const router = useRouter();
-	// const params = useSearchParams();
 	const [isLoading, setIsLoading] = useState(false);
-
-	// const coupon = params.get("coupon");
+	const [showToast, setShowToast] = useState(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema) as unknown as Resolver<
 			z.infer<typeof formSchema>
 		>,
 		defaultValues: {
-			name: "New Project",
-			targetScore: 75,
+			name: "",
+			targetScore: 80,
 			subscriptionTier: "free",
 		},
 	});
@@ -75,30 +65,25 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			setIsLoading(true);
-			const loadingToast = toast.loading("Creating your workspace...");
 
-			// Create organization first
 			const { data, success, error } = await createOrganization(user.id, {
 				name: values.name,
 				targetScore: values.targetScore,
 				subscriptionTier: "free",
 			});
 
-			// Always dismiss the loading toast
-			toast.dismiss(loadingToast);
-
 			if (!data || !success) {
 				toast.error(error || "Failed to create workspace");
-				setIsLoading(false);
 				return;
 			}
 
-			toast.success("Workspace created successfully!");
-			router.push(`/dashboard/settings/integrations`);
-			router.refresh();
+			setShowToast(true);
+			setTimeout(() => {
+				router.push("/dashboard/settings/integrations");
+				router.refresh();
+			}, 1000);
 		} catch (error) {
 			logger.error("Error creating workspace:", error);
-			toast.dismiss(); // Dismiss any active toasts
 			toast.error(
 				error instanceof Error
 					? error.message
@@ -110,149 +95,137 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 	}
 
 	return (
-				<Card className="border-border/80 mx-auto">
-			<CardHeader className="text-center">
-				<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-					<Logo className="h-8 w-8" />
-				</div>
-				<CardTitle className="text-3xl font-semibold">
-					{`Welcome to ${APP_NAME}!`}
-				</CardTitle>
-				<CardDescription className="text-base mt-2">
-					{`Let's create your first workspace to get started`}
-				</CardDescription>
-			</CardHeader>
+		<div className="w-full max-w-[520px] rounded-xl border border-border bg-background p-6 sm:p-10">
+			<div
+				aria-hidden="true"
+				className="size-14 rounded-full bg-orb"
+			/>
 
-			<CardContent>
-				<Form {...form}>
-					<form
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="space-y-8"
-					>
-						{/* Workspace Details */}
-						<div className="space-y-6">
-							<FormField
-								control={form.control}
-								name="name"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Workspace Name</FormLabel>
-										<FormControl>
-											<div className="relative">
-												<Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-												<Input
-													placeholder="Acme Inc."
-													className="pl-10"
-													{...field}
-												/>
-											</div>
-										</FormControl>
-										<FormDescription>
-											{`This is your workspace's display name. A unique URL will be generated automatically.`}
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+			<h1 className="mt-6 font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.035em] sm:text-[36px]">
+				Welcome to {APP_NAME}
+			</h1>
+			<p className="mt-3 text-muted-foreground">
+				Let&apos;s set up your first workspace. It takes under a minute.
+			</p>
 
-							<FormField
-								control={form.control}
-								name="targetScore"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Target Score</FormLabel>
-										<FormControl>
-											<div className="relative">
-												<Target className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-												<Input
-													type="number"
-													min="0"
-													max="100"
-													placeholder="75"
-													className="pl-10"
-													{...field}
-													onChange={(e) =>
-														field.onChange(
-															parseInt(
-																e.target.value
-															) || 0
-														)
-													}
-												/>
-											</div>
-										</FormControl>
-										<FormDescription>
-											{`Set your workspace's target score (0-100)`}
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</div>
-
-						{/* Info Box */}
-						<div className="rounded-xl border bg-muted/40 p-5 text-sm space-y-3">
-							<div>
-								<p className="font-semibold text-foreground">
-									{`What's a workspace?`}
-								</p>
-								<p className="mt-2 text-muted-foreground">
-									{`A workspace is where your team collaborates. You can invite members, connect integrations, and manage all your SaaS tools in one place.`}
-								</p>
-							</div>
-							<div>
-								<p className="font-semibold text-foreground">
-									{`What's a target score?`}
-								</p>
-								<p className="mt-2 text-muted-foreground">
-									{`Your target score represents the benchmark your workspace aims to achieve. You can adjust this later in settings.`}
-								</p>
-							</div>
-							{/* {selectedPlan !== "free" && (
-								<div>
-									<p className="font-semibold text-foreground">
-										💳 Payment & Billing
-									</p>
-									<p className="mt-2 text-muted-foreground">
-										{billingInterval === "yearly"
-											? `You'll be billed annually and save 17% compared to monthly billing. `
-											: `You'll be billed monthly. Switch to yearly anytime to save 17%. `}
-										{`You can cancel anytime and manage your subscription in settings.`}
-									</p>
-								</div>
-							)} */}
-						</div>
-
-						<Button
-							type="submit"
-							size="lg"
-							className="w-full"
-							disabled={isLoading}
-						>
-							{isLoading ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Creating workspace...
-								</>
-							) : (
-								"Create Free Workspace"
+			<Form {...form}>
+				<form
+					onSubmit={form.handleSubmit(onSubmit)}
+					className="mt-7"
+				>
+					<div>
+						<FormField
+							control={form.control}
+							name="name"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel className="mb-2 text-[13px] font-medium">
+										Workspace name
+									</FormLabel>
+									<FormControl>
+										<Input
+											placeholder="Acme Inc."
+											className="h-12 rounded-md px-4 text-[15px]"
+											{...field}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
 							)}
-						</Button>
+						/>
+					</div>
 
-						<p className="text-xs text-center text-muted-foreground">
-							By continuing, you agree to our Terms of Service and
-							Privacy Policy
+					<div className="mt-5">
+						<FormField
+							control={form.control}
+							name="targetScore"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel className="mb-2 text-[13px] font-medium">
+										Target ClutterScore (0 to 100)
+									</FormLabel>
+									<FormControl>
+										<Input
+											type="number"
+											min="0"
+											max="100"
+											placeholder="80"
+											className="h-12 rounded-md px-4 text-[15px]"
+											{...field}
+											onChange={(e) =>
+												field.onChange(
+													parseInt(e.target.value) || 0
+												)
+											}
+										/>
+									</FormControl>
+									<FormDescription className="mt-1.5 text-xs">
+										The score you want your workspace to
+										reach.
+									</FormDescription>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</div>
+
+					<div className="mt-6 flex gap-3 rounded-md bg-muted px-[18px] py-4">
+						<span
+							aria-hidden="true"
+							className="mt-2 size-2 shrink-0 rounded-full bg-ink"
+						/>
+						<p className="text-sm text-muted-foreground">
+							<span className="font-semibold text-foreground">
+								What happens next.
+							</span>{" "}
+							We create your workspace on the Free plan, then take
+							you to Integrations to connect up to 3 tools.
 						</p>
-					</form>
-				</Form>
-			</CardContent>
-		</Card>
+					</div>
+
+					<Button
+						type="submit"
+						disabled={isLoading || showToast}
+						className="mt-6 h-12 w-full rounded-full"
+					>
+						{isLoading ? (
+							<>
+								<Loader2 className="size-4 animate-spin" />
+								Creating workspace...
+							</>
+						) : (
+							"Create workspace"
+						)}
+					</Button>
+				</form>
+			</Form>
+
+			{showToast && (
+				<div
+					role="status"
+					className="fixed bottom-6 right-6 z-50 flex max-w-[340px] items-start gap-3 rounded-md bg-night p-4 text-paper shadow-lg"
+				>
+					<span className="flex size-[18px] shrink-0 items-center justify-center rounded-sm bg-lime">
+						<Check className="size-3 text-ink" strokeWidth={3} />
+					</span>
+					<div className="text-sm">
+						<div className="font-semibold text-paper">
+							Workspace created
+						</div>
+						<div className="mt-0.5 text-[#A8A8A2]">
+							Taking you to Integrations to connect your first
+							tool.
+						</div>
+					</div>
+				</div>
+			)}
+		</div>
 	);
 }
 
 export function OnboardingForm({ user }: OnboardingFormProps) {
 	return (
-		<Suspense fallback={"loading..."}>
+		<Suspense fallback={null}>
 			<OnboardingFormContent user={user} />
 		</Suspense>
 	);

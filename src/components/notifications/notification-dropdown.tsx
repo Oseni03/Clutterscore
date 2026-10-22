@@ -104,17 +104,12 @@ export const NotificationDropdown = () => {
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="ghost"
-					className="relative h-8 w-8 p-0 rounded-full"
+					className="relative size-11 rounded-full bg-muted p-0 hover:bg-border"
 					aria-label="Notifications"
 				>
-					<Bell className="h-5 w-5" />
+					<Bell className="size-[18px]" />
 					{unreadCount > 0 && (
-						<Badge
-							variant="destructive"
-							className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-xs"
-						>
-							{unreadCount > 9 ? "9+" : unreadCount}
-						</Badge>
+						<span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-foreground ring-2 ring-muted" />
 					)}
 				</Button>
 			</DropdownMenuTrigger>
