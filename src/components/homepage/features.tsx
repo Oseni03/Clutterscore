@@ -1,4 +1,5 @@
 import {
+	ArrowUpRight,
 	CheckCircle2,
 	Database,
 	HardDrive,
@@ -13,14 +14,19 @@ function Features() {
 	return (
 		<section className="py-32" id="features">
 			<div className="container mx-auto px-4">
-				<div className="text-center max-w-3xl mx-auto mb-20">
-					<h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
-						One dashboard to clean it all.
-					</h2>
-					<p className="text-xl text-muted-foreground">
-						Stop paying for storage you don&apos;t use and SaaS
-						seats for people who don&apos;t work there anymore.
-					</p>
+				<div className="grid md:grid-cols-[80px_1fr] gap-6 md:gap-8 items-start max-w-5xl mb-16">
+					<span className="text-eyebrow text-muted-foreground md:pt-2">
+						Features
+					</span>
+					<div>
+						<h2 className="text-3xl md:text-[28px] md:leading-tight font-display font-semibold mb-4">
+							One dashboard to clean it all.
+						</h2>
+						<p className="text-lg text-muted-foreground max-w-2xl">
+							Stop paying for storage you don&apos;t use and SaaS
+							seats for people who don&apos;t work there anymore.
+						</p>
+					</div>
 				</div>
 
 				<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -56,15 +62,13 @@ function Features() {
 							desc: "Every file deleted and permission revoked is logged. Undo any action for up to 30 days.",
 						},
 					].map((feature, i) => (
-						<Card
-							key={i}
-							className="bg-card border-border/60 hover:border-primary/20 transition-colors"
-						>
+						<Card key={i} className="relative transition-colors">
+							<ArrowUpRight className="absolute right-5 top-5 h-4 w-4 text-muted-foreground" />
 							<CardHeader>
-								<div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center mb-4">
-									<feature.icon className="h-6 w-6 text-primary" />
+								<div className="h-12 w-12 rounded-md border border-border bg-background flex items-center justify-center mb-4">
+									<feature.icon className="h-6 w-6 text-foreground" />
 								</div>
-								<h3 className="font-display text-xl font-bold">
+								<h3 className="font-display text-title font-semibold">
 									{feature.title}
 								</h3>
 							</CardHeader>

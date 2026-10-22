@@ -2,11 +2,11 @@ import React from "react";
 
 function Stats() {
 	return (
-		<section className="py-24 bg-muted/30 border-y border-border/50">
+		<section className="py-24 bg-muted border-y border-border">
 			<div className="container mx-auto px-4">
 				<div className="grid md:grid-cols-3 gap-12 text-center">
 					<div>
-						<h3 className="text-5xl font-display font-bold mb-2 text-primary">
+						<h3 className="text-5xl font-display font-semibold mb-2 text-foreground">
 							68%
 						</h3>
 						<p className="text-lg font-medium mb-2">
@@ -17,7 +17,7 @@ function Stats() {
 						</p>
 					</div>
 					<div>
-						<h3 className="text-5xl font-display font-bold mb-2 text-primary">
+						<h3 className="text-5xl font-display font-semibold mb-2 text-foreground">
 							14mo
 						</h3>
 						<p className="text-lg font-medium mb-2">
@@ -28,7 +28,7 @@ function Stats() {
 						</p>
 					</div>
 					<div>
-						<h3 className="text-5xl font-display font-bold mb-2 text-primary">
+						<h3 className="text-5xl font-display font-semibold mb-2 text-foreground">
 							28%
 						</h3>
 						<p className="text-lg font-medium mb-2">

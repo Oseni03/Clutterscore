@@ -175,7 +175,7 @@ export default function IntegrationsTab() {
 							className="flex items-center justify-between"
 						>
 							<div className="flex items-center gap-4">
-								<Skeleton className="h-10 w-10 rounded-lg" />
+								<Skeleton className="h-10 w-10 rounded-md" />
 								<div className="space-y-2">
 									<Skeleton className="h-4 w-32" />
 									<Skeleton className="h-3 w-24" />
@@ -215,7 +215,7 @@ export default function IntegrationsTab() {
 							className="flex items-center justify-between"
 						>
 							<div className="flex items-center gap-4">
-								<div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xl">
+								<div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-xl">
 									<Image
 										src={SOURCE_ICONS[source as ToolSource]}
 										alt={`${source} icon`}
@@ -228,7 +228,7 @@ export default function IntegrationsTab() {
 										{SOURCE_NAMES[source]}
 										{integration?.syncStatus ===
 											"SYNCING" && (
-											<Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+											<Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
 										)}
 										{integration?.syncStatus ===
 											"ERROR" && (
@@ -286,7 +286,7 @@ export default function IntegrationsTab() {
 											{/* Status Banner */}
 											{integration.syncStatus ===
 											"ERROR" ? (
-												<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+												<div className="rounded-md border border-destructive/50 bg-destructive/10 p-4">
 													<div className="flex items-center gap-2 text-destructive font-medium">
 														<AlertCircle className="h-4 w-4" />
 														Integration Error
@@ -319,12 +319,12 @@ export default function IntegrationsTab() {
 													</Button>
 												</div>
 											) : (
-												<div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:bg-emerald-900/20 dark:border-emerald-900">
-													<div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+												<div className="rounded-md border border-border bg-muted p-4">
+													<div className="flex items-center gap-2 text-foreground font-medium">
 														<CheckCircle2 className="h-4 w-4" />
 														Integration Active
 													</div>
-													<p className="text-xs text-emerald-600/80 dark:text-emerald-500/80 mt-1">
+													<p className="text-xs text-muted-foreground mt-1">
 														{integration.lastSyncedAt
 															? `Last synchronized ${new Date(integration.lastSyncedAt).toLocaleString()}`
 															: "Ready to sync"}
@@ -347,7 +347,7 @@ export default function IntegrationsTab() {
 																		key={
 																			scope
 																		}
-																		className="flex items-center justify-between text-sm border p-2 rounded bg-card"
+																		className="flex items-center justify-between text-sm border border-border p-2 rounded-md bg-card"
 																	>
 																		<span className="text-xs">
 																			{
@@ -377,9 +377,9 @@ export default function IntegrationsTab() {
 													</h4>
 													{integration.metadata
 														?.webhook ? (
-														<div className="flex items-center justify-between text-sm border p-3 rounded bg-card">
+														<div className="flex items-center justify-between text-sm border border-border p-3 rounded-md bg-card">
 															<div className="flex items-center gap-2">
-																<Webhook className="h-4 w-4 text-green-500" />
+																<Webhook className="h-4 w-4 text-foreground" />
 																<span>
 																	Webhooks
 																	Active
@@ -393,7 +393,7 @@ export default function IntegrationsTab() {
 															</Badge>
 														</div>
 													) : (
-														<div className="border p-3 rounded bg-muted/50">
+														<div className="border border-border p-3 rounded-md bg-muted/50">
 															<p className="text-xs text-muted-foreground mb-2">
 																Enable real-time
 																sync for instant

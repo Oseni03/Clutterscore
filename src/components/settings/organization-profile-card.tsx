@@ -44,9 +44,9 @@ export function OrganizationProfileCard({
 	);
 
 	return (
-		<Card className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-shadow">
+		<Card className="overflow-hidden">
 			{/* Header with gradient */}
-			<div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background h-32">
+			<div className="relative bg-dawn h-32">
 				<div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
 				{isAdmin && (
 					<div className="absolute top-4 right-4 flex gap-2">
@@ -62,7 +62,7 @@ export function OrganizationProfileCard({
 						<Button
 							variant="secondary"
 							size="icon"
-							className="h-9 w-9 bg-background/80 backdrop-blur-sm hover:bg-red-50 hover:text-red-600"
+							className="h-9 w-9 bg-background/80 backdrop-blur-sm hover:bg-destructive/10 hover:text-destructive"
 							onClick={onDelete}
 							aria-label="Delete workspace"
 						>
@@ -75,11 +75,11 @@ export function OrganizationProfileCard({
 			<CardContent className="p-6 -mt-8 space-y-6">
 				{/* Organization icon and name */}
 				<div className="flex items-start gap-4">
-					<div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center ring-4 ring-background shadow-sm">
-						<Building2 className="w-8 h-8 text-primary" />
+					<div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center ring-4 ring-background">
+						<Building2 className="w-8 h-8 text-foreground" />
 					</div>
 					<div className="flex-1 min-w-0 pt-2">
-						<h3 className="text-2xl font-bold tracking-tight truncate">
+						<h3 className="text-2xl font-semibold tracking-[-0.03em] truncate">
 							{organization.name}
 						</h3>
 						<div className="flex items-center gap-2 mt-1">
@@ -109,7 +109,7 @@ export function OrganizationProfileCard({
 							<span className="font-medium">Workspace URL</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<code className="text-sm font-mono bg-muted px-2 py-1 rounded">
+							<code className="text-sm font-mono bg-muted px-2 py-1 rounded-sm">
 								{organization.slug}
 							</code>
 						</div>
@@ -122,7 +122,7 @@ export function OrganizationProfileCard({
 							<span className="font-medium">Target Score</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<span className="text-2xl font-bold text-primary">
+							<span className="text-2xl font-semibold text-foreground">
 								{organization.targetScore || 75}
 							</span>
 							<span className="text-sm text-muted-foreground">
@@ -142,12 +142,12 @@ export function OrganizationProfileCard({
 				</div>
 
 				{/* Stats bar */}
-				<div className="pt-4 border-t">
+				<div className="pt-4 border-t border-border">
 					<div className="flex items-center justify-between text-sm">
 						<span className="text-muted-foreground">
 							Workspace ID
 						</span>
-						<code className="text-xs font-mono bg-muted px-2 py-1 rounded">
+						<code className="text-xs font-mono bg-muted px-2 py-1 rounded-sm">
 							{organization.id.slice(0, 8)}...
 						</code>
 					</div>

@@ -28,7 +28,7 @@ export default function RecommendedPlaybooks({
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-6">
-				<h2 className="text-lg md:text-2xl font-display font-bold">
+				<h2 className="text-lg md:text-2xl font-display font-semibold">
 					Recommended Actions
 				</h2>
 				<Button

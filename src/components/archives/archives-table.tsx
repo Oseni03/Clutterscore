@@ -87,7 +87,7 @@ function ArchivesTable({
 										</TableCell>
 										<TableCell>
 											<div
-												className={`text-sm ${isExpiringSoon ? "text-orange-600 font-medium" : "text-muted-foreground"}`}
+												className={`text-sm ${isExpiringSoon ? "text-destructive font-medium" : "text-muted-foreground"}`}
 											>
 												{daysLeft} days
 											</div>

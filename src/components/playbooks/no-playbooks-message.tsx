@@ -16,7 +16,7 @@ export default function NoPlaybooksMessage({
 }: NoPlaybooksMessageProps) {
 	return (
 		<div className="col-span-2">
-			<div className="text-center py-12 md:py-20 border rounded-lg bg-muted/20">
+			<div className="text-center py-12 md:py-20 border border-border rounded-md bg-muted">
 				<div className="text-4xl md:text-5xl mb-4">✨</div>
 				<h3 className="text-lg md:text-xl font-semibold mb-2">
 					No Playbooks Yet
@@ -27,10 +27,10 @@ export default function NoPlaybooksMessage({
 				</p>
 				{isThrottled ? (
 					<div className="space-y-3">
-						<p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+						<p className="text-sm text-destructive font-medium">
 							Monthly audit limit reached
 						</p>
-						<Button onClick={onUpgrade} variant="default">
+						<Button onClick={onUpgrade} variant="accent">
 							<Crown className="mr-2 h-4 w-4" />
 							Upgrade for Unlimited Audits
 						</Button>

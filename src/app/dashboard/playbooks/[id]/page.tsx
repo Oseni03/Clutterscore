@@ -38,17 +38,17 @@ import { ToolSource } from "@prisma/client";
 
 const IMPACT_CONFIG = {
 	SECURITY: {
-		color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+		color: "bg-destructive/10 text-destructive",
 		icon: Shield,
 		label: "Security Risk",
 	},
 	SAVINGS: {
-		color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+		color: "bg-lime text-ink",
 		icon: DollarSign,
 		label: "Cost Savings",
 	},
 	EFFICIENCY: {
-		color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+		color: "bg-muted text-muted-foreground",
 		icon: Zap,
 		label: "Efficiency Gain",
 	},
@@ -205,7 +205,7 @@ export default function PlaybookDetailPage() {
 			{/* Header Card */}
 			<Card className="p-6">
 				<div className="flex items-start gap-4">
-					<div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center text-2xl flex-shrink-0">
+					<div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center text-2xl flex-shrink-0">
 						<Image
 							src={SOURCE_ICONS[playbook.source as ToolSource]}
 							alt={`${playbook.source} icon`}
@@ -215,7 +215,7 @@ export default function PlaybookDetailPage() {
 					</div>
 					<div className="flex-1">
 						<div className="flex items-center gap-2 mb-2">
-							<h1 className="text-xl md:text-2xl font-bold">
+							<h1 className="text-xl md:text-2xl font-semibold">
 								{playbook.title}
 							</h1>
 							<Badge
@@ -288,7 +288,7 @@ export default function PlaybookDetailPage() {
 						{playbook.items.map((item) => (
 							<div
 								key={item.id}
-								className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+								className="flex items-start gap-3 p-3 rounded-md border border-border hover:bg-muted/60 transition-colors"
 							>
 								<Checkbox
 									checked={selectedItems.has(item.id)}
@@ -310,7 +310,7 @@ export default function PlaybookDetailPage() {
 												).map(([key, value]) => (
 													<span
 														key={key}
-														className="text-xs bg-muted px-2 py-0.5 rounded"
+														className="text-xs bg-muted px-2 py-0.5 rounded-sm"
 													>
 														{key}: {String(value)}
 													</span>
@@ -360,7 +360,7 @@ export default function PlaybookDetailPage() {
 
 			{playbook.status === "EXECUTED" && (
 				<Alert>
-					<CheckCircle2 className="h-4 w-4 text-green-600" />
+					<CheckCircle2 className="h-4 w-4 text-foreground" />
 					<AlertDescription>
 						This playbook was executed on{" "}
 						{playbook.executedAt

@@ -19,7 +19,7 @@ export function FilesHeader({
 	return (
 		<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 			<div>
-				<h1 className="text-xl md:text-2xl font-display font-bold">
+				<h1 className="text-xl md:text-2xl font-display font-semibold">
 					File Explorer
 				</h1>
 				<p className="text-sm text-muted-foreground mt-1">

@@ -21,15 +21,15 @@ export function FilesStats({
 				<p className="text-xs text-muted-foreground mb-1">
 					Total Files
 				</p>
-				<p className="text-2xl font-bold">{totalFiles}</p>
+				<p className="text-2xl font-semibold">{totalFiles}</p>
 			</Card>
 			<Card className="p-4">
 				<p className="text-xs text-muted-foreground mb-1">Total Size</p>
-				<p className="text-2xl font-bold">{totalSize}</p>
+				<p className="text-2xl font-semibold">{totalSize}</p>
 			</Card>
 			<Card className="p-4">
 				<p className="text-xs text-muted-foreground mb-1">Duplicates</p>
-				<p className="text-2xl font-bold text-yellow-600">
+				<p className="text-2xl font-semibold text-muted-foreground">
 					{duplicatesCount}
 				</p>
 			</Card>
@@ -37,7 +37,7 @@ export function FilesStats({
 				<p className="text-xs text-muted-foreground mb-1">
 					Public Files
 				</p>
-				<p className="text-2xl font-bold text-red-600">
+				<p className="text-2xl font-semibold text-destructive">
 					{publicFilesCount}
 				</p>
 			</Card>

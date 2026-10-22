@@ -101,7 +101,7 @@ export default function StoragePage() {
 			<div className="p-4 md:p-6 space-y-6">
 				<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 					<div>
-						<h1 className="text-xl md:text-2xl font-display font-bold">
+						<h1 className="text-xl md:text-2xl font-display font-semibold">
 							Storage Audit
 						</h1>
 						<p className="text-sm text-muted-foreground mt-1">
@@ -176,7 +176,7 @@ export default function StoragePage() {
 			{/* Header */}
 			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
 				<div>
-					<h1 className="text-xl md:text-2xl font-display font-bold">
+					<h1 className="text-xl md:text-2xl font-display font-semibold">
 						Storage Audit
 					</h1>
 					<p className="text-sm text-muted-foreground mt-1">
@@ -222,7 +222,7 @@ export default function StoragePage() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl md:text-3xl font-bold">
+						<div className="text-2xl md:text-3xl font-semibold">
 							{formatSize(stats.totalUsedGb)}
 						</div>
 						<Progress
@@ -243,7 +243,7 @@ export default function StoragePage() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl md:text-3xl font-bold text-destructive">
+						<div className="text-2xl md:text-3xl font-semibold text-destructive">
 							{formatSize(stats.wastedStorageGb)}
 						</div>
 						<p className="text-xs text-muted-foreground mt-2">
@@ -266,10 +266,10 @@ export default function StoragePage() {
 					</CardHeader>
 					<CardContent>
 						<div className="flex items-center gap-2">
-							<div className="h-8 w-8 rounded bg-blue-100 text-blue-600 flex items-center justify-center dark:bg-blue-900/30">
+							<div className="h-8 w-8 rounded-md bg-ink text-lime flex items-center justify-center">
 								<LargestWasterIcon className="h-4 w-4" />
 							</div>
-							<div className="text-lg md:text-xl font-bold">
+							<div className="text-lg md:text-xl font-display font-semibold">
 								{stats.largestWaster.type}
 							</div>
 						</div>

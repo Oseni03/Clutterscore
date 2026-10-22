@@ -27,15 +27,15 @@ const getIconForType = (type: NotificationType) => {
 	switch (type) {
 		case "PLAYBOOK_READY":
 		case "AUDIT_COMPLETE":
-			return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+			return <CheckCircle2 className="h-4 w-4 text-foreground" />;
 		case "RISK_DETECTED":
 		case "SUBSCRIPTION_EXPIRING":
 		case "APPROVAL_REQUIRED":
-			return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+			return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
 		case "INTEGRATION_ERROR":
-			return <XCircle className="h-4 w-4 text-red-500" />;
+			return <XCircle className="h-4 w-4 text-destructive" />;
 		default:
-			return <Info className="h-4 w-4 text-blue-500" />;
+			return <Info className="h-4 w-4 text-muted-foreground" />;
 	}
 };
 
@@ -73,7 +73,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 			{actionUrl && (
 				<Link
 					href={actionUrl}
-					className="text-xs text-primary hover:underline"
+					className="text-xs text-foreground underline-offset-4 hover:underline"
 				>
 					Take action
 				</Link>
@@ -126,7 +126,7 @@ export const NotificationDropdown = () => {
 					<span className="font-semibold">Notifications</span>
 					<Link
 						href="/dashboard/notifications"
-						className="text-xs text-primary hover:underline"
+						className="text-xs text-foreground underline-offset-4 hover:underline"
 					>
 						View all
 					</Link>

@@ -63,12 +63,12 @@ function BillingCard() {
 
 	const getPlanIcon = (planId?: string) => {
 		if (planId?.includes("enterprise"))
-			return <Crown className="w-5 h-5 text-purple-500" />;
+			return <Crown className="w-5 h-5 text-foreground" />;
 		if (planId?.includes("tier3"))
-			return <Crown className="w-5 h-5 text-indigo-500" />;
+			return <Crown className="w-5 h-5 text-muted-foreground" />;
 		if (planId?.includes("pro"))
-			return <Zap className="w-5 h-5 text-blue-500" />;
-		return <DollarSign className="w-5 h-5 text-gray-500" />;
+			return <Zap className="w-5 h-5 text-muted-foreground" />;
+		return <DollarSign className="w-5 h-5 text-muted-foreground" />;
 	};
 
 	const currentPricing =
@@ -95,8 +95,8 @@ function BillingCard() {
 		<>
 			{/* User Count Sync Alert */}
 			{needsUserCountSync && (
-				<Alert className="mb-6 border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-					<AlertCircle className="h-4 w-4 text-amber-600" />
+				<Alert className="mb-6 border-border bg-muted">
+					<AlertCircle className="h-4 w-4 text-muted-foreground" />
 					<AlertDescription className="flex items-center justify-between">
 						<span>
 							<strong>Action Required:</strong> Connect Google
@@ -130,8 +130,8 @@ function BillingCard() {
 				recommendedPlan &&
 				recommendedPlan.id !== currentPlan?.id &&
 				!needsUserCountSync && (
-					<Alert className="mb-6 border-blue-500/50 bg-blue-50 dark:bg-blue-950/20">
-						<AlertCircle className="h-4 w-4 text-blue-600" />
+					<Alert className="mb-6 border-border bg-muted">
+						<AlertCircle className="h-4 w-4 text-muted-foreground" />
 						<AlertDescription>
 							<strong>Recommended Tier:</strong> We detected{" "}
 							<strong>{userCount} users</strong> from{" "}
@@ -148,8 +148,11 @@ function BillingCard() {
 			{userCount &&
 				(userCount < 1 || userCount > 2000) &&
 				!needsUserCountSync && (
-					<Alert className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20">
-						<AlertCircle className="h-4 w-4 text-red-600" />
+					<Alert
+						variant="destructive"
+						className="mb-6"
+					>
+						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>
 							{userCount < 1 ? (
 								<>
@@ -193,7 +196,7 @@ function BillingCard() {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="flex items-baseline gap-2">
-							<span className="text-3xl font-bold">
+							<span className="text-3xl font-semibold">
 								{currentPricing?.price || "$0"}
 							</span>
 							<span className="text-muted-foreground text-sm">
@@ -226,7 +229,7 @@ function BillingCard() {
 
 								{subscription.status === "active" &&
 									subscription.cancelAtPeriodEnd && (
-										<div className="text-sm text-amber-600 dark:text-amber-500">
+										<div className="text-sm text-muted-foreground">
 											Cancels on{" "}
 											{new Date(
 												subscription.endsAt ||
@@ -325,7 +328,7 @@ function BillingCard() {
 						<Separator />
 
 						{/* Features List */}
-						<div className="border-t pt-4">
+						<div className="border-t border-border pt-4">
 							<h4 className="font-medium mb-3 text-sm">
 								Features included:
 							</h4>
@@ -337,7 +340,7 @@ function BillingCard() {
 											key={index}
 											className="flex items-start gap-2 text-sm text-muted-foreground"
 										>
-											<div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-primary flex-shrink-0" />
+											<div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-lime flex-shrink-0" />
 											<span className="flex-1">
 												{feature}
 											</span>
@@ -354,31 +357,33 @@ function BillingCard() {
 									<p className="text-xs text-muted-foreground mb-2">
 										Choose billing cycle:
 									</p>
-									<div className="inline-flex w-full items-center gap-2 p-1 bg-secondary rounded-lg">
+									<div className="inline-flex w-full items-center gap-1 p-1 bg-muted rounded-full">
 										<Button
+											variant="ghost"
 											onClick={() =>
 												setSelectedInterval("monthly")
 											}
-											className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+											className={`flex-1 px-4 py-2 h-10 rounded-full text-sm font-medium transition-all ${
 												selectedInterval === "monthly"
-													? "bg-background shadow-sm text-foreground"
+													? "bg-primary text-primary-foreground hover:bg-primary/90"
 													: "text-muted-foreground hover:text-foreground"
 											}`}
 										>
 											Monthly
 										</Button>
 										<Button
+											variant="ghost"
 											onClick={() =>
 												setSelectedInterval("yearly")
 											}
-											className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+											className={`flex-1 px-4 py-2 h-10 rounded-full text-sm font-medium transition-all ${
 												selectedInterval === "yearly"
-													? "bg-background shadow-sm text-foreground"
+													? "bg-primary text-primary-foreground hover:bg-primary/90"
 													: "text-muted-foreground hover:text-foreground"
 											}`}
 										>
 											Yearly
-											<span className="text-xs text-primary ml-1">
+											<span className="text-xs text-muted-foreground ml-1">
 												(Required)
 											</span>
 										</Button>
@@ -431,10 +436,10 @@ function BillingCard() {
 				</Card>
 
 				{/* Plan Info Card */}
-				<Card className="border-primary/20 bg-primary/5">
+				<Card className="border-border bg-muted">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
-							<Zap className="h-5 w-5 text-primary" />
+							<Zap className="h-5 w-5 text-foreground" />
 							What&apos;s Included
 						</CardTitle>
 						<CardDescription>
@@ -454,7 +459,7 @@ function BillingCard() {
 										{eligiblePlans.map((plan) => (
 											<div
 												key={plan.id}
-												className="p-3 bg-background rounded-lg border border-border"
+												className="p-3 bg-background rounded-md border border-border"
 											>
 												<div className="flex items-center justify-between mb-2">
 													<span className="font-medium text-sm">
@@ -473,7 +478,7 @@ function BillingCard() {
 													{plan.minUsers}-
 													{plan.maxUsers} users
 												</p>
-												<p className="text-lg font-bold text-primary">
+												<p className="text-lg font-semibold text-foreground">
 													{plan.price}
 												</p>
 											</div>
@@ -487,8 +492,8 @@ function BillingCard() {
 								<Separator />
 								<div className="space-y-3">
 									<div className="flex items-start gap-3">
-										<div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-											<CheckCircle2 className="h-4 w-4 text-primary" />
+										<div className="w-6 h-6 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
+											<CheckCircle2 className="h-4 w-4 text-ink" />
 										</div>
 										<div>
 											<p className="text-sm font-medium">
@@ -501,8 +506,8 @@ function BillingCard() {
 										</div>
 									</div>
 									<div className="flex items-start gap-3">
-										<div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-											<CheckCircle2 className="h-4 w-4 text-primary" />
+										<div className="w-6 h-6 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
+											<CheckCircle2 className="h-4 w-4 text-ink" />
 										</div>
 										<div>
 											<p className="text-sm font-medium">
@@ -515,8 +520,8 @@ function BillingCard() {
 										</div>
 									</div>
 									<div className="flex items-start gap-3">
-										<div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-											<CheckCircle2 className="h-4 w-4 text-primary" />
+										<div className="w-6 h-6 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
+											<CheckCircle2 className="h-4 w-4 text-ink" />
 										</div>
 										<div>
 											<p className="text-sm font-medium">
@@ -540,17 +545,17 @@ function BillingCard() {
 
 			{/* Founders Circle Notice */}
 			{currentPlan?.id !== "free" && currentPlan?.id !== "enterprise" && (
-				<Card className="mt-6 border-amber-500/20 bg-amber-50 dark:bg-amber-950/20">
+				<Card className="mt-6 border-border bg-muted">
 					<CardContent className="pt-6">
 						<div className="flex items-start gap-4">
-							<div className="p-2 rounded-lg bg-amber-500/10">
-								<Crown className="h-5 w-5 text-amber-600" />
+							<div className="p-2 rounded-md bg-ink text-lime">
+								<Crown className="h-5 w-5" />
 							</div>
 							<div className="flex-1">
-								<h4 className="font-semibold mb-1 text-amber-900 dark:text-amber-100">
+								<h4 className="font-semibold mb-1 text-foreground">
 									Founders Circle Member
 								</h4>
-								<p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+								<p className="text-sm text-muted-foreground mb-3">
 									Your pricing is locked forever at $
 									{currentPricing?.priceValue}/
 									{currentInterval}. After 50 customers,
@@ -558,12 +563,7 @@ function BillingCard() {
 									(~$4/seat/month), but you&apos;re
 									grandfathered in.
 								</p>
-								<Badge
-									variant="secondary"
-									className="bg-amber-500/20 text-amber-900 dark:text-amber-100 border-0"
-								>
-									Locked Forever
-								</Badge>
+								<Badge variant="accent">Locked Forever</Badge>
 							</div>
 						</div>
 					</CardContent>
@@ -572,17 +572,17 @@ function BillingCard() {
 
 			{/* 30-Day Undo Safety Net Info */}
 			{currentPlan?.id !== "free" && (
-				<Card className="mt-6 border-blue-500/20 bg-blue-50 dark:bg-blue-950/20">
+				<Card className="mt-6 border-border bg-muted">
 					<CardContent className="pt-6">
 						<div className="flex items-start gap-4">
-							<div className="p-2 rounded-lg bg-blue-500/10">
-								<AlertCircle className="h-5 w-5 text-blue-600" />
+							<div className="p-2 rounded-md bg-ink text-lime">
+								<AlertCircle className="h-5 w-5" />
 							</div>
 							<div className="flex-1">
-								<h4 className="font-semibold mb-1 text-blue-900 dark:text-blue-100">
+								<h4 className="font-semibold mb-1 text-foreground">
 									30-Day Undo Safety Net
 								</h4>
-								<p className="text-sm text-blue-800 dark:text-blue-200">
+								<p className="text-sm text-muted-foreground">
 									Every cleanup action can be reversed within
 									30 days. Archived files are stored securely
 									and can be restored with one click—no data

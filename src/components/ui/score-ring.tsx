@@ -27,8 +27,8 @@ export function ScoreRing({
 	// Let's go with 100 = Cleanest.
 
 	const getColor = (s: number) => {
-		if (s >= 80) return "text-emerald-500";
-		if (s >= 50) return "text-yellow-500";
+		if (s >= 80) return "text-foreground";
+		if (s >= 50) return "text-muted-foreground";
 		return "text-destructive";
 	};
 
@@ -43,7 +43,7 @@ export function ScoreRing({
 			{/* Background Ring */}
 			<svg className="transform -rotate-90 w-full h-full">
 				<circle
-					className="text-muted/30"
+					className="text-border"
 					stroke="currentColor"
 					strokeWidth={strokeWidth}
 					fill="transparent"
@@ -69,10 +69,10 @@ export function ScoreRing({
 				/>
 			</svg>
 			<div className="absolute inset-0 flex flex-col items-center justify-center">
-				<span className="text-4xl font-display font-bold tracking-tighter">
+				<span className="text-4xl font-display font-semibold tracking-[-0.03em]">
 					{score}
 				</span>
-				<span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mt-1">
+				<span className="text-eyebrow uppercase tracking-widest text-muted-foreground mt-1">
 					Score
 				</span>
 			</div>

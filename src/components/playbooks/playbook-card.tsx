@@ -21,15 +21,15 @@ interface PlaybookCardProps {
 
 const IMPACT_CONFIG = {
 	security: {
-		color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+		color: "bg-destructive/10 text-destructive",
 		icon: Shield,
 	},
 	savings: {
-		color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+		color: "bg-lime text-ink",
 		icon: DollarSign,
 	},
 	efficiency: {
-		color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+		color: "bg-muted text-muted-foreground",
 		icon: Zap,
 	},
 };
@@ -52,10 +52,10 @@ export function PlaybookCard({
 	const Icon = config.icon;
 
 	return (
-		<Card className="p-6 border-border/60 shadow-sm hover:shadow-md transition-shadow">
+		<Card className="p-6">
 			<div className="flex items-start justify-between mb-4">
 				<div className="flex items-start gap-3 flex-1">
-					<div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xl flex-shrink-0">
+					<div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-xl flex-shrink-0">
 						<Image
 							src={SOURCE_ICONS[source as ToolSource]}
 							alt={`${source} icon`}

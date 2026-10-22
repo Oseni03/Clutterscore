@@ -9,7 +9,7 @@ import Header from "@/components/homepage/header";
 
 export default function LandingPage() {
 	return (
-		<div className="min-h-screen bg-background font-sans selection:bg-primary selection:text-primary-foreground">
+		<div className="min-h-screen bg-background font-sans selection:bg-lime selection:text-ink">
 			{/* Navigation – full-width background, content centered */}
 			<div className="w-full flex justify-center">
 				<div className="w-full max-w-7xl">

@@ -56,13 +56,13 @@ export function FilesTable({ files, onArchive }: FilesTableProps) {
 	const getFileIcon = (type: FileType) => {
 		const Icon = FILE_TYPE_ICONS[type] || FileText;
 		const colors = {
-			DOCUMENT: "text-gray-500",
-			IMAGE: "text-purple-500",
-			VIDEO: "text-blue-500",
-			MUSIC: "text-pink-500",
-			ARCHIVE: "text-yellow-500",
-			DATABASE: "text-green-500",
-			OTHER: "text-gray-400",
+			DOCUMENT: "text-muted-foreground",
+			IMAGE: "text-foreground",
+			VIDEO: "text-foreground",
+			MUSIC: "text-muted-foreground",
+			ARCHIVE: "text-muted-foreground",
+			DATABASE: "text-foreground",
+			OTHER: "text-muted-foreground",
 		};
 		return <Icon className={`h-4 w-4 ${colors[type]}`} />;
 	};
@@ -97,7 +97,7 @@ export function FilesTable({ files, onArchive }: FilesTableProps) {
 						<TableRow key={file.id}>
 							<TableCell>
 								<div className="flex items-center gap-3">
-									<div className="h-8 w-8 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
+									<div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center flex-shrink-0">
 										{getFileIcon(file.type)}
 									</div>
 									<div className="min-w-0">
@@ -111,7 +111,7 @@ export function FilesTable({ files, onArchive }: FilesTableProps) {
 											{file.isDuplicate && (
 												<Badge
 													variant="secondary"
-													className="text-[10px] bg-yellow-100 text-yellow-700"
+													className="text-[10px] bg-muted text-muted-foreground"
 												>
 													Duplicate
 												</Badge>
@@ -119,7 +119,7 @@ export function FilesTable({ files, onArchive }: FilesTableProps) {
 											{file.isPubliclyShared && (
 												<Badge
 													variant="secondary"
-													className="text-[10px] bg-red-100 text-red-700"
+													className="text-[10px] bg-destructive/10 text-destructive"
 												>
 													Public
 												</Badge>

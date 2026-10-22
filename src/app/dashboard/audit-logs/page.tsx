@@ -54,14 +54,14 @@ const ACTION_ICONS = {
 };
 
 const ACTION_COLORS = {
-	REVOKE_ACCESS: "bg-orange-100 text-orange-600 dark:bg-orange-900/30",
-	ARCHIVE_FILE: "bg-red-100 text-red-600 dark:bg-red-900/30",
-	ARCHIVE_CHANNEL: "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
-	ARCHIVE_PAGE: "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
-	REMOVE_GUEST: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30",
-	REMOVE_LICENSE: "bg-purple-100 text-purple-600 dark:bg-purple-900/30",
-	UPDATE_PERMISSIONS: "bg-green-100 text-green-600 dark:bg-green-900/30",
-	OTHER: "bg-gray-100 text-gray-600 dark:bg-gray-900/30",
+	REVOKE_ACCESS: "bg-muted text-muted-foreground",
+	ARCHIVE_FILE: "bg-destructive/10 text-destructive",
+	ARCHIVE_CHANNEL: "bg-muted text-muted-foreground",
+	ARCHIVE_PAGE: "bg-muted text-muted-foreground",
+	REMOVE_GUEST: "bg-muted text-muted-foreground",
+	REMOVE_LICENSE: "bg-muted text-muted-foreground",
+	UPDATE_PERMISSIONS: "bg-lime text-ink",
+	OTHER: "bg-muted text-muted-foreground",
 };
 
 export default function AuditLogsPage() {
@@ -177,7 +177,7 @@ export default function AuditLogsPage() {
 			{/* Header */}
 			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 				<div>
-					<h1 className="text-xl md:text-2xl font-display font-bold">
+					<h1 className="text-xl md:text-2xl font-display font-semibold">
 						Audit Logs & Undo History
 					</h1>
 					<p className="text-sm text-muted-foreground mt-1">
@@ -228,19 +228,19 @@ export default function AuditLogsPage() {
 					<p className="text-xs text-muted-foreground mb-1">
 						Total Actions
 					</p>
-					<p className="text-2xl font-bold">{pagination.total}</p>
+					<p className="text-2xl font-semibold">{pagination.total}</p>
 				</Card>
 				<Card className="p-4">
 					<p className="text-xs text-muted-foreground mb-1">
 						Successful
 					</p>
-					<p className="text-2xl font-bold text-green-600">
+					<p className="text-2xl font-semibold text-foreground">
 						{stats.success}
 					</p>
 				</Card>
 				<Card className="p-4">
 					<p className="text-xs text-muted-foreground mb-1">Failed</p>
-					<p className="text-2xl font-bold text-red-600">
+					<p className="text-2xl font-semibold text-destructive">
 						{stats.failed}
 					</p>
 				</Card>
@@ -248,7 +248,7 @@ export default function AuditLogsPage() {
 					<p className="text-xs text-muted-foreground mb-1">
 						Can Undo
 					</p>
-					<p className="text-2xl font-bold text-blue-600">
+					<p className="text-2xl font-semibold text-muted-foreground">
 						{logs.filter((l) => l.canUndo).length}
 					</p>
 				</Card>
@@ -399,7 +399,7 @@ export default function AuditLogsPage() {
 															className={
 																log.status ===
 																"SUCCESS"
-																	? "text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/30"
+																	? "text-foreground border-border bg-muted"
 																	: ""
 															}
 														>

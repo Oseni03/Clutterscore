@@ -97,7 +97,7 @@ export function UndoButton({
 					<AlertDialogTitle>Undo Action?</AlertDialogTitle>
 					<AlertDialogDescription className="space-y-2">
 						<p>You are about to undo the following action:</p>
-						<div className="bg-muted p-3 rounded-lg space-y-1">
+						<div className="bg-muted p-3 rounded-md space-y-1">
 							<p className="font-medium text-foreground">
 								{actionType.replace(/_/g, " ")}
 							</p>
@@ -105,7 +105,7 @@ export function UndoButton({
 								Target: {target}
 							</p>
 							{daysUntilExpiry !== null && (
-								<p className="text-xs text-orange-600 flex items-center gap-1 mt-2">
+								<p className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
 									<Clock className="h-3 w-3" />
 									Expires in {daysUntilExpiry} day
 									{daysUntilExpiry !== 1 ? "s" : ""}

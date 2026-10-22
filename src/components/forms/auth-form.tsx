@@ -104,7 +104,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 								</div>
 								<span className="sr-only">Clusterscore</span>
 							</Link>
-							<h1 className="text-xl font-bold">
+							<h1 className="text-xl font-semibold">
 								Welcome to Clusterscore.
 							</h1>
 							{isLogin ? (
@@ -141,7 +141,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 												type="email"
 												placeholder="you@example.com"
 												{...field}
-												className="border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800"
+												className="border-border bg-background dark:border-border dark:bg-input/20"
 											/>
 										</FormControl>
 										<FormMessage />

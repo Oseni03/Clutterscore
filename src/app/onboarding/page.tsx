@@ -19,7 +19,7 @@ export default async function OnboardingPage() {
 	// }
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4 py-12">
+		<div className="flex min-h-screen items-center justify-center bg-muted px-4 py-12">
 			<div className="w-full max-w-lg">
 				<OnboardingForm user={session.user} />
 			</div>

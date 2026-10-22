@@ -86,9 +86,9 @@ const OrganizationInvitationEmail = (data: {
 
 // Styles
 const main = {
-	backgroundColor: "#ffffff",
+	backgroundColor: "#FFFFFF",
 	fontFamily:
-		'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif',
+		'Inter,"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif',
 };
 
 const container = {
@@ -103,15 +103,15 @@ const header = {
 };
 
 const h1 = {
-	color: "#000000",
+	color: "#0E0E0E",
 	fontSize: "32px",
-	fontWeight: "bold",
+	fontWeight: "600",
 	margin: "0 0 8px",
 	padding: "0",
 };
 
 const subtitle = {
-	color: "#666666",
+	color: "#5F5F5A",
 	fontSize: "16px",
 	margin: "0",
 	padding: "0",
@@ -122,14 +122,14 @@ const content = {
 };
 
 const paragraph = {
-	color: "#000000",
+	color: "#0E0E0E",
 	fontSize: "16px",
 	lineHeight: "24px",
 	margin: "0 0 16px",
 };
 
 const paragraphGray = {
-	color: "#666666",
+	color: "#5F5F5A",
 	fontSize: "16px",
 	lineHeight: "24px",
 	margin: "0 0 24px",
@@ -141,11 +141,11 @@ const buttonContainer = {
 };
 
 const primaryButton = {
-	backgroundColor: "#000000",
-	borderRadius: "0px",
-	color: "#ffffff",
+	backgroundColor: "#0E0E0E",
+	borderRadius: "999px",
+	color: "#FFFFFF",
 	fontSize: "16px",
-	fontWeight: "bold",
+	fontWeight: "600",
 	textDecoration: "none",
 	textAlign: "center" as const,
 	display: "inline-block",
@@ -154,12 +154,12 @@ const primaryButton = {
 };
 
 const secondaryButton = {
-	backgroundColor: "#ffffff",
-	border: "2px solid #000000",
-	borderRadius: "0px",
-	color: "#000000",
+	backgroundColor: "#FFFFFF",
+	border: "2px solid #0E0E0E",
+	borderRadius: "999px",
+	color: "#0E0E0E",
 	fontSize: "16px",
-	fontWeight: "bold",
+	fontWeight: "600",
 	textDecoration: "none",
 	textAlign: "center" as const,
 	display: "inline-block",
@@ -168,7 +168,7 @@ const secondaryButton = {
 };
 
 const hr = {
-	borderColor: "#cccccc",
+	borderColor: "#E4E4DF",
 	margin: "20px 0",
 };
 
@@ -178,7 +178,7 @@ const footer = {
 };
 
 const footerText = {
-	color: "#666666",
+	color: "#5F5F5A",
 	fontSize: "14px",
 	lineHeight: "20px",
 	margin: "0 0 8px",

@@ -63,7 +63,7 @@ export default function ClutterscoreTrend({
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="h-[200px] animate-pulse bg-muted rounded" />
+					<div className="h-[200px] animate-pulse bg-muted rounded-sm" />
 				</CardContent>
 			</Card>
 		);
@@ -82,7 +82,7 @@ export default function ClutterscoreTrend({
 						Weekly Clutterscore Trend
 						{scoreDelta !== 0 && (
 							<span
-								className={`flex items-center gap-1 text-xs ${isImproving ? "text-green-600" : "text-red-600"}`}
+								className={`flex items-center gap-1 text-xs ${isImproving ? "text-foreground" : "text-destructive"}`}
 							>
 								{isImproving ? (
 									<TrendingUp className="h-3 w-3" />

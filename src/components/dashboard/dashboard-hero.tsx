@@ -39,9 +39,8 @@ export default function DashboardHero({
 	return (
 		<div className="grid md:grid-cols-12 gap-4 md:gap-6">
 			{/* Score Card */}
-			<Card className="md:col-span-3 flex flex-col items-center justify-center p-6 border-border/60 shadow-sm relative overflow-hidden">
-				<div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent pointer-events-none" />
-				<h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-4 w-full text-center uppercase tracking-wider">
+			<Card className="md:col-span-3 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+				<h3 className="text-eyebrow text-muted-foreground mb-4 w-full text-center uppercase tracking-wider">
 					Clutterscore
 				</h3>
 				<ScoreRing score={score} size={140} />
@@ -52,7 +51,7 @@ export default function DashboardHero({
 								<p className="text-xs text-muted-foreground">
 									Last
 								</p>
-								<p className="text-sm font-bold text-muted-foreground">
+								<p className="text-sm font-semibold text-muted-foreground">
 									{previousScore}
 								</p>
 							</div>
@@ -61,8 +60,10 @@ export default function DashboardHero({
 					)}
 					<div>
 						<p className="text-xs text-muted-foreground">Target</p>
-						<p className="text-sm font-bold text-emerald-600">
-							{targetScore}
+						<p className="text-sm font-semibold">
+							<span className="inline-block rounded-sm bg-lime px-2 py-0.5 text-ink">
+								{targetScore}
+							</span>
 						</p>
 					</div>
 				</div>
@@ -70,17 +71,17 @@ export default function DashboardHero({
 
 			{/* Waste Metrics */}
 			<div className="md:col-span-5 grid grid-cols-1 gap-4">
-				<Card className="p-4 border-border/60 shadow-sm">
+				<Card className="p-4">
 					<div className="flex justify-between items-start">
 						<div>
-							<p className="text-xs font-medium text-muted-foreground mb-1">
+							<p className="text-eyebrow font-medium text-muted-foreground mb-1">
 								Projected Annual Waste
 							</p>
-							<h3 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+							<h3 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
 								{formatCurrency(estimatedSavings)}
 							</h3>
 						</div>
-						<div className="h-10 w-10 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center">
+						<div className="h-10 w-10 rounded-md bg-lime text-ink flex items-center justify-center">
 							<TrendingUp className="h-5 w-5" />
 						</div>
 					</div>
@@ -90,26 +91,26 @@ export default function DashboardHero({
 					</div>
 				</Card>
 
-				<Card className="p-4 border-border/60 shadow-sm">
+				<Card className="p-4">
 					<div className="flex justify-between items-start">
 						<div>
-							<p className="text-xs font-medium text-muted-foreground mb-1">
+							<p className="text-eyebrow font-medium text-muted-foreground mb-1">
 								Active Risks
 							</p>
-							<h3 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+							<h3 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
 								{activeRisks}
 							</h3>
 						</div>
-						<div className="h-10 w-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center dark:bg-orange-900/30">
+						<div className="h-10 w-10 rounded-md bg-ink text-lime flex items-center justify-center">
 							<AlertTriangle className="h-5 w-5" />
 						</div>
 					</div>
 					<div className="mt-3 text-xs text-muted-foreground">
-						<span className="text-orange-600 font-medium">
+						<span className="text-destructive font-medium">
 							{criticalRisks} Critical
 						</span>{" "}
 						•{" "}
-						<span className="text-yellow-600 font-medium">
+						<span className="text-muted-foreground font-medium">
 							{moderateRisks} Moderate
 						</span>
 					</div>

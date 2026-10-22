@@ -29,7 +29,7 @@ export default function FilesTable({
 					className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg group transition-colors border border-transparent hover:border-border/50"
 				>
 					<div className="flex items-center gap-3 overflow-hidden">
-						<div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground">
+						<div className="h-10 w-10 rounded-sm bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground">
 							{file.type === "Video" && (
 								<Film className="h-5 w-5" />
 							)}

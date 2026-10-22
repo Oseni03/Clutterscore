@@ -14,7 +14,7 @@ function ArchivesStats({ stats }: { stats: ArchiveStats }) {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold">{stats.totalFiles}</div>
+					<div className="text-2xl font-semibold">{stats.totalFiles}</div>
 				</CardContent>
 			</Card>
 
@@ -25,7 +25,7 @@ function ArchivesStats({ stats }: { stats: ArchiveStats }) {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold flex items-center gap-2">
+					<div className="text-2xl font-semibold flex items-center gap-2">
 						<HardDrive className="h-5 w-5 text-muted-foreground" />
 						{formatSize(stats.totalSizeMb)}
 					</div>
@@ -39,7 +39,7 @@ function ArchivesStats({ stats }: { stats: ArchiveStats }) {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold text-orange-600 flex items-center gap-2">
+					<div className="text-2xl font-semibold text-destructive flex items-center gap-2">
 						<Clock className="h-5 w-5" />
 						{stats.expiringSoon}
 					</div>

@@ -12,7 +12,7 @@ function Header() {
 	const { user } = authClient.useSession().data || {};
 
 	return (
-		<nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+		<nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
 			<div className="container mx-auto px-4 h-16 flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<Image
@@ -22,7 +22,7 @@ function Header() {
 						height={32}
 						className="h-8 w-8"
 					/>
-					<span className="font-display font-bold text-xl tracking-tight">
+					<span className="font-display font-semibold text-xl tracking-[-0.03em]">
 						Clutterscore
 					</span>
 				</div>

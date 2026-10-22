@@ -45,30 +45,30 @@ function Pricing() {
 	}));
 
 	return (
-		<section className="py-32 bg-secondary/20" id="pricing">
+		<section className="py-32 bg-muted/40" id="pricing">
 			<div className="container mx-auto px-4">
 				<div className="text-center max-w-3xl mx-auto mb-12">
-					<Badge variant="secondary" className="mb-4">
+					<Badge variant="accent" className="mb-4">
 						Founders Circle Pricing
 					</Badge>
-					<h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
+					<h2 className="text-3xl md:text-h2 font-display font-semibold mb-6">
 						Fixed tiers. No per-seat chaos.
 					</h2>
-					<p className="text-xl text-muted-foreground mb-8">
+					<p className="text-lead text-muted-foreground mb-8">
 						Pricing locked for the first 50 customers. Choose the
 						tier that matches your team size.
 					</p>
 
 					{/* Billing Interval Toggle */}
-					<div className="inline-flex items-center gap-3 p-1 bg-secondary rounded-lg">
+					<div className="inline-flex items-center gap-1 p-1 bg-muted rounded-full">
 						<Button
 							variant="ghost"
 							onClick={() => setBillingInterval("monthly")}
 							className={cn(
-								"px-6 py-2 rounded-md text-sm font-medium transition-all",
+								"h-10 px-5 rounded-full text-sm font-medium transition-colors",
 								billingInterval === "monthly"
-									? "bg-background shadow-sm text-foreground"
-									: "text-muted-foreground hover:text-foreground"
+									? "bg-primary text-primary-foreground hover:bg-primary/90"
+									: "text-muted-foreground hover:bg-transparent hover:text-foreground"
 							)}
 						>
 							Monthly
@@ -77,16 +77,21 @@ function Pricing() {
 							variant="ghost"
 							onClick={() => setBillingInterval("yearly")}
 							className={cn(
-								"px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2",
+								"h-10 px-5 rounded-full text-sm font-medium transition-colors flex items-center gap-2",
 								billingInterval === "yearly"
-									? "bg-background shadow-sm text-foreground"
-									: "text-muted-foreground hover:text-foreground"
+									? "bg-primary text-primary-foreground hover:bg-primary/90"
+									: "text-muted-foreground hover:bg-transparent hover:text-foreground"
 							)}
 						>
 							Annual Pre-Pay
 							<Badge
 								variant="secondary"
-								className="bg-primary/10 text-primary border-0 text-xs"
+								className={cn(
+									"border-0 text-xs",
+									billingInterval === "yearly"
+										? "bg-primary-foreground/15 text-primary-foreground"
+										: "bg-foreground/10 text-foreground"
+								)}
 							>
 								Required
 							</Badge>
@@ -103,21 +108,21 @@ function Pricing() {
 							<Card
 								key={plan.id}
 								className={cn(
-									"flex flex-col relative overflow-hidden transition-all hover:shadow-lg",
+									"flex flex-col relative overflow-hidden transition-all",
 									isPopular
-										? "border-primary shadow-lg scale-105 lg:scale-110"
-										: "border-border/60"
+										? "border border-foreground scale-105 lg:scale-110"
+										: "border border-transparent"
 								)}
 							>
 								{isPopular && (
-									<div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-lg">
+									<div className="absolute top-0 right-0 bg-lime text-ink text-xs font-semibold px-3 py-1 rounded-bl-md">
 										POPULAR
 									</div>
 								)}
 								<CardHeader>
 									<div className="flex items-center gap-2 mb-2">
-										<plan.icon className="h-5 w-5 text-primary" />
-										<h3 className="text-xl font-display font-bold">
+										<plan.icon className="h-5 w-5 text-foreground" />
+										<h3 className="text-xl font-display font-semibold">
 											{plan.name}
 										</h3>
 									</div>
@@ -136,7 +141,7 @@ function Pricing() {
 									</p>
 									<div className="mt-6">
 										<div className="flex items-baseline gap-1">
-											<span className="text-3xl font-bold">
+											<span className="text-3xl font-display font-semibold">
 												{pricing.price}
 											</span>
 											<span className="text-muted-foreground text-xs">
@@ -166,7 +171,7 @@ function Pricing() {
 														className={cn(
 															"h-4 w-4 mt-0.5 flex-shrink-0",
 															isPopular
-																? "text-primary"
+																? "text-foreground"
 																: "text-muted-foreground"
 														)}
 													/>
@@ -210,12 +215,12 @@ function Pricing() {
 				</div>
 				{/* Info Banner */}
 				<div className="mt-12 text-center max-w-2xl mx-auto">
-					<Card className="border-primary/20 bg-primary/5">
+					<Card className="bg-lime">
 						<CardContent className="pt-6">
-							<p className="text-sm font-medium mb-2">
+							<p className="text-sm font-medium mb-2 text-ink">
 								🚀 Automatic Tier Detection
 							</p>
-							<p className="text-xs text-muted-foreground">
+							<p className="text-xs text-ink/70">
 								Connect Google Workspace, Dropbox, or Slack and
 								we&apos;ll automatically recommend the right
 								tier for your team size.

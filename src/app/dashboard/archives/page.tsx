@@ -26,7 +26,7 @@ export default function ArchivesPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold">Archived Files</h1>
+					<h1 className="text-2xl font-semibold">Archived Files</h1>
 					<p className="text-sm text-muted-foreground mt-1">
 						Files stored for 30-day recovery period
 					</p>

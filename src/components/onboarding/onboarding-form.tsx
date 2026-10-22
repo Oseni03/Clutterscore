@@ -110,12 +110,12 @@ export function OnboardingFormContent({ user }: OnboardingFormProps) {
 	}
 
 	return (
-		<Card className="border-border/80 shadow-xl mx-auto">
+				<Card className="border-border/80 mx-auto">
 			<CardHeader className="text-center">
 				<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
 					<Logo className="h-8 w-8" />
 				</div>
-				<CardTitle className="text-3xl font-bold">
+				<CardTitle className="text-3xl font-semibold">
 					{`Welcome to ${APP_NAME}!`}
 				</CardTitle>
 				<CardDescription className="text-base mt-2">

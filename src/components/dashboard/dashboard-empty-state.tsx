@@ -30,25 +30,22 @@ export default function DashboardEmptyState({
 	return (
 		<div className="p-4 md:p-6 space-y-6">
 			<div className="flex items-center justify-between">
-				<h1 className="text-xl md:text-2xl font-bold text-foreground">
+				<h1 className="text-xl md:text-2xl font-semibold text-foreground">
 					Dashboard
 				</h1>
 			</div>
 
 			{isThrottled && throttleInfo && (
-				<Alert
-					variant="destructive"
-					className="border-orange-600 bg-orange-50 dark:bg-orange-950"
-				>
-					<AlertCircle className="h-4 w-4 text-orange-600" />
-					<AlertDescription className="text-orange-900 dark:text-orange-100">
+				<Alert variant="destructive">
+					<AlertCircle className="h-4 w-4 text-destructive" />
+					<AlertDescription className="text-foreground">
 						<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
 							<div className="space-y-1">
 								<p className="font-medium">
 									{throttleInfo.error}
 								</p>
 								{throttleInfo.resetDate && (
-									<p className="text-sm flex items-center gap-1 text-orange-700 dark:text-orange-200">
+									<p className="text-sm flex items-center gap-1 text-muted-foreground">
 										<Calendar className="h-3 w-3" />
 										Next audit available:{" "}
 										{format(
@@ -61,7 +58,7 @@ export default function DashboardEmptyState({
 							<Button
 								size="sm"
 								variant="outline"
-								className="border-orange-600 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900 w-full md:w-auto"
+								className="w-full md:w-auto"
 								onClick={onUpgrade}
 							>
 								<Crown className="mr-2 h-4 w-4" />
@@ -86,7 +83,7 @@ export default function DashboardEmptyState({
 					</p>
 					{isThrottled ? (
 						<div className="space-y-3 mt-4">
-							<p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+							<p className="text-sm text-destructive font-medium">
 								Free tier audit limit reached
 							</p>
 							<Button onClick={onUpgrade} size="lg">

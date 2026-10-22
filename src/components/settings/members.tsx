@@ -119,7 +119,7 @@ export default function MembersCard() {
 			<Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 					<div>
-						<h1 className="text-lg sm:text-xl font-bold text-foreground">
+						<h1 className="text-lg sm:text-xl font-semibold text-foreground">
 							User Management
 						</h1>
 						<p className="text-sm text-muted-foreground">
@@ -157,7 +157,7 @@ export default function MembersCard() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">
+						<div className="text-2xl font-semibold">
 							{members?.length}
 						</div>
 					</CardContent>
@@ -170,7 +170,7 @@ export default function MembersCard() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">
+						<div className="text-2xl font-semibold">
 							{members?.filter((u) => u.role === "admin").length}
 						</div>
 						<div className="text-xs text-muted-foreground">
@@ -186,7 +186,7 @@ export default function MembersCard() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">
+						<div className="text-2xl font-semibold">
 							{members?.filter((u) => u.role === "member").length}
 						</div>
 						<div className="text-xs text-muted-foreground">
@@ -202,7 +202,7 @@ export default function MembersCard() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">
+						<div className="text-2xl font-semibold">
 							{invitations?.filter(
 								(inv) => inv.status === "pending"
 							).length || 0}
@@ -231,7 +231,7 @@ export default function MembersCard() {
 											<div className="flex items-center justify-between">
 												<div className="flex items-center gap-4">
 													<Avatar className="h-12 w-12">
-														<AvatarFallback className="bg-orange-100 text-orange-600 font-medium">
+														<AvatarFallback className="bg-muted text-muted-foreground font-medium">
 															{invitation.email
 																.split("@")[0]
 																.slice(0, 2)
@@ -247,7 +247,7 @@ export default function MembersCard() {
 															</h3>
 															<Badge
 																variant="outline"
-																className="text-orange-600 border-orange-200"
+																className="text-muted-foreground border-border"
 															>
 																{
 																	invitation.role
@@ -255,7 +255,7 @@ export default function MembersCard() {
 															</Badge>
 															<Badge
 																variant="secondary"
-																className="text-xs bg-orange-50 text-orange-600"
+																className="text-xs bg-muted text-muted-foreground"
 															>
 																Pending
 															</Badge>
@@ -349,7 +349,7 @@ export default function MembersCard() {
 																			invitation.id
 																		)
 																	}
-																	className="bg-red-600 hover:bg-red-700"
+																	className="bg-destructive hover:bg-destructive/90"
 																>
 																	Cancel
 																	Invitation

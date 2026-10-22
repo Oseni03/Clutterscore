@@ -31,7 +31,7 @@ export default function StorageSuggestions({
 	const suggestions = [
 		{
 			icon: TrendingDown,
-			color: "text-green-600 bg-green-100 dark:bg-green-900/30",
+			color: "text-ink bg-lime",
 			title: `Archive ${largestWaster.type} files`,
 			description: `${largestWaster.location} contains ${largestWaster.sizeGb.toFixed(1)} GB of ${largestWaster.type.toLowerCase()} files. Consider archiving or deleting old files.`,
 			impact: `Save ~$${Math.round(largestWaster.sizeGb * 0.1)}/month`,
@@ -40,7 +40,7 @@ export default function StorageSuggestions({
 		},
 		{
 			icon: Archive,
-			color: "text-blue-600 bg-blue-100 dark:bg-blue-900/30",
+			color: "text-foreground bg-muted",
 			title: "Remove duplicate files",
 			description:
 				"Found multiple copies of the same files across different folders. Removing duplicates can free up significant space.",
@@ -50,7 +50,7 @@ export default function StorageSuggestions({
 		},
 		{
 			icon: Shield,
-			color: "text-orange-600 bg-orange-100 dark:bg-orange-900/30",
+			color: "text-destructive bg-destructive/10",
 			title: "Review public files",
 			description:
 				"Some large files are publicly accessible. Review permissions to ensure sensitive data isn't exposed.",
@@ -64,7 +64,7 @@ export default function StorageSuggestions({
 		<Card>
 			<CardHeader>
 				<div className="flex items-center gap-2">
-					<div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center dark:bg-yellow-900/30">
+					<div className="h-8 w-8 rounded-md bg-ink text-lime flex items-center justify-center">
 						<Lightbulb className="h-4 w-4" />
 					</div>
 					<CardTitle>Suggestions</CardTitle>
@@ -75,13 +75,13 @@ export default function StorageSuggestions({
 				</p>
 			</CardHeader>
 			<CardContent>
-				<div className="mb-6 p-4 rounded-lg bg-muted/50 border">
+				<div className="mb-6 p-4 rounded-md bg-muted border border-border">
 					<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 						<div>
 							<p className="text-sm font-medium">
 								Potential Savings
 							</p>
-							<p className="text-2xl md:text-3xl font-bold text-green-600">
+							<p className="text-2xl md:text-3xl font-semibold text-foreground">
 								${savingsPerYear}/year
 							</p>
 							<p className="text-xs text-muted-foreground mt-1">
@@ -103,7 +103,7 @@ export default function StorageSuggestions({
 						return (
 							<div
 								key={index}
-								className="flex gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+								className="flex gap-4 p-4 rounded-md border border-border hover:bg-muted/60 transition-colors"
 							>
 								<div
 									className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${suggestion.color}`}

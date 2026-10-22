@@ -34,15 +34,15 @@ export function SavingsTracker() {
 
 	if (loading) {
 		return (
-			<Card className="border-green-200 bg-green-50">
+			<Card>
 				<CardHeader>
-					<CardTitle className="flex items-center gap-2 text-green-900">
+					<CardTitle className="flex items-center gap-2">
 						<DollarSign className="h-5 w-5" />
 						Loading Savings...
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="h-20 animate-pulse bg-green-100 rounded" />
+					<div className="h-20 animate-pulse rounded-md bg-border" />
 				</CardContent>
 			</Card>
 		);
@@ -56,57 +56,57 @@ export function SavingsTracker() {
 	const isImproving = data.clutterscore >= data.targetScore * 0.8;
 
 	return (
-		<Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100">
+		<Card>
 			<CardHeader>
-				<CardTitle className="flex items-center justify-between text-green-900">
+				<CardTitle className="flex items-center justify-between">
 					<span className="flex items-center gap-2">
 						<DollarSign className="h-5 w-5" />
 						Savings Tracker
 					</span>
 					{isImproving ? (
-						<TrendingUp className="h-5 w-5 text-green-600" />
+						<TrendingUp className="h-5 w-5 text-foreground" />
 					) : (
-						<TrendingDown className="h-5 w-5 text-orange-600" />
+						<TrendingDown className="h-5 w-5 text-destructive" />
 					)}
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div>
-					<div className="text-sm font-medium text-green-800">
+					<div className="text-sm font-medium text-muted-foreground">
 						Saved This Month
 					</div>
-					<div className="text-3xl font-bold text-green-900">
+					<div className="text-3xl font-display font-semibold text-foreground">
 						${data.monthlySavings.toLocaleString()}
 					</div>
 				</div>
 
-				<div className="pt-4 border-t border-green-200">
-					<div className="text-sm font-medium text-green-800 mb-1">
+				<div className="border-t border-border pt-4">
+					<div className="text-sm font-medium text-muted-foreground mb-1">
 						Estimated Annual Savings
 					</div>
-					<div className="text-2xl font-bold text-green-700">
+					<div className="text-2xl font-display font-semibold text-foreground">
 						${data.estimatedAnnualSavings.toLocaleString()}/year
 					</div>
 				</div>
 
-				<div className="pt-4 border-t border-green-200">
+				<div className="border-t border-border pt-4">
 					<div className="flex items-center justify-between mb-2">
-						<span className="text-sm font-medium text-green-800">
+						<span className="text-sm font-medium text-muted-foreground">
 							Progress to Target
 						</span>
-						<span className="text-sm font-semibold text-green-900">
+						<span className="text-sm font-semibold text-foreground">
 							{data.clutterscore}/{data.targetScore}
 						</span>
 					</div>
-					<div className="w-full bg-green-200 rounded-full h-3">
+					<div className="h-3 w-full rounded-full bg-border">
 						<div
-							className="h-3 rounded-full bg-green-600 transition-all duration-500"
+							className="h-3 rounded-full bg-lime transition-all duration-500"
 							style={{
 								width: `${Math.min(scoreProgress, 100)}%`,
 							}}
 						/>
 					</div>
-					<div className="text-xs text-green-700 mt-1">
+					<div className="text-xs text-muted-foreground mt-1">
 						{scoreProgress >= 100
 							? "🎉 Target achieved!"
 							: `${100 - scoreProgress}% to go`}

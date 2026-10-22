@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardStats } from "@/types/audit";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface NextScanCountdownProps {
 	onRunAudit?: () => void;
@@ -85,7 +86,7 @@ export function NextScanCountdown({
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="h-16 animate-pulse bg-muted rounded" />
+					<div className="h-16 animate-pulse bg-border rounded-md" />
 				</CardContent>
 			</Card>
 		);
@@ -99,18 +100,22 @@ export function NextScanCountdown({
 
 	return (
 		<Card
-			className={
-				canRunAudit
-					? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30"
-					: "border-border"
-			}
+			className={canRunAudit ? "bg-lime" : undefined}
 		>
 			<CardHeader>
-				<CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+				<CardTitle
+					className={cn(
+						"flex items-center gap-2 text-sm",
+						canRunAudit ? "text-ink" : "text-muted-foreground"
+					)}
+				>
 					<Clock className="h-4 w-4" />
 					Next Scan Availability
 					{isFreeTier && (
-						<Badge variant="secondary" className="ml-auto text-xs">
+						<Badge
+							variant="secondary"
+							className="ml-auto px-2 py-1 text-[11px]"
+						>
 							FREE TIER
 						</Badge>
 					)}
@@ -120,10 +125,17 @@ export function NextScanCountdown({
 				{canRunAudit ? (
 					<>
 						<div className="text-center">
-							<div className="text-3xl font-bold text-green-600 dark:text-green-500">
+							<div className="text-3xl font-display font-semibold text-ink">
 								Available Now
 							</div>
-							<p className="text-xs text-muted-foreground mt-1">
+							<p
+								className={cn(
+									"text-xs mt-1",
+									canRunAudit
+										? "text-ink/70"
+										: "text-muted-foreground"
+								)}
+							>
 								{stats.lastAuditDate
 									? `Last scan: ${format(new Date(stats.lastAuditDate), "MMM d, yyyy")}`
 									: "Ready for your first scan"}
@@ -153,7 +165,7 @@ export function NextScanCountdown({
 						<div className="text-center space-y-2">
 							{stats.nextScanDate && (
 								<>
-									<div className="text-2xl font-bold text-orange-600 dark:text-orange-500">
+									<div className="text-2xl font-display font-semibold text-foreground">
 										{timeLeft}
 									</div>
 									<p className="text-xs text-muted-foreground">
@@ -175,24 +187,24 @@ export function NextScanCountdown({
 							)}
 						</div>
 
-						<div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 space-y-3">
+						<div className="bg-card border border-border rounded-md p-4 space-y-3">
 							<div className="text-center space-y-2">
-								<div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/50">
-									<Crown className="h-5 w-5 text-orange-600 dark:text-orange-500" />
+								<div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-ink">
+									<Crown className="h-5 w-5 text-lime" />
 								</div>
-								<p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+								<p className="text-sm font-medium text-foreground">
 									{isFreeTier
 										? "Free tier: 1 scan per month"
 										: "Audit limit reached"}
 								</p>
-								<p className="text-xs text-orange-700 dark:text-orange-300">
+								<p className="text-xs text-muted-foreground">
 									Upgrade to Pro for unlimited scans anytime
 								</p>
 							</div>
 							<Button
 								variant="outline"
 								size="sm"
-								className="w-full border-orange-600 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/50"
+								className="w-full"
 								onClick={() =>
 									router.push("/dashboard/settings/billing")
 								}
@@ -205,7 +217,7 @@ export function NextScanCountdown({
 				)}
 
 				{stats.pendingPlaybooks > 0 && (
-					<div className="pt-3 border-t">
+					<div className="pt-3 border-t border-border">
 						<p className="text-xs text-muted-foreground text-center">
 							You have{" "}
 							<strong className="text-foreground">

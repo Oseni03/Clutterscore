@@ -37,8 +37,7 @@ const getSubscriptionBadge = (planTier: string) => {
 		ENTERPRISE: {
 			variant: "default" as const,
 			text: "Exterprise Plan",
-			className:
-				"bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0",
+			className: "bg-ink text-lime border-0",
 		},
 	};
 
@@ -81,7 +80,7 @@ export default function WorkspacePage() {
 		<div className="w-full flex justify-center">
 			<div className="w-full max-w-6xl p-6 space-y-6">
 				<div className="mb-8">
-					<h1 className="text-2xl font-display font-bold">
+					<h1 className="text-2xl font-display font-semibold">
 						Workspace Settings
 					</h1>
 					<p className="text-muted-foreground">

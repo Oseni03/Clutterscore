@@ -37,15 +37,15 @@ const getIconForType = (type: string) => {
 	switch (type) {
 		case "PLAYBOOK_READY":
 		case "AUDIT_COMPLETE":
-			return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+			return <CheckCircle2 className="h-4 w-4 text-foreground" />;
 		case "RISK_DETECTED":
 		case "SUBSCRIPTION_EXPIRING":
 		case "APPROVAL_REQUIRED":
-			return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+			return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
 		case "INTEGRATION_ERROR":
-			return <XCircle className="h-4 w-4 text-red-600" />;
+			return <XCircle className="h-4 w-4 text-destructive" />;
 		default:
-			return <Info className="h-4 w-4 text-blue-600" />;
+			return <Info className="h-4 w-4 text-muted-foreground" />;
 	}
 };
 
@@ -81,7 +81,7 @@ export default function NotificationsPage() {
 
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-5xl">
-			<Card className="shadow-sm">
+			<Card>
 				<CardHeader>
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 						<div>
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
 															href={
 																notif.actionUrl
 															}
-															className="text-xs text-primary hover:underline"
+															className="text-xs text-foreground underline-offset-4 hover:underline"
 															onClick={(e) =>
 																e.stopPropagation()
 															}
@@ -217,7 +217,7 @@ export default function NotificationsPage() {
 
 					{/* Server-side pagination controls */}
 					{pagination && pagination.totalPages > 1 && (
-						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t px-4 py-4">
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-border px-4 py-4">
 							<p className="text-sm text-muted-foreground">
 								Page {pagination.page} of{" "}
 								{pagination.totalPages} ({pagination.totalCount}{" "}
