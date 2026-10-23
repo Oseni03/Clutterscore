@@ -1,49 +1,41 @@
-import React from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { Button } from "../ui/button";
-import { Download } from "lucide-react";
+"use client";
+
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { ArchivedFile } from "@/types/archives";
 
 export const DownloadButton = ({ archive }: { archive: ArchivedFile }) => {
-	const handleDownload = async () => {
+	const handleDownload = () => {
+		if (!archive.downloadUrl) {
+			toast.error("Download not available");
+			return;
+		}
+
 		try {
 			const link = document.createElement("a");
 			link.href = archive.downloadUrl;
 			link.download = archive.name;
+			link.target = "_blank";
+			link.rel = "noopener noreferrer";
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 
 			toast.success(`Downloading ${archive.name}`);
-		} catch (err) {
-			console.error("ARCHIVE_DOWNLOAD_ERROR: ", err);
+		} catch (error) {
+			console.error("ARCHIVE_DOWNLOAD_ERROR: ", error);
 			toast.error("Failed to download file");
 		}
 	};
 
 	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span>
-					<Button
-						variant="ghost"
-						size="sm"
-						disabled
-						// onClick={() =>
-						// 	handleDownload(
-						// 		archive
-						// 	)
-						// }
-					>
-						<Download className="h-4 w-4" />
-					</Button>
-				</span>
-			</TooltipTrigger>
-
-			<TooltipContent>
-				<p>Download not available</p>
-			</TooltipContent>
-		</Tooltip>
+		<Button
+			variant="secondary"
+			onClick={handleDownload}
+			disabled={!archive.downloadUrl}
+			className="h-9 rounded-full bg-muted px-4 text-[13px] font-semibold text-ink hover:bg-border"
+		>
+			Download
+		</Button>
 	);
 };

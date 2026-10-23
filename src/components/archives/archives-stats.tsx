@@ -1,76 +1,35 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Clock, HardDrive } from "lucide-react";
 import { formatSize } from "@/lib/utils";
 import { ArchiveStats } from "@/types/archives";
 
 function ArchivesStats({ stats }: { stats: ArchiveStats }) {
 	return (
-		<div className="grid md:grid-cols-4 gap-4">
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm font-medium text-muted-foreground">
-						Total Files
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-semibold">{stats.totalFiles}</div>
-				</CardContent>
-			</Card>
+		<div className="grid gap-4 md:grid-cols-3">
+			<div className="rounded-xl border border-border bg-background p-5">
+				<div className="text-[13px] font-medium text-muted-foreground">
+					Archived files
+				</div>
+				<div className="mt-2 font-display text-[32px] font-semibold tracking-[-0.03em]">
+					{stats.totalFiles}
+				</div>
+			</div>
 
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm font-medium text-muted-foreground">
-						Total Size
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-semibold flex items-center gap-2">
-						<HardDrive className="h-5 w-5 text-muted-foreground" />
-						{formatSize(stats.totalSizeMb)}
-					</div>
-				</CardContent>
-			</Card>
+			<div className="rounded-xl border border-border bg-background p-5">
+				<div className="text-[13px] font-medium text-muted-foreground">
+					Total size
+				</div>
+				<div className="mt-2 font-display text-[32px] font-semibold tracking-[-0.03em]">
+					{formatSize(stats.totalSizeMb)}
+				</div>
+			</div>
 
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm font-medium text-muted-foreground">
-						Expiring Soon
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-semibold text-destructive flex items-center gap-2">
-						<Clock className="h-5 w-5" />
-						{stats.expiringSoon}
-					</div>
-					<p className="text-xs text-muted-foreground mt-1">
-						Within 7 days
-					</p>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm font-medium text-muted-foreground">
-						By Source
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-1">
-						{Object.entries(stats.bySource).map(
-							([source, count]) => (
-								<div
-									key={source}
-									className="flex justify-between text-sm"
-								>
-									<span>{source}</span>
-									<span className="font-medium">{count}</span>
-								</div>
-							)
-						)}
-					</div>
-				</CardContent>
-			</Card>
+			<div className="rounded-xl bg-night p-5 text-paper">
+				<div className="text-[13px] font-medium text-[#A8A8A2]">
+					Expiring in 7 days
+				</div>
+				<div className="mt-2 font-display text-[32px] font-semibold tracking-[-0.03em] text-[#F4B183]">
+					{stats.expiringSoon}
+				</div>
+			</div>
 		</div>
 	);
 }

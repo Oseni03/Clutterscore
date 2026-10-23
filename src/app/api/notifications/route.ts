@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
 import { logger } from "@/lib/logger";
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 8;
 
 export async function GET(req: NextRequest) {
 	return withAuth(req, async (req, user) => {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 			const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
 			const skip = (page - 1) * ITEMS_PER_PAGE;
 
-			const [notifications, totalCount] = await Promise.all([
+			const [notifications, totalCount, unreadCount] = await Promise.all([
 				prisma.notification.findMany({
 					where: { userId: user.id },
 					orderBy: { createdAt: "desc" },
@@ -23,14 +23,19 @@ export async function GET(req: NextRequest) {
 				prisma.notification.count({
 					where: { userId: user.id },
 				}),
+				prisma.notification.count({
+					where: { userId: user.id, read: false },
+				}),
 			]);
 
 			const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
 			return NextResponse.json({
 				notifications,
+				unreadCount,
 				pagination: {
 					page,
+					pageSize: ITEMS_PER_PAGE,
 					totalPages,
 					totalCount,
 					hasNext: page < totalPages,
