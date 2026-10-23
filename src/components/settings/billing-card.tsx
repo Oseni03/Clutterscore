@@ -1,37 +1,73 @@
 "use client";
 
-import React from "react";
+import { useMemo, type ReactNode } from "react";
+import { format } from "date-fns";
 import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-	CardFooter,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
-	Crown,
-	Zap,
-	DollarSign,
+	Check,
+	CircleCheck,
+	CreditCard,
 	Loader2,
-	Users,
-	AlertCircle,
 	RefreshCw,
-	CheckCircle2,
+	ShieldCheck,
+	Sparkles,
+	Star,
+	Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useBilling } from "@/hooks/use-billing";
 import {
+	FREE_PLAN,
+	SUBSCRIPTION_PLANS,
+	getBillingInterval,
+	getPlan,
 	getPlanByProductId,
 	getPlanByTier,
-	getBillingInterval,
-	FREE_PLAN,
+	type BillingInterval,
+	type SubscriptionPlan,
 } from "@/lib/subscription-plans";
-import { useBilling } from "@/hooks/use-billing";
 
-function BillingCard() {
+const INCLUDED_FEATURES = [
+	"Unlimited audits",
+	"Execute playbooks",
+	"All four integrations",
+	"More members",
+	"30-day undo on every action",
+	"Priority sync",
+];
+
+function getSourceLabel(source: string | null) {
+	switch (source) {
+		case "GOOGLE":
+			return "Google Workspace";
+		case "DROPBOX":
+			return "Dropbox";
+		case "SLACK":
+			return "Slack";
+		case "MANUAL":
+			return "Manual verification";
+		default:
+			return "your integrations";
+	}
+}
+
+function InfoTile({
+	label,
+	children,
+}: {
+	label: string;
+	children: ReactNode;
+}) {
+	return (
+		<div className="rounded-xl bg-muted p-3.5">
+			<p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+				{label}
+			</p>
+			<div className="mt-1.5 text-sm font-semibold">{children}</div>
+		</div>
+	);
+}
+
+export default function BillingCard() {
 	const {
 		isAdmin,
 		activeOrganization,
@@ -61,541 +97,510 @@ function BillingCard() {
 		? getBillingInterval(subscription.productId)
 		: null;
 
-	const getPlanIcon = (planId?: string) => {
-		if (planId?.includes("enterprise"))
-			return <Crown className="w-5 h-5 text-foreground" />;
-		if (planId?.includes("tier3"))
-			return <Crown className="w-5 h-5 text-muted-foreground" />;
-		if (planId?.includes("pro"))
-			return <Zap className="w-5 h-5 text-muted-foreground" />;
-		return <DollarSign className="w-5 h-5 text-muted-foreground" />;
-	};
+	const displayInterval: BillingInterval = selectedInterval;
+	const currentPricing = currentPlan.plans[currentInterval ?? selectedInterval];
+	const billingLabel = currentInterval
+		? currentInterval === "yearly"
+			? "Billed yearly"
+			: "Billed monthly"
+		: currentPlan.id === "free"
+			? "Free forever"
+			: `Billed ${displayInterval}`;
 
-	const currentPricing =
-		currentPlan && currentInterval
-			? currentPlan.plans[currentInterval]
-			: currentPlan?.plans.yearly;
+	const hasDetectedUsers = typeof userCount === "number" && userCount > 0;
+	const showTierMismatch =
+		hasDetectedUsers &&
+		!!recommendedPlan &&
+		recommendedPlan.id !== currentPlan.id &&
+		!needsUserCountSync;
+	const showOutOfRange =
+		hasDetectedUsers && userCount > 2000 && !needsUserCountSync;
 
-	const getSourceLabel = (source: string | null) => {
-		switch (source) {
-			case "GOOGLE":
-				return "Google Workspace";
-			case "DROPBOX":
-				return "Dropbox";
-			case "SLACK":
-				return "Slack";
-			case "MANUAL":
-				return "Manual Verification";
-			default:
-				return "Unknown";
+	const plansForTeam = useMemo(() => {
+		const ids = new Set<string>([
+			FREE_PLAN.id,
+			currentPlan.id,
+			...eligiblePlans.map((plan) => plan.id),
+		]);
+
+		const plans = Array.from(ids)
+			.map((id) => getPlan(id))
+			.filter((plan): plan is SubscriptionPlan => !!plan);
+
+		for (const plan of SUBSCRIPTION_PLANS) {
+			if (plans.length >= 3) break;
+			if (!ids.has(plan.id)) {
+				plans.push(plan);
+				ids.add(plan.id);
+			}
 		}
-	};
+
+		return plans.slice(0, 3);
+	}, [currentPlan.id, eligiblePlans]);
 
 	return (
-		<>
-			{/* User Count Sync Alert */}
+		<div className="space-y-6">
 			{needsUserCountSync && (
-				<Alert className="mb-6 border-border bg-muted">
-					<AlertCircle className="h-4 w-4 text-muted-foreground" />
-					<AlertDescription className="flex items-center justify-between">
-						<span>
-							<strong>Action Required:</strong> Connect Google
-							Workspace, Dropbox, or Slack to detect your user
-							count and see available plans.
-						</span>
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={handleSyncUserCount}
-							disabled={isSyncing}
-						>
-							{isSyncing ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Syncing...
-								</>
-							) : (
-								<>
-									<RefreshCw className="mr-2 h-4 w-4" />
-									Sync Now
-								</>
-							)}
-						</Button>
-					</AlertDescription>
-				</Alert>
+				<div className="flex flex-wrap items-start gap-4 rounded-2xl border border-border bg-background p-5">
+					<span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-[#F4B183]" />
+					<div className="min-w-0 flex-1">
+						<h2 className="text-[15px] font-semibold">
+							Connect an integration to detect users
+						</h2>
+						<p className="mt-1 text-[13px] text-muted-foreground">
+							We need a user count from Google Workspace,
+							Dropbox or Slack before we can recommend the right
+							plan.
+						</p>
+					</div>
+					<Button
+						variant="secondary"
+						onClick={handleSyncUserCount}
+						disabled={isSyncing}
+						className="h-10 rounded-full px-4 text-sm font-semibold"
+					>
+						{isSyncing ? (
+							<Loader2 className="size-4 animate-spin" />
+						) : (
+							<RefreshCw className="size-4" />
+						)}
+						Sync now
+					</Button>
+				</div>
 			)}
 
-			{/* Tier Mismatch Alert */}
-			{userCount &&
-				recommendedPlan &&
-				recommendedPlan.id !== currentPlan?.id &&
-				!needsUserCountSync && (
-					<Alert className="mb-6 border-border bg-muted">
-						<AlertCircle className="h-4 w-4 text-muted-foreground" />
-						<AlertDescription>
-							<strong>Recommended Tier:</strong> We detected{" "}
-							<strong>{userCount} users</strong> from{" "}
-							{getSourceLabel(userCountSource)}. We recommend{" "}
-							<strong>{recommendedPlan.name}</strong> (
+			{showTierMismatch && recommendedPlan && (
+				<div className="flex flex-wrap items-start gap-4 rounded-2xl border border-border bg-background p-5">
+					<span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-lime" />
+					<div className="min-w-0 flex-1">
+						<h2 className="text-[15px] font-semibold">
+							A different plan fits your team
+						</h2>
+						<p className="mt-1 text-[13px] text-muted-foreground">
+							We detected {userCount} users from{" "}
+							{getSourceLabel(userCountSource)}.{" "}
+							{recommendedPlan.name} is the best fit for{" "}
 							{recommendedPlan.minUsers}-
-							{recommendedPlan.maxUsers} users) for optimal
-							performance.
-						</AlertDescription>
-					</Alert>
-				)}
-
-			{/* Out of Range Alert */}
-			{userCount &&
-				(userCount < 1 || userCount > 2000) &&
-				!needsUserCountSync && (
-					<Alert
-						variant="destructive"
-						className="mb-6"
+							{recommendedPlan.maxUsers} users.
+						</p>
+					</div>
+					<a
+						href="#plans"
+						className="inline-flex min-h-10 items-center rounded-full bg-muted px-4 text-sm font-semibold text-foreground transition-colors hover:bg-border"
 					>
-						<AlertCircle className="h-4 w-4" />
-						<AlertDescription>
-							{userCount < 1 ? (
-								<>
-									Your organization has{" "}
-									<strong>{userCount} users</strong>, which is
-									below our minimum of 1 users for Pro plans.
-									Please stay on the Free plan or contact
-									sales for custom pricing.
-								</>
-							) : (
-								<>
-									Your organization has{" "}
-									<strong>{userCount} users</strong>, which
-									exceeds our maximum of 2,000 users for
-									self-service plans. Please contact sales for
-									enterprise pricing.
-								</>
-							)}
-						</AlertDescription>
-					</Alert>
-				)}
+						Change plan
+					</a>
+				</div>
+			)}
 
-			<div className="grid gap-6 md:grid-cols-2">
-				{/* Current Plan Card */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							{getPlanIcon(currentPlan?.id)}
-							Current Plan
-						</CardTitle>
-						<CardDescription>
-							You are on the {currentPlan?.name}
-							{currentInterval && (
-								<Badge variant="secondary" className="ml-2">
-									{currentInterval === "yearly"
-										? "Annual"
-										: "Monthly"}
-								</Badge>
-							)}
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="flex items-baseline gap-2">
-							<span className="text-3xl font-semibold">
-								{currentPricing?.price || "$0"}
-							</span>
-							<span className="text-muted-foreground text-sm">
-								{currentPricing?.period || "/month"}
-							</span>
-						</div>
+			{showOutOfRange && (
+				<div className="flex flex-wrap items-start gap-4 rounded-2xl border border-border bg-background p-5">
+					<span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-[#F4B183]" />
+					<div className="min-w-0 flex-1">
+						<h2 className="text-[15px] font-semibold">
+							Your team is outside self-service range
+						</h2>
+						<p className="mt-1 text-[13px] text-muted-foreground">
+							Your workspace exceeds 2,000 users. Contact us for
+							custom enterprise pricing.
+						</p>
+					</div>
+					<a
+						href="#plans"
+						className="inline-flex min-h-10 items-center rounded-full bg-muted px-4 text-sm font-semibold text-foreground transition-colors hover:bg-border"
+					>
+						Review plans
+					</a>
+				</div>
+			)}
 
-						{subscription && (
-							<>
-								<div className="text-sm text-muted-foreground">
-									${(subscription.amount / 100).toFixed(2)}/
-									{subscription.currency.toLowerCase()} -{" "}
-									<span className="capitalize">
-										{subscription.status}
-									</span>
-								</div>
-
-								{subscription.status === "active" && (
-									<div className="text-sm text-muted-foreground">
-										Current period:{" "}
-										{new Date(
-											subscription.currentPeriodStart
-										).toLocaleDateString()}{" "}
-										-{" "}
-										{new Date(
-											subscription.currentPeriodEnd
-										).toLocaleDateString()}
-									</div>
-								)}
-
-								{subscription.status === "active" &&
-									subscription.cancelAtPeriodEnd && (
-										<div className="text-sm text-muted-foreground">
-											Cancels on{" "}
-											{new Date(
-												subscription.endsAt ||
-													subscription.currentPeriodEnd
-											).toLocaleDateString()}
-										</div>
-									)}
-							</>
-						)}
-
-						<div className="text-sm text-muted-foreground">
-							{currentPlan?.description}
-						</div>
-
-						<Separator />
-
-						{/* User Count Display */}
-						<div className="space-y-3">
-							<div className="flex items-center justify-between text-sm">
-								<span className="flex items-center gap-2">
-									<Users className="h-4 w-4" />
-									Detected Users
+			<div className="rounded-2xl border border-border bg-background p-6">
+				<div className="flex flex-wrap items-start justify-between gap-5">
+					<div className="flex items-start gap-4">
+						<span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-lime text-ink">
+							<Star className="size-5" fill="currentColor" />
+						</span>
+						<div>
+							<div className="flex flex-wrap items-center gap-2">
+								<h2 className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+									{currentPlan.name}
+								</h2>
+								<span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-paper">
+									Active
 								</span>
-								<div className="flex items-center gap-2">
-									{userCount ? (
-										<>
-											<span className="font-medium">
-												{userCount}
-											</span>
-											{userCountVerified ? (
-												<Badge
-													variant="secondary"
-													className="text-xs gap-1"
-												>
-													<CheckCircle2 className="h-3 w-3" />
-													Verified
-												</Badge>
-											) : (
-												<Button
-													size="sm"
-													variant="ghost"
-													onClick={
-														handleVerifyUserCount
-													}
-												>
-													Verify
-												</Button>
-											)}
-										</>
-									) : (
-										<span className="text-muted-foreground">
-											Not synced
-										</span>
-									)}
-								</div>
 							</div>
+							<p className="mt-1 text-[13px] text-muted-foreground">
+								{billingLabel}
+							</p>
+						</div>
+					</div>
 
-							{userCountSource && userCountLastSync && (
-								<p className="text-xs text-muted-foreground">
-									Last synced from{" "}
-									{getSourceLabel(userCountSource)} on{" "}
-									{userCountLastSync.toLocaleDateString()}
-								</p>
-							)}
+					<div className="text-left sm:text-right">
+						<p className="font-display text-[36px] font-semibold leading-none tracking-[-0.04em]">
+							{currentPricing.price}
+						</p>
+						<p className="mt-1 text-[13px] text-muted-foreground">
+							{currentPricing.period}
+						</p>
+					</div>
+				</div>
 
-							{!userCount && (
-								<Button
-									size="sm"
-									variant="outline"
-									className="w-full"
-									onClick={handleSyncUserCount}
-									disabled={isSyncing}
-								>
-									{isSyncing ? (
-										<>
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-											Syncing...
-										</>
-									) : (
-										<>
-											<RefreshCw className="mr-2 h-4 w-4" />
-											Sync User Count
-										</>
-									)}
-								</Button>
-							)}
+				<p className="mt-4 max-w-2xl text-sm text-muted-foreground">
+					{currentPlan.description}
+				</p>
 
-							{currentPlan?.id !== "free" && userCount && (
-								<p className="text-xs text-muted-foreground">
-									Your plan supports {currentPlan.minUsers}-
-									{currentPlan.maxUsers} users
-								</p>
+				<div className="mt-5 grid gap-3 sm:grid-cols-2">
+					<InfoTile label="Subscription status">
+						<span className="capitalize">
+							{subscription?.status || "active"}
+						</span>
+					</InfoTile>
+					<InfoTile label="Current period">
+						{subscription?.currentPeriodStart &&
+						subscription?.currentPeriodEnd
+							? `${format(
+									new Date(subscription.currentPeriodStart),
+									"MMM d, yyyy"
+								)} to ${format(
+									new Date(subscription.currentPeriodEnd),
+									"MMM d, yyyy"
+								)}`
+							: "No renewal date"}
+					</InfoTile>
+					<InfoTile label="Cancellation">
+						{subscription?.cancelAtPeriodEnd
+							? `Ends ${format(
+									new Date(
+										subscription.endsAt ||
+											subscription.currentPeriodEnd
+									),
+									"MMM d, yyyy"
+								)}`
+							: "Not scheduled"}
+					</InfoTile>
+					<InfoTile label="Detected users">
+						{hasDetectedUsers ? (
+							<span className="flex flex-wrap items-center gap-2">
+								{userCount}
+								{userCountVerified ? (
+									<span className="inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-[11px] font-semibold text-ink">
+										<CircleCheck className="size-3" />
+										Verified
+									</span>
+								) : (
+									<button
+										type="button"
+										onClick={handleVerifyUserCount}
+										className="text-[11px] font-semibold underline underline-offset-2"
+									>
+										Verify
+									</button>
+								)}
+							</span>
+						) : (
+							"Not synced"
+						)}
+					</InfoTile>
+				</div>
+
+				<p className="mt-3 text-xs text-muted-foreground">
+					{hasDetectedUsers
+						? userCountSource
+							? `Last synced from ${getSourceLabel(
+									userCountSource
+								)}${
+									userCountLastSync
+										? ` on ${format(
+												userCountLastSync,
+												"MMM d, yyyy"
+											)}`
+										: ""
+								}.`
+							: "Detected from your workspace data."
+						: "Connect an integration to detect users in your workspace."}
+				</p>
+
+				<div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5">
+					<div className="flex flex-wrap items-center gap-3">
+						<span className="text-xs font-medium text-muted-foreground">
+							Plan interval
+						</span>
+						<div className="inline-flex rounded-full bg-muted p-1">
+							{(["monthly", "yearly"] as BillingInterval[]).map(
+								(interval) => (
+									<button
+										key={interval}
+										type="button"
+										onClick={() =>
+											setSelectedInterval(interval)
+										}
+										className={`min-h-9 rounded-full px-4 text-[13px] font-semibold capitalize transition-colors ${
+											displayInterval === interval
+												? "bg-ink text-paper"
+												: "text-muted-foreground hover:text-foreground"
+										}`}
+									>
+										{interval}
+									</button>
+								)
 							)}
 						</div>
+					</div>
 
-						<Separator />
-
-						{/* Features List */}
-						<div className="border-t border-border pt-4">
-							<h4 className="font-medium mb-3 text-sm">
-								Features included:
-							</h4>
-							<div className="space-y-2">
-								{currentPlan?.features
-									.slice(0, 5)
-									.map((feature, index) => (
-										<div
-											key={index}
-											className="flex items-start gap-2 text-sm text-muted-foreground"
-										>
-											<div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-lime flex-shrink-0" />
-											<span className="flex-1">
-												{feature}
-											</span>
-										</div>
-									))}
-							</div>
-						</div>
-					</CardContent>
-					<CardFooter className="flex-col gap-3">
-						{/* Billing Interval Toggle (only for free tier with eligible plans) */}
-						{currentPlan?.id === "free" &&
-							eligiblePlans.length > 0 && (
-								<div className="w-full">
-									<p className="text-xs text-muted-foreground mb-2">
-										Choose billing cycle:
-									</p>
-									<div className="inline-flex w-full items-center gap-1 p-1 bg-muted rounded-full">
-										<Button
-											variant="ghost"
-											onClick={() =>
-												setSelectedInterval("monthly")
-											}
-											className={`flex-1 px-4 py-2 h-10 rounded-full text-sm font-medium transition-all ${
-												selectedInterval === "monthly"
-													? "bg-primary text-primary-foreground hover:bg-primary/90"
-													: "text-muted-foreground hover:text-foreground"
-											}`}
-										>
-											Monthly
-										</Button>
-										<Button
-											variant="ghost"
-											onClick={() =>
-												setSelectedInterval("yearly")
-											}
-											className={`flex-1 px-4 py-2 h-10 rounded-full text-sm font-medium transition-all ${
-												selectedInterval === "yearly"
-													? "bg-primary text-primary-foreground hover:bg-primary/90"
-													: "text-muted-foreground hover:text-foreground"
-											}`}
-										>
-											Yearly
-											<span className="text-xs text-muted-foreground ml-1">
-												(Required)
-											</span>
-										</Button>
-									</div>
-								</div>
-							)}
-
+					<div className="flex flex-wrap gap-2.5">
+						{subscription && (
+							<Button
+								variant="outline"
+								onClick={handleManageBilling}
+								disabled={!isAdmin}
+								className="h-11 rounded-full px-5 text-sm font-semibold"
+							>
+								<CreditCard className="size-4" />
+								Manage Billing
+							</Button>
+						)}
 						<Button
-							className="w-full"
 							onClick={handleUpgradeSubscription}
 							disabled={
 								!isAdmin ||
 								isUpgrading ||
-								!userCount ||
+								!hasDetectedUsers ||
 								eligiblePlans.length === 0 ||
 								needsUserCountSync
 							}
+							className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90"
 						>
-							{isUpgrading ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Loading...
-								</>
-							) : currentPlan?.id === "enterprise" ? (
-								"Contact Sales"
-							) : currentPlan?.id.includes("tier3") ? (
-								"Book Demo"
-							) : currentPlan?.id === "free" ? (
-								`Upgrade to Pro (${
-									selectedInterval === "yearly"
-										? "Annual"
-										: "Monthly"
-								})`
-							) : (
-								"Change Plan"
+							{isUpgrading && (
+								<Loader2 className="size-4 animate-spin" />
 							)}
+							Change Plan
 						</Button>
+					</div>
+				</div>
 
-						{subscription && (
-							<Button
-								variant="outline"
-								className="w-full"
-								onClick={handleManageBilling}
-								disabled={!isAdmin}
-							>
-								Manage Billing
-							</Button>
-						)}
-					</CardFooter>
-				</Card>
-
-				{/* Plan Info Card */}
-				<Card className="border-border bg-muted">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Zap className="h-5 w-5 text-foreground" />
-							What&apos;s Included
-						</CardTitle>
-						<CardDescription>
-							{currentPlan?.id === "free"
-								? "Upgrade to unlock full features"
-								: "Your current plan benefits"}
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						{currentPlan?.id === "free" &&
-							eligiblePlans.length > 0 && (
-								<>
-									<p className="text-sm font-medium">
-										Ready to upgrade?
-									</p>
-									<div className="space-y-2">
-										{eligiblePlans.map((plan) => (
-											<div
-												key={plan.id}
-												className="p-3 bg-background rounded-md border border-border"
-											>
-												<div className="flex items-center justify-between mb-2">
-													<span className="font-medium text-sm">
-														{plan.name}
-													</span>
-													{plan.popular && (
-														<Badge
-															variant="default"
-															className="text-xs"
-														>
-															Popular
-														</Badge>
-													)}
-												</div>
-												<p className="text-xs text-muted-foreground mb-2">
-													{plan.minUsers}-
-													{plan.maxUsers} users
-												</p>
-												<p className="text-lg font-semibold text-foreground">
-													{plan.price}
-												</p>
-											</div>
-										))}
-									</div>
-								</>
-							)}
-
-						{currentPlan?.id !== "free" && (
-							<>
-								<Separator />
-								<div className="space-y-3">
-									<div className="flex items-start gap-3">
-										<div className="w-6 h-6 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
-											<CheckCircle2 className="h-4 w-4 text-ink" />
-										</div>
-										<div>
-											<p className="text-sm font-medium">
-												Unlimited Cleanups
-											</p>
-											<p className="text-xs text-muted-foreground">
-												Run as many cleanup scans as you
-												need
-											</p>
-										</div>
-									</div>
-									<div className="flex items-start gap-3">
-										<div className="w-6 h-6 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
-											<CheckCircle2 className="h-4 w-4 text-ink" />
-										</div>
-										<div>
-											<p className="text-sm font-medium">
-												30-Day Undo
-											</p>
-											<p className="text-xs text-muted-foreground">
-												Reverse any action within 30
-												days
-											</p>
-										</div>
-									</div>
-									<div className="flex items-start gap-3">
-										<div className="w-6 h-6 rounded-full bg-lime flex items-center justify-center flex-shrink-0">
-											<CheckCircle2 className="h-4 w-4 text-ink" />
-										</div>
-										<div>
-											<p className="text-sm font-medium">
-												Priority Support
-											</p>
-											<p className="text-xs text-muted-foreground">
-												{currentPlan.id.includes(
-													"tier3"
-												)
-													? "24h response time"
-													: "48h response time"}
-											</p>
-										</div>
-									</div>
-								</div>
-							</>
-						)}
-					</CardContent>
-				</Card>
+				{!isAdmin && (
+					<p className="mt-4 rounded-xl bg-muted px-4 py-3 text-[13px] text-muted-foreground">
+						Only workspace admins can manage billing or change
+						plans.
+					</p>
+				)}
 			</div>
 
-			{/* Founders Circle Notice */}
-			{currentPlan?.id !== "free" && currentPlan?.id !== "enterprise" && (
-				<Card className="mt-6 border-border bg-muted">
-					<CardContent className="pt-6">
-						<div className="flex items-start gap-4">
-							<div className="p-2 rounded-md bg-ink text-lime">
-								<Crown className="h-5 w-5" />
-							</div>
-							<div className="flex-1">
-								<h4 className="font-semibold mb-1 text-foreground">
-									Founders Circle Member
-								</h4>
-								<p className="text-sm text-muted-foreground mb-3">
-									Your pricing is locked forever at $
-									{currentPricing?.priceValue}/
-									{currentInterval}. After 50 customers,
-									we&apos;ll switch to per-user pricing
-									(~$4/seat/month), but you&apos;re
-									grandfathered in.
-								</p>
-								<Badge variant="accent">Locked Forever</Badge>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-			)}
+			<div className="rounded-2xl bg-night p-6 text-paper">
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div>
+						<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+							What&apos;s included
+						</h2>
+						<p className="mt-1 text-[13px] text-[#A8A8A2]">
+							Everything in your {currentPlan.name} plan.
+						</p>
+					</div>
+					<span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-[#A8A8A2]">
+						6 features
+					</span>
+				</div>
 
-			{/* 30-Day Undo Safety Net Info */}
-			{currentPlan?.id !== "free" && (
-				<Card className="mt-6 border-border bg-muted">
-					<CardContent className="pt-6">
-						<div className="flex items-start gap-4">
-							<div className="p-2 rounded-md bg-ink text-lime">
-								<AlertCircle className="h-5 w-5" />
-							</div>
-							<div className="flex-1">
-								<h4 className="font-semibold mb-1 text-foreground">
-									30-Day Undo Safety Net
-								</h4>
-								<p className="text-sm text-muted-foreground">
-									Every cleanup action can be reversed within
-									30 days. Archived files are stored securely
-									and can be restored with one click—no data
-									is permanently deleted without your explicit
-									approval.
+				<div className="mt-5 grid gap-3 sm:grid-cols-2">
+					{INCLUDED_FEATURES.map((feature) => (
+						<div
+							key={feature}
+							className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3.5"
+						>
+							<span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-lime text-ink">
+								<Check className="size-3.5" strokeWidth={3} />
+							</span>
+							<span className="text-sm">{feature}</span>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<section id="plans" className="scroll-mt-24 space-y-4">
+				<div className="flex flex-wrap items-end justify-between gap-3">
+					<div>
+						<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+							Plans for your team size
+						</h2>
+						<p className="mt-1 text-[13px] text-muted-foreground">
+							{hasDetectedUsers
+								? `Based on ${userCount} detected users. Switch any time.`
+								: "Sync your user count to see which plans fit your team."}
+						</p>
+					</div>
+					{hasDetectedUsers && (
+						<span className="rounded-full bg-muted px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+							{userCount} users detected
+						</span>
+					)}
+				</div>
+
+				<div className="grid gap-4 lg:grid-cols-3">
+					{plansForTeam.map((plan) => {
+						const isCurrent = plan.id === currentPlan.id;
+						const isEligible = eligiblePlans.some(
+							(eligiblePlan) => eligiblePlan.id === plan.id
+						);
+						const pricing = plan.plans[selectedInterval];
+
+						let actionLabel = `Switch to ${plan.name}`;
+						let actionDisabled =
+							!isAdmin || isUpgrading || needsUserCountSync;
+						let action: (() => void) | undefined =
+							handleUpgradeSubscription;
+
+						if (isCurrent) {
+							actionLabel = "Current plan";
+							actionDisabled = true;
+							action = undefined;
+						} else if (plan.id === "free") {
+							actionLabel = subscription
+								? "Downgrade in portal"
+								: "Free plan";
+							actionDisabled = !subscription || !isAdmin;
+							action = subscription
+								? handleManageBilling
+								: undefined;
+						} else if (!hasDetectedUsers) {
+							actionLabel = "Sync users to switch";
+							actionDisabled = true;
+							action = undefined;
+						} else if (!isEligible) {
+							actionLabel = "Not available for your size";
+							actionDisabled = true;
+							action = undefined;
+						}
+
+						return (
+							<article
+								key={plan.id}
+								className={`flex flex-col rounded-2xl border bg-background p-6 ${
+									isCurrent
+										? "border-ink"
+										: "border-border"
+								}`}
+							>
+								<div className="flex flex-wrap items-center justify-between gap-2">
+									<h3 className="font-display text-[20px] font-semibold tracking-[-0.02em]">
+										{plan.name}
+									</h3>
+									{isCurrent ? (
+										<span className="rounded-full bg-lime px-2.5 py-1 text-[11px] font-semibold text-ink">
+											Current
+										</span>
+									) : plan.popular ? (
+										<span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+											Popular
+										</span>
+									) : null}
+								</div>
+
+								<div className="mt-4 flex items-baseline gap-1">
+									<span className="font-display text-[30px] font-semibold leading-none tracking-[-0.04em]">
+										{pricing.price}
+									</span>
+									<span className="text-[13px] text-muted-foreground">
+										{pricing.period}
+									</span>
+								</div>
+								<p className="mt-1 text-[12px] text-muted-foreground">
+									{plan.id === "free"
+										? "Up to 2,500 users"
+										: `${plan.minUsers}-${plan.maxUsers} users`}
 								</p>
+								<p className="mt-4 text-[13px] text-muted-foreground">
+									{plan.description}
+								</p>
+
+								<ul className="mt-4 flex-1 space-y-2.5">
+									{plan.features.slice(0, 3).map((feature) => (
+										<li
+											key={feature}
+											className="flex items-start gap-2 text-[13px]"
+										>
+											<span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded bg-muted">
+												<Check className="size-2.5" />
+											</span>
+											{feature}
+										</li>
+									))}
+								</ul>
+
+								<button
+									type="button"
+									onClick={action}
+									disabled={actionDisabled}
+									className={`mt-6 inline-flex min-h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition-colors ${
+										actionDisabled
+											? "bg-muted text-muted-foreground"
+											: "bg-ink text-paper hover:bg-ink/90"
+									}`}
+								>
+									{actionLabel}
+								</button>
+							</article>
+						);
+					})}
+				</div>
+			</section>
+
+			<div
+				className={
+					currentPlan.id !== "free"
+						? "grid gap-4 md:grid-cols-2"
+						: "grid gap-4"
+				}
+			>
+				{currentPlan.id !== "free" && (
+					<div className="rounded-2xl bg-lime p-6 text-ink">
+						<div className="flex items-start gap-4">
+							<span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-ink text-lime">
+								<Sparkles className="size-5" />
+							</span>
+							<div>
+								<h2 className="font-display text-[20px] font-semibold tracking-[-0.02em]">
+									Founders Circle pricing lock
+								</h2>
+								<p className="mt-1.5 text-[13px]">
+									Your price is locked forever. You&apos;re
+									grandfathered in even after we move to
+									per-user pricing.
+								</p>
+								<span className="mt-3 inline-flex rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-lime">
+									Locked forever
+								</span>
 							</div>
 						</div>
-					</CardContent>
-				</Card>
+					</div>
+				)}
+
+				<div className="rounded-2xl border border-border bg-background p-6">
+					<div className="flex items-start gap-4">
+						<span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
+							<ShieldCheck className="size-5" />
+						</span>
+						<div>
+							<h2 className="font-display text-[20px] font-semibold tracking-[-0.02em]">
+								30-day safety net
+							</h2>
+							<p className="mt-1.5 text-[13px] text-muted-foreground">
+								Every cleanup action can be reversed within 30
+								days. Archived files stay recoverable with one
+								click.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{!activeOrganization && (
+				<div className="flex items-center gap-3 rounded-xl border border-border bg-background px-5 py-4">
+					<Users className="size-4 text-muted-foreground" />
+					<p className="text-sm text-muted-foreground">
+						Select a workspace to view billing details.
+					</p>
+				</div>
 			)}
-		</>
+		</div>
 	);
 }
-
-export default BillingCard;

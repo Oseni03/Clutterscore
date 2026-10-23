@@ -24,8 +24,6 @@ const ROUTE_LABELS = [
 	{ prefix: "/dashboard/files", label: "Files" },
 	{ prefix: "/dashboard/storage", label: "Storage" },
 	{ prefix: "/dashboard/archives", label: "Archives" },
-	{ prefix: "/dashboard/settings/users", label: "Members" },
-	{ prefix: "/dashboard/settings/billing", label: "Billing" },
 	{ prefix: "/dashboard/settings", label: "Settings" },
 	{ prefix: "/dashboard/account", label: "Account" },
 	{ prefix: "/dashboard/notifications", label: "Notifications" },

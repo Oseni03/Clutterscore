@@ -9,7 +9,10 @@ import {
 	verifyUserCount,
 	initiateCheckout,
 } from "@/server/subscription";
-import { BillingInterval } from "@/lib/subscription-plans";
+import {
+	BillingInterval,
+	getBillingInterval,
+} from "@/lib/subscription-plans";
 
 interface EligiblePlan {
 	id: string;
@@ -63,11 +66,18 @@ export function useBilling() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeOrganization?.id, loadSubscription]);
 
+	useEffect(() => {
+		if (!subscription) return;
+
+		const interval = getBillingInterval(subscription.productId);
+		if (interval) setSelectedInterval(interval);
+	}, [subscription]);
+
 	const fetchEligiblePlans = async () => {
 		if (!activeOrganization?.id) return;
 
 		try {
-			const response = await fetch(`/api/billing/eligible-plans`);
+			const response = await fetch(`/api/subscription/eligible-plans`);
 			if (response.ok) {
 				const data = await response.json();
 				setEligiblePlans(data.eligiblePlans || []);

@@ -1,95 +1,106 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { PaintBucket, Sun, Moon, Monitor } from "lucide-react";
 
-export const ThemeCard = () => {
-	const { theme, setTheme } = useTheme();
+const THEME_OPTIONS = [
+	{ value: "light", label: "Light" },
+	{ value: "dark", label: "Dark" },
+	{ value: "system", label: "System" },
+] as const;
 
-	const themeOptions = [
-		{
-			value: "light",
-			label: "Light",
-			description: "Clean and bright interface",
-			icon: Sun,
-		},
-		{
-			value: "dark",
-			label: "Dark",
-			description: "Easy on the eyes in low light",
-			icon: Moon,
-		},
-		{
-			value: "system",
-			label: "System",
-			description: "Match your device settings",
-			icon: Monitor,
-		},
-	];
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<PaintBucket className="h-4 w-4" />
-					Theme & Appearance
-				</CardTitle>
-				<CardDescription>
-					Customize how the application looks and feels.
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-6">
-				{/* Theme Selection */}
-				<div className="space-y-4">
-					<Label className="text-base font-medium">Theme Mode</Label>
-					<RadioGroup
-						value={theme}
-						onValueChange={setTheme}
-						className="grid grid-cols-1 md:grid-cols-3 gap-4"
-					>
-						{themeOptions.map((option) => {
-							const IconComponent = option.icon;
-							return (
-								<div key={option.value} className="relative">
-									<RadioGroupItem
-										value={option.value}
-										id={option.value}
-										className="peer sr-only"
-									/>
-									<Label
-										htmlFor={option.value}
-										className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
-									>
-										<IconComponent className="mb-3 h-6 w-6" />
-										<div className="text-center">
-											<div className="font-medium">
-												{option.label}
-											</div>
-											<div className="text-xs text-muted-foreground mt-1">
-												{option.description}
-											</div>
-										</div>
-									</Label>
-								</div>
-							);
-						})}
-					</RadioGroup>
-				</div>
+type ThemeValue = (typeof THEME_OPTIONS)[number]["value"];
 
-				<div className="text-xs text-muted-foreground pt-2">
-					Theme changes are applied immediately and saved
-					automatically.
-				</div>
-			</CardContent>
-		</Card>
-	);
+const THEME_LABELS: Record<ThemeValue, string> = {
+	light: "Light",
+	dark: "Dark",
+	system: "System",
 };
+
+export function ThemeCard() {
+	const { theme, setTheme } = useTheme();
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	const selectedTheme: ThemeValue = mounted
+		? ((theme as ThemeValue | undefined) ?? "system")
+		: "system";
+
+	return (
+		<section className="rounded-2xl border border-border bg-background p-6">
+			<h2 className="font-display text-[22px] font-semibold tracking-[-0.03em]">
+				Theme
+			</h2>
+			<p className="mt-2 text-sm text-muted-foreground">
+				Light, dark, or match your system. Currently:{" "}
+				{THEME_LABELS[selectedTheme]}.
+			</p>
+
+			<div
+				role="radiogroup"
+				aria-label="Theme"
+				className="mt-6 flex flex-col gap-3 sm:flex-row"
+			>
+				{THEME_OPTIONS.map((option) => {
+					const isSelected = selectedTheme === option.value;
+					const showLightPreview = option.value !== "dark";
+					const showDarkPreview = option.value !== "light";
+
+					return (
+						<button
+							key={option.value}
+							type="button"
+							role="radio"
+							aria-checked={isSelected}
+							onClick={() => setTheme(option.value)}
+							className={`flex-1 rounded-xl border-2 bg-background p-3 text-left transition-colors ${
+								isSelected
+									? "border-ink"
+									: "border-border hover:border-graphite/50"
+							}`}
+						>
+							<div className="flex h-24 overflow-hidden rounded-lg border border-border">
+								{showLightPreview && (
+									<div className="flex-1 bg-paper p-2.5">
+										<div className="h-1.5 w-3/5 rounded-full bg-ink/80" />
+										<div className="mt-2 h-1.5 w-full rounded-full bg-line" />
+										<div className="mt-1.5 h-1.5 w-4/5 rounded-full bg-line" />
+										<div className="mt-3 h-5 w-2/5 rounded bg-lime" />
+									</div>
+								)}
+								{showDarkPreview && (
+									<div className="flex-1 bg-night p-2.5">
+										<div className="h-1.5 w-3/5 rounded-full bg-paper/80" />
+										<div className="mt-2 h-1.5 w-full rounded-full bg-paper/15" />
+										<div className="mt-1.5 h-1.5 w-4/5 rounded-full bg-paper/15" />
+										<div className="mt-3 h-5 w-2/5 rounded bg-lime" />
+									</div>
+								)}
+							</div>
+
+							<div className="mt-3 flex items-center gap-2.5">
+								<span
+									className={`flex size-[18px] items-center justify-center rounded-full border-2 ${
+										isSelected
+											? "border-ink"
+											: "border-border"
+									}`}
+								>
+									{isSelected && (
+										<span className="size-2 rounded-full bg-ink" />
+									)}
+								</span>
+								<span className="text-[15px] font-semibold">
+									{option.label}
+								</span>
+							</div>
+						</button>
+					);
+				})}
+			</div>
+		</section>
+	);
+}

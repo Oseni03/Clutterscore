@@ -1,39 +1,90 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { format, formatDistanceToNow } from "date-fns";
+import {
+	Calendar,
+	Loader2,
+	Mail,
+	Plus,
+	Send,
+	ShieldCheck,
+	Users,
+	X,
+} from "lucide-react";
+import type { Invitation as AuthInvitation } from "better-auth/plugins";
+import type { Invitation as PrismaInvitation } from "@prisma/client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Calendar, Users, Clock, Send, X } from "lucide-react";
-import { format } from "date-fns";
 import {
 	Dialog,
-	DialogDescription,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { InvitationForm } from "@/components/forms/invitation-form";
-import { UpdateMemberRoleForm } from "@/components/forms/update-member-role-form";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { SettingsHeader } from "@/components/settings/settings-header";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
-import { removeMember } from "@/server/members";
+import { removeMember, updateMemberRole } from "@/server/members";
 import { cancelInvitation } from "@/server/invitations";
+import { getUser } from "@/server/users";
 import { authClient } from "@/lib/auth-client";
 import { logger } from "@/lib/logger";
+import type { Member, MemberUser } from "@/types";
+
+const AVATAR_STYLES = [
+	"bg-lime text-ink",
+	"bg-[#B9A9D6] text-ink",
+	"bg-[#8FA9A8] text-ink",
+	"bg-[#F4B183] text-ink",
+];
+
+const ROLE_OPTIONS = [
+	{
+		value: "admin" as const,
+		label: "Admin",
+		description:
+			"Manage users, billing, integrations and run playbooks.",
+	},
+	{
+		value: "member" as const,
+		label: "Member",
+		description: "View audits and review playbooks.",
+	},
+];
+
+function getInitials(name: string) {
+	return name
+		.split(" ")
+		.map((part) => part[0])
+		.join("")
+		.slice(0, 2)
+		.toUpperCase();
+}
+
+function getAvatarStyle(seed: string) {
+	const index = seed
+		.split("")
+		.reduce((total, character) => total + character.charCodeAt(0), 0);
+	return AVATAR_STYLES[index % AVATAR_STYLES.length];
+}
+
+function roleLabel(role: string | null) {
+	return role === "admin" ? "Admin" : "Member";
+}
+
+function invitationExpiry(expiresAt: Date | string) {
+	const date = new Date(expiresAt);
+
+	if (date.getTime() < Date.now()) {
+		return "expired";
+	}
+
+	return `expires in ${formatDistanceToNow(date)}`;
+}
 
 export default function MembersCard() {
 	const {
@@ -41,496 +92,750 @@ export default function MembersCard() {
 		members,
 		invitations,
 		isAdmin,
+		addInvitation,
 		removeInvite,
+		updateMember,
 		removeMember: removeMemberState,
 	} = useOrganizationStore((state) => state);
-	const { user } = authClient.useSession().data || {};
+	const { data: session } = authClient.useSession();
+	const currentUserId = session?.user?.id;
+
 	const [isInviteOpen, setIsInviteOpen] = useState(false);
-	const [isMemberOpen, setIsMemberOpen] = useState(false);
+	const [inviteEmail, setInviteEmail] = useState("");
+	const [isInviting, setIsInviting] = useState(false);
+	const [resendingId, setResendingId] = useState<string | null>(null);
 
-	async function handleRemoveMember(memberId: string) {
+	const [roleMember, setRoleMember] = useState<Member | null>(null);
+	const [roleValue, setRoleValue] = useState<"admin" | "member">("member");
+	const [isSavingRole, setIsSavingRole] = useState(false);
+
+	const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
+	const [isRemovingMember, setIsRemovingMember] = useState(false);
+
+	const [inviteToCancel, setInviteToCancel] =
+		useState<PrismaInvitation | null>(null);
+	const [isCancellingInvite, setIsCancellingInvite] = useState(false);
+
+	const pendingInvitations = invitations.filter(
+		(invitation) => invitation.status === "pending"
+	);
+	const adminCount = members.filter((member) => member.role === "admin").length;
+	const memberCount = members.filter(
+		(member) => member.role === "member"
+	).length;
+	const subscriptionTier = activeOrganization?.subscriptionTier || "free";
+	const canInvite = isAdmin && subscriptionTier !== "free";
+
+	const handleInviteOpenChange = (open: boolean) => {
+		setIsInviteOpen(open);
+		if (!open) setInviteEmail("");
+	};
+
+	async function handleInvite(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		if (!activeOrganization) {
+			toast.error("No active workspace selected");
+			return;
+		}
+
+		if (!canInvite) {
+			toast.error("Upgrade to invite team members");
+			return;
+		}
+
+		const email = inviteEmail.trim().toLowerCase();
+
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			toast.error("Enter a valid work email");
+			return;
+		}
+
+		setIsInviting(true);
+		const toastId = toast.loading("Sending invitation...");
+
 		try {
-			toast.loading("Removing member...");
+			const { data, error } = await authClient.organization.inviteMember({
+				email,
+				role: "member",
+				organizationId: activeOrganization.id,
+				resend: true,
+			});
 
-			if (!activeOrganization) return;
-
-			if (!isAdmin) {
-				toast.dismiss();
-				toast.error("You do not have permission to remove members");
+			if (error) {
+				toast.error(error.message || "Failed to send invitation", {
+					id: toastId,
+				});
 				return;
 			}
 
-			const { data, error } = await removeMember(
-				activeOrganization.id,
-				memberId
-			);
-
 			if (data) {
-				removeMemberState(data.member.id);
+				addInvitation(data as AuthInvitation);
 			}
 
-			if (error) {
-				logger.error("Error removing member:", error);
-				toast.dismiss();
-				toast.error("Unable to remove member");
-			} else {
-				toast.dismiss();
-				toast.success("Member remove successfully");
-			}
+			toast.success("Invitation sent", {
+				id: toastId,
+				description: `An invitation email has been sent to ${email}.`,
+			});
+			handleInviteOpenChange(false);
 		} catch (error) {
-			logger.error("Failed to remove member", error);
-			toast.dismiss();
-			toast.error("Failed to remove member");
+			logger.error("Failed to invite member", error);
+			toast.error("Failed to send invitation", { id: toastId });
+		} finally {
+			setIsInviting(false);
 		}
 	}
 
-	async function handleCancelInvitation(invitationId: string) {
+	async function handleResendInvitation(invitation: PrismaInvitation) {
+		if (!activeOrganization || !isAdmin) return;
+
+		setResendingId(invitation.id);
+		const toastId = toast.loading("Resending invitation...");
+
 		try {
-			toast.loading("Canceling invite...");
+			const { data, error } = await authClient.organization.inviteMember({
+				email: invitation.email,
+				role: invitation.role as "admin" | "member",
+				organizationId: activeOrganization.id,
+				resend: true,
+			});
 
-			if (!activeOrganization) return;
+			if (error) {
+				toast.error(error.message || "Failed to resend invitation", {
+					id: toastId,
+				});
+				return;
+			}
 
-			const { data, success, error } =
-				await cancelInvitation(invitationId);
+			if (data?.id) {
+				removeInvite(data.id);
+				addInvitation(data as AuthInvitation);
+			}
+
+			toast.success("Invitation resent", { id: toastId });
+		} catch (error) {
+			logger.error("Failed to resend invitation", error);
+			toast.error("Failed to resend invitation", { id: toastId });
+		} finally {
+			setResendingId(null);
+		}
+	}
+
+	async function handleCancelInvitation() {
+		if (!inviteToCancel) return;
+
+		setIsCancellingInvite(true);
+		const toastId = toast.loading("Cancelling invitation...");
+
+		try {
+			const { data, success, error } = await cancelInvitation(
+				inviteToCancel.id
+			);
+
+			if (!success) {
+				logger.error("Failed to cancel invitation", error);
+				toast.error("Failed to cancel invitation", { id: toastId });
+				return;
+			}
 
 			if (data) {
 				removeInvite(data.id);
 			}
 
-			if (!success) {
-				logger.error("Error canceling Invite:", error);
-				toast.dismiss();
-				toast.error("Failed to can invite");
+			toast.success("Invitation cancelled", { id: toastId });
+			setInviteToCancel(null);
+		} catch (error) {
+			logger.error("Failed to cancel invitation", error);
+			toast.error("Failed to cancel invitation", { id: toastId });
+		} finally {
+			setIsCancellingInvite(false);
+		}
+	}
+
+	function openRoleDialog(member: Member) {
+		setRoleMember(member);
+		setRoleValue(member.role === "admin" ? "admin" : "member");
+	}
+
+	async function handleSaveRole() {
+		if (!roleMember || !activeOrganization) return;
+
+		setIsSavingRole(true);
+		const toastId = toast.loading("Updating member role...");
+
+		try {
+			const { data, success, error } = await updateMemberRole(
+				roleMember.id,
+				activeOrganization.id,
+				roleValue
+			);
+
+			if (!success || !data) {
+				logger.error("Failed to update member role", error);
+				toast.error("Failed to update member role", { id: toastId });
 				return;
 			}
 
-			toast.dismiss();
-			toast.success("Invite canceled successfully");
+			const updatedUser = await getUser(data.userId);
+			updateMember({
+				...data,
+				user:
+					(updatedUser?.data as MemberUser | undefined) ??
+					roleMember.user,
+			});
+
+			toast.success("Role updated", {
+				id: toastId,
+				description: `${roleMember.user.name} is now ${
+					roleValue === "admin" ? "an" : "a"
+				} ${roleValue}.`,
+			});
+			setRoleMember(null);
 		} catch (error) {
-			logger.error("Error handling invitation cancelation:", error);
-			toast.dismiss();
-			toast.error("Failed to cancel invite");
+			logger.error("Failed to update member role", error);
+			toast.error("Failed to update member role", { id: toastId });
+		} finally {
+			setIsSavingRole(false);
+		}
+	}
+
+	async function handleRemoveMember() {
+		if (!memberToRemove || !activeOrganization) return;
+
+		setIsRemovingMember(true);
+		const toastId = toast.loading("Removing member...");
+
+		try {
+			const { data, success, error } = await removeMember(
+				activeOrganization.id,
+				memberToRemove.id
+			);
+
+			if (!success || !data) {
+				logger.error("Failed to remove member", error);
+				toast.error("Unable to remove member", { id: toastId });
+				return;
+			}
+
+			removeMemberState(data.member.id);
+			toast.success("Member removed", { id: toastId });
+			setMemberToRemove(null);
+		} catch (error) {
+			logger.error("Failed to remove member", error);
+			toast.error("Failed to remove member", { id: toastId });
+		} finally {
+			setIsRemovingMember(false);
 		}
 	}
 
 	return (
-		<div className="space-y-6">
-			{/* Header */}
-			<Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-					<div>
-						<h1 className="text-lg sm:text-xl font-semibold text-foreground">
-							User Management
-						</h1>
-						<p className="text-sm text-muted-foreground">
-							{members?.length || 0} users
-						</p>
-					</div>
-					<DialogTrigger asChild>
-						<Button
-							disabled={!isAdmin}
-							className="w-full sm:w-auto"
-						>
-							<Users className="w-4 h-4 mr-2" />
-							<span>Invite User</span>
-						</Button>
-					</DialogTrigger>
-				</div>
-				{/* Create Dialog Content */}
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Invite User</DialogTitle>
-						<DialogDescription>
-							Invite a new user to your workspace.
+		<div className="mx-auto w-full max-w-[1040px] space-y-6 p-6 md:p-8">
+			<Dialog open={isInviteOpen} onOpenChange={handleInviteOpenChange}>
+				<SettingsHeader
+					title="Users"
+					subtitle={`${members.length} ${
+						members.length === 1 ? "user" : "users"
+					} in this workspace`}
+					action={
+						isAdmin ? (
+							<DialogTrigger asChild>
+								<Button className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90">
+									<Plus className="size-4" />
+									Invite User
+								</Button>
+							</DialogTrigger>
+						) : undefined
+					}
+				/>
+
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Invite a user
+						</DialogTitle>
+						<DialogDescription className="mt-2 text-sm text-muted-foreground">
+							Send an invitation to join this workspace.
 						</DialogDescription>
 					</DialogHeader>
-					<InvitationForm onSuccess={() => setIsInviteOpen(false)} />
+
+					{subscriptionTier === "free" ? (
+						<div className="mt-5 rounded-xl bg-muted p-4">
+							<p className="text-sm font-semibold">
+								Upgrade to invite your team
+							</p>
+							<p className="mt-1 text-[13px] text-muted-foreground">
+								Team invitations are available on Pro plans.
+								Upgrade to collaborate with your team.
+							</p>
+							<Link
+								href="/dashboard/settings/billing"
+								className="mt-4 inline-flex min-h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-paper transition-colors hover:bg-ink/90"
+							>
+								View plans
+							</Link>
+						</div>
+					) : (
+						<form onSubmit={handleInvite}>
+							<label
+								htmlFor="invite-email"
+								className="mt-5 block text-sm font-medium"
+							>
+								Work email
+							</label>
+							<Input
+								id="invite-email"
+								type="email"
+								value={inviteEmail}
+								onChange={(event) =>
+									setInviteEmail(event.target.value)
+								}
+								placeholder="teammate@company.com"
+								className="mt-2 h-12 rounded-xl border-border bg-background px-4 text-[15px]"
+								autoComplete="email"
+								required
+							/>
+							<div className="mt-6 flex flex-wrap justify-end gap-3">
+								<Button
+									type="button"
+									variant="secondary"
+									onClick={() => handleInviteOpenChange(false)}
+									disabled={isInviting}
+									className="h-11 rounded-full px-6 text-sm font-semibold"
+								>
+									Cancel
+								</Button>
+								<Button
+									type="submit"
+									disabled={isInviting}
+									className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
+								>
+									{isInviting ? (
+										<Loader2 className="size-4 animate-spin" />
+									) : (
+										<Send className="size-4" />
+									)}
+									Send invite
+								</Button>
+							</div>
+						</form>
+					)}
+
+					{subscriptionTier === "free" && (
+						<div className="mt-6 flex justify-end">
+							<Button
+								type="button"
+								variant="secondary"
+								onClick={() => handleInviteOpenChange(false)}
+								className="h-11 rounded-full px-6 text-sm font-semibold"
+							>
+								Cancel
+							</Button>
+						</div>
+					)}
 				</DialogContent>
 			</Dialog>
 
-			{/* Stats Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Total Users
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-semibold">
-							{members?.length}
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Admins
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-semibold">
-							{members?.filter((u) => u.role === "admin").length}
-						</div>
-						<div className="text-xs text-muted-foreground">
-							Admin users
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Regular Users
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-semibold">
-							{members?.filter((u) => u.role === "member").length}
-						</div>
-						<div className="text-xs text-muted-foreground">
-							Standard users
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Pending Invites
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-semibold">
-							{invitations?.filter(
-								(inv) => inv.status === "pending"
-							).length || 0}
-						</div>
-						<div className="text-xs text-muted-foreground">
-							Awaiting response
-						</div>
-					</CardContent>
-				</Card>
-			</div>
-
-			{/* Pending Invitations */}
-			{invitations &&
-				invitations?.filter((inv) => inv.status === "pending").length >
-					0 && (
-					<div className="space-y-4">
-						<h2 className="text-lg font-semibold">
-							Pending Invitations
-						</h2>
-						<div className="grid gap-4">
-							{invitations
-								?.filter((inv) => inv.status === "pending")
-								.map((invitation) => (
-									<Card key={invitation.id}>
-										<CardContent className="p-6">
-											<div className="flex items-center justify-between">
-												<div className="flex items-center gap-4">
-													<Avatar className="h-12 w-12">
-														<AvatarFallback className="bg-muted text-muted-foreground font-medium">
-															{invitation.email
-																.split("@")[0]
-																.slice(0, 2)
-																.toUpperCase()}
-														</AvatarFallback>
-													</Avatar>
-													<div>
-														<div className="flex items-center gap-2">
-															<h3 className="font-medium">
-																{
-																	invitation.email
-																}
-															</h3>
-															<Badge
-																variant="outline"
-																className="text-muted-foreground border-border"
-															>
-																{
-																	invitation.role
-																}
-															</Badge>
-															<Badge
-																variant="secondary"
-																className="text-xs bg-muted text-muted-foreground"
-															>
-																Pending
-															</Badge>
-														</div>
-														<div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-															<div className="flex items-center gap-1">
-																<Clock className="w-3 h-3" />
-																Expires{" "}
-																{format(
-																	invitation.expiresAt,
-																	"MMM dd, yyyy"
-																)}
-															</div>
-															{/* <div className="flex items-center gap-1">
-                                                                <User className="w-3 h-3" />
-                                                                By{" "}
-                                                                {
-                                                                    invitation
-                                                                        .invitedBy
-                                                                        ?.name
-                                                                }
-                                                            </div> */}
-														</div>
-													</div>
-												</div>
-												<div className="flex gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														// onClick={() =>
-														// 	handleResendInvitation(
-														// 		invitation.id
-														// 	)
-														// }
-														disabled={!isAdmin}
-													>
-														<Send className="w-3 h-3 mr-1" />
-														Resend
-													</Button>
-													<AlertDialog>
-														<AlertDialogTrigger
-															asChild
-														>
-															<Button
-																variant="outline"
-																size="sm"
-																disabled={
-																	!isAdmin
-																}
-															>
-																<X className="w-3 h-3 mr-1" />
-																Cancel
-															</Button>
-														</AlertDialogTrigger>
-														<AlertDialogContent>
-															<AlertDialogHeader>
-																<AlertDialogTitle>
-																	Cancel
-																	Invitation?
-																</AlertDialogTitle>
-																<AlertDialogDescription>
-																	This will
-																	cancel the
-																	pending
-																	invitation
-																	for{" "}
-																	<span className="font-medium">
-																		{
-																			invitation.email
-																		}
-																	</span>
-																	. They will
-																	no longer be
-																	able to join
-																	using this
-																	invitation
-																	link.
-																</AlertDialogDescription>
-															</AlertDialogHeader>
-															<AlertDialogFooter>
-																<AlertDialogCancel>
-																	Keep
-																	Invitation
-																</AlertDialogCancel>
-																<AlertDialogAction
-																	disabled={
-																		!isAdmin
-																	}
-																	onClick={() =>
-																		handleCancelInvitation(
-																			invitation.id
-																		)
-																	}
-																	className="bg-destructive hover:bg-destructive/90"
-																>
-																	Cancel
-																	Invitation
-																</AlertDialogAction>
-															</AlertDialogFooter>
-														</AlertDialogContent>
-													</AlertDialog>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-								))}
-						</div>
-					</div>
-				)}
-
-			{/* Users List */}
-			{members.length > 0 && (
-				<div className="space-y-4">
-					<h2 className="text-lg font-semibold">Team Members</h2>
-					<div className="grid gap-4">
-						{members?.map((member) => (
-							<Card key={member.id}>
-								<CardContent className="p-6">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-4">
-											<Avatar className="h-12 w-12">
-												<AvatarFallback className="bg-primary text-primary-foreground font-medium">
-													{member.user.name
-														.split(" ")
-														.map((n) => n[0])
-														.join("")}
-												</AvatarFallback>
-											</Avatar>
-											<div>
-												<div className="flex items-center gap-2">
-													<h3 className="font-medium">
-														{member.user.name}
-													</h3>
-													<Badge
-														variant={
-															member.role ===
-															"admin"
-																? "default"
-																: "secondary"
-														}
-													>
-														{member.role}
-													</Badge>
-													{member.userId ===
-														user?.id && (
-														<Badge
-															variant="outline"
-															className="text-xs"
-														>
-															You
-														</Badge>
-													)}
-												</div>
-												<div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-													<div className="flex items-center gap-1">
-														<Mail className="w-3 h-3" />
-														{member.user.email}
-													</div>
-													<div className="flex items-center gap-1">
-														<Calendar className="w-3 h-3" />
-														Joined{" "}
-														{format(
-															member.createdAt,
-															"MMM yyyy"
-														)}
-													</div>
-												</div>
-											</div>
-										</div>
-										<div className="flex gap-2">
-											<Dialog
-												open={isMemberOpen}
-												onOpenChange={setIsMemberOpen}
-											>
-												<DialogTrigger asChild>
-													<Button
-														variant="outline"
-														size="sm"
-														disabled={
-															member.userId ===
-																user?.id ||
-															!isAdmin
-														}
-													>
-														Edit
-													</Button>
-												</DialogTrigger>
-												{/* Update Dialog Content */}
-												<DialogContent>
-													<DialogHeader>
-														<DialogTitle>
-															Update Member
-														</DialogTitle>
-														<DialogDescription>
-															Update member role
-															of your workspace.
-														</DialogDescription>
-													</DialogHeader>
-													<UpdateMemberRoleForm
-														defaultValues={{
-															email: member.user
-																.email,
-															role: member.role as
-																| "member"
-																| "admin",
-														}}
-														memberId={member.id}
-														onSuccess={() =>
-															setIsMemberOpen(
-																false
-															)
-														}
-													/>
-												</DialogContent>
-											</Dialog>
-											<AlertDialog>
-												<AlertDialogTrigger asChild>
-													<Button
-														variant="outline"
-														size="sm"
-														disabled={
-															member.userId ===
-																user?.id ||
-															!isAdmin
-														}
-													>
-														Remove
-													</Button>
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>
-															Are you absolutely
-															sure?
-														</AlertDialogTitle>
-														<AlertDialogDescription>
-															This action cannot
-															be undone. This will
-															permanently remove
-															user from Workspace.
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel>
-															Cancel
-														</AlertDialogCancel>
-														<AlertDialogAction
-															onClick={() =>
-																handleRemoveMember(
-																	member.id
-																)
-															}
-														>
-															Continue
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						))}
-					</div>
-				</div>
-			)}
-
-			{members?.length === 0 && (
-				<div className="text-center py-12">
-					<Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-					<p className="text-muted-foreground">
-						No users found for this workspace.
+			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+				<div className="rounded-2xl border border-border bg-background p-5">
+					<p className="text-[13px] text-muted-foreground">
+						Total users
+					</p>
+					<p className="mt-3 font-display text-[32px] font-semibold leading-none tracking-[-0.04em]">
+						{members.length}
+					</p>
+					<p className="mt-2 text-xs text-muted-foreground">
+						In this workspace
 					</p>
 				</div>
+				<div className="rounded-2xl border border-border bg-background p-5">
+					<p className="text-[13px] text-muted-foreground">Admins</p>
+					<p className="mt-3 font-display text-[32px] font-semibold leading-none tracking-[-0.04em]">
+						{adminCount}
+					</p>
+					<p className="mt-2 text-xs text-muted-foreground">
+						Full access
+					</p>
+				</div>
+				<div className="rounded-2xl border border-border bg-background p-5">
+					<p className="text-[13px] text-muted-foreground">
+						Regular users
+					</p>
+					<p className="mt-3 font-display text-[32px] font-semibold leading-none tracking-[-0.04em]">
+						{memberCount}
+					</p>
+					<p className="mt-2 text-xs text-muted-foreground">
+						Standard access
+					</p>
+				</div>
+				<div className="rounded-2xl bg-night p-5 text-paper">
+					<p className="text-[13px] text-[#A8A8A2]">
+						Pending invites
+					</p>
+					<p className="mt-3 font-display text-[32px] font-semibold leading-none tracking-[-0.04em] text-lime">
+						{pendingInvitations.length}
+					</p>
+					<p className="mt-2 text-xs text-[#A8A8A2]">
+						Awaiting response
+					</p>
+				</div>
+			</div>
+
+			{pendingInvitations.length > 0 && (
+				<section className="space-y-3">
+					<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+						Pending invitations
+					</h2>
+					<div className="space-y-3">
+						{pendingInvitations.map((invitation) => (
+							<div
+								key={invitation.id}
+								className="flex flex-wrap items-center gap-4 rounded-2xl border border-dashed border-border bg-background p-5"
+							>
+								<div className="flex min-w-0 flex-1 items-center gap-4">
+									<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted font-display text-lg font-semibold text-muted-foreground">
+										?
+									</span>
+									<div className="min-w-0">
+										<p className="truncate text-[15px] font-semibold">
+											{invitation.email}
+										</p>
+										<p className="mt-0.5 text-[13px] text-muted-foreground">
+											Invited as{" "}
+											{roleLabel(invitation.role)} -{" "}
+											{invitationExpiry(invitation.expiresAt)}
+										</p>
+									</div>
+								</div>
+								<div className="flex shrink-0 gap-2">
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={() =>
+											handleResendInvitation(invitation)
+										}
+										disabled={
+											!isAdmin ||
+											resendingId === invitation.id
+										}
+										className="h-10 rounded-full px-4 text-sm font-semibold"
+									>
+										{resendingId === invitation.id ? (
+											<Loader2 className="size-3.5 animate-spin" />
+										) : (
+											<Send className="size-3.5" />
+										)}
+										Resend
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() =>
+											setInviteToCancel(invitation)
+										}
+										disabled={!isAdmin}
+										className="h-10 rounded-full px-4 text-sm font-semibold"
+									>
+										<X className="size-3.5" />
+										Cancel invite
+									</Button>
+								</div>
+							</div>
+						))}
+					</div>
+				</section>
 			)}
+
+			<section className="space-y-3">
+				<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+					Team members
+				</h2>
+
+				{members.length === 0 ? (
+					<div className="rounded-2xl border border-border bg-background px-6 py-14 text-center">
+						<Users className="mx-auto size-8 text-muted-foreground" />
+						<p className="mt-3 text-sm text-muted-foreground">
+							No users found for this workspace.
+						</p>
+					</div>
+				) : (
+					<div className="space-y-3">
+						{members.map((member) => {
+							const isSelf = member.userId === currentUserId;
+							const canManage = isAdmin && !isSelf;
+
+							return (
+								<div
+									key={member.id}
+									className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-background p-5"
+								>
+									<div className="flex min-w-0 flex-1 items-center gap-4">
+										<span
+											className={`flex size-11 shrink-0 items-center justify-center rounded-full font-display text-sm font-semibold ${getAvatarStyle(
+												member.user.name
+											)}`}
+										>
+											{getInitials(member.user.name)}
+										</span>
+										<div className="min-w-0">
+											<div className="flex flex-wrap items-center gap-2">
+												<p className="truncate text-[15px] font-semibold">
+													{member.user.name}
+												</p>
+												{isSelf && (
+													<span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+														You
+													</span>
+												)}
+												<span
+													className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+														member.role === "admin"
+															? "bg-ink text-paper"
+															: "bg-muted text-foreground"
+													}`}
+												>
+													{roleLabel(member.role)}
+												</span>
+											</div>
+											<div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+												<span className="flex items-center gap-1.5">
+													<Mail className="size-3.5" />
+													{member.user.email}
+												</span>
+												<span className="flex items-center gap-1.5">
+													<Calendar className="size-3.5" />
+													Joined{" "}
+													{format(
+														new Date(member.createdAt),
+														"MMM d, yyyy"
+													)}
+												</span>
+											</div>
+										</div>
+									</div>
+									<div className="flex shrink-0 gap-2">
+										<Button
+											variant="secondary"
+											size="sm"
+											onClick={() => openRoleDialog(member)}
+											disabled={!canManage}
+											className="h-10 rounded-full px-4 text-sm font-semibold"
+										>
+											Edit role
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setMemberToRemove(member)
+											}
+											disabled={!canManage}
+											className="h-10 rounded-full px-4 text-sm font-semibold"
+										>
+											Remove
+										</Button>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</section>
+
+			{!isAdmin && (
+				<div className="rounded-xl bg-muted px-4 py-3 text-[13px] text-muted-foreground">
+					Only workspace admins can invite, edit or remove users.
+				</div>
+			)}
+
+			<Dialog
+				open={!!roleMember}
+				onOpenChange={(open) => {
+					if (!open) setRoleMember(null);
+				}}
+			>
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Change role for {roleMember?.user.name}
+						</DialogTitle>
+						<DialogDescription className="mt-2 text-sm text-muted-foreground">
+							Choose what this person can do in the workspace.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-5 space-y-2.5">
+						{ROLE_OPTIONS.map((option) => {
+							const selected = roleValue === option.value;
+
+							return (
+								<label
+									key={option.value}
+									className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition-colors ${
+										selected
+											? "border-ink bg-muted"
+											: "border-border bg-background hover:bg-muted/60"
+									}`}
+								>
+									<input
+										type="radio"
+										name="member-role"
+										value={option.value}
+										checked={selected}
+										onChange={() =>
+											setRoleValue(option.value)
+										}
+										className="sr-only"
+									/>
+									<span
+										className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+											selected
+												? "border-ink"
+												: "border-border"
+										}`}
+									>
+										{selected && (
+											<span className="size-2.5 rounded-full bg-ink" />
+										)}
+									</span>
+									<span>
+										<span className="block text-sm font-semibold">
+											{option.label}
+										</span>
+										<span className="mt-0.5 block text-[13px] text-muted-foreground">
+											{option.description}
+										</span>
+									</span>
+								</label>
+							);
+						})}
+					</div>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={() => setRoleMember(null)}
+							disabled={isSavingRole}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={handleSaveRole}
+							disabled={isSavingRole}
+							className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
+						>
+							{isSavingRole ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : (
+								<ShieldCheck className="size-4" />
+							)}
+							Save role
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={!!memberToRemove}
+				onOpenChange={(open) => {
+					if (!open) setMemberToRemove(null);
+				}}
+			>
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Remove {memberToRemove?.user.name}?
+						</DialogTitle>
+						<DialogDescription className="mt-2.5 text-sm text-muted-foreground">
+							They will lose access to this workspace right away.
+							You can invite them again later.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={() => setMemberToRemove(null)}
+							disabled={isRemovingMember}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={handleRemoveMember}
+							disabled={isRemovingMember}
+							className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
+						>
+							{isRemovingMember && (
+								<Loader2 className="size-4 animate-spin" />
+							)}
+							Remove user
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={!!inviteToCancel}
+				onOpenChange={(open) => {
+					if (!open) setInviteToCancel(null);
+				}}
+			>
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Cancel invitation?
+						</DialogTitle>
+						<DialogDescription className="mt-2.5 text-sm text-muted-foreground">
+							This cancels the pending invitation for{" "}
+							<span className="font-semibold text-foreground">
+								{inviteToCancel?.email}
+							</span>
+							. They will no longer be able to join using this
+							link.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={() => setInviteToCancel(null)}
+							disabled={isCancellingInvite}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
+							Keep invitation
+						</Button>
+						<Button
+							type="button"
+							onClick={handleCancelInvitation}
+							disabled={isCancellingInvite}
+							className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
+						>
+							{isCancellingInvite && (
+								<Loader2 className="size-4 animate-spin" />
+							)}
+							Cancel invitation
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
