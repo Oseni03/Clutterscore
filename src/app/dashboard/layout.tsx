@@ -23,7 +23,6 @@ const ROUTE_LABELS = [
 	{ prefix: "/dashboard/audit-logs", label: "Audit logs" },
 	{ prefix: "/dashboard/files", label: "Files" },
 	{ prefix: "/dashboard/storage", label: "Storage" },
-	{ prefix: "/dashboard/settings/integrations", label: "Integrations" },
 	{ prefix: "/dashboard/settings/users", label: "Members" },
 	{ prefix: "/dashboard/settings/billing", label: "Billing" },
 	{ prefix: "/dashboard/settings", label: "Settings" },

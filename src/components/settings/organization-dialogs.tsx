@@ -1,17 +1,8 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -19,6 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { UpdateOrganizationForm } from "../forms/update-organization-form";
 import { Organization } from "@prisma/client";
 
@@ -47,111 +39,153 @@ export function OrganizationDialogs({
 	onResetConfirm,
 	onDeleteConfirm,
 }: OrganizationDialogsProps) {
+	const [typedName, setTypedName] = useState("");
+
+	useEffect(() => {
+		if (!deleteDialogOpen) setTypedName("");
+	}, [deleteDialogOpen]);
+
+	const canDelete = typedName.trim() === organization.name;
+
 	return (
 		<>
-			{/* Update Dialog */}
 			<Dialog open={updateDialogOpen} onOpenChange={onUpdateDialogChange}>
-				<DialogContent className="sm:max-w-[500px]">
-					<DialogHeader>
-						<DialogTitle>Update Workspace</DialogTitle>
-						<DialogDescription>
-							Make changes to your workspace information here.
-							Click save when you&rsquo;re done.
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Update workspace
+						</DialogTitle>
+						<DialogDescription className="mt-2 text-sm text-muted-foreground">
+							Update your workspace name and target score.
 						</DialogDescription>
 					</DialogHeader>
-					<UpdateOrganizationForm organization={organization} />
+					<UpdateOrganizationForm
+						organization={organization}
+						onSuccess={() => onUpdateDialogChange(false)}
+						onCancel={() => onUpdateDialogChange(false)}
+					/>
 				</DialogContent>
 			</Dialog>
 
-			{/* Reset Data Alert Dialog */}
-			<AlertDialog
-				open={resetDialogOpen}
-				onOpenChange={onResetDialogChange}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Reset All Organization Data?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently delete{" "}
-							<strong>all data</strong> for{" "}
-							<strong>{organization.name}</strong>:
-							<br />
-							<br />
-							• Audit results & trends
-							<br />
-							• Playbooks & execution history
-							<br />
-							• Files, integrations, and settings
-							<br />
-							<br />
-							Your organization will remain, but all progress will
-							be lost. This action cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isLoading}>
+			<Dialog open={resetDialogOpen} onOpenChange={onResetDialogChange}>
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Reset workspace data?
+						</DialogTitle>
+						<DialogDescription className="mt-2.5 text-sm text-muted-foreground">
+							This clears your audits, files, ClutterScore
+							history, playbooks and audit logs. Connected apps
+							stay connected.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-4 flex gap-3 rounded-xl bg-muted px-4 py-3.5 text-[13px]">
+						<span className="mt-1.5 size-2 shrink-0 rounded-full bg-[#F4B183]" />
+						<p>
+							<span className="font-semibold">
+								This cannot be undone.
+							</span>{" "}
+							<span className="text-muted-foreground">
+								Audits, files, playbooks and logs will be
+								permanently removed.
+							</span>
+						</p>
+					</div>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							variant="secondary"
+							onClick={() => onResetDialogChange(false)}
+							disabled={isLoading}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
 							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
+						</Button>
+						<Button
 							onClick={onResetConfirm}
 							disabled={isLoading}
-							className="bg-destructive hover:bg-destructive/90"
+							className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
 						>
 							{isLoading ? (
 								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									<Loader2 className="size-4 animate-spin" />
 									Resetting...
 								</>
 							) : (
-								"Yes, Reset Everything"
+								"Reset data"
 							)}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 
-			{/* Delete Alert Dialog */}
-			<AlertDialog
+			<Dialog
 				open={deleteDialogOpen}
 				onOpenChange={onDeleteDialogChange}
 			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Are you absolutely sure?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							This action cannot be undone. This will permanently
-							delete the workspace{" "}
-							<strong className="text-foreground">
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Delete this workspace?
+						</DialogTitle>
+						<DialogDescription className="mt-2.5 text-sm text-muted-foreground">
+							This permanently deletes{" "}
+							<span className="font-semibold text-foreground">
 								{organization.name}
-							</strong>{" "}
-							and remove all associated data from our servers.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isLoading}>
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={onDeleteConfirm}
+							</span>
+							, its members and all of its data. Type the
+							workspace name to confirm.
+						</DialogDescription>
+					</DialogHeader>
+
+					<label htmlFor="workspace-confirm" className="sr-only">
+						Type workspace name
+					</label>
+					<Input
+						id="workspace-confirm"
+						value={typedName}
+						onChange={(event) => setTypedName(event.target.value)}
+						placeholder={organization.name}
+						className="mt-4 h-12 rounded-xl border-border bg-background px-4 text-[15px]"
+					/>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							variant="secondary"
+							onClick={() => onDeleteDialogChange(false)}
 							disabled={isLoading}
-							className="bg-destructive hover:bg-destructive/90"
+							className="h-11 rounded-full px-6 text-sm font-semibold"
 						>
-							{isLoading ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Deleting...
-								</>
-							) : (
-								"Delete Workspace"
+							Cancel
+						</Button>
+						<button
+							type="button"
+							onClick={onDeleteConfirm}
+							disabled={!canDelete || isLoading}
+							className={`inline-flex min-h-11 items-center gap-2 rounded-full px-6 text-sm font-semibold transition-colors ${
+								canDelete
+									? "bg-ink text-paper hover:bg-ink/90"
+									: "bg-border text-muted-foreground"
+							}`}
+						>
+							{isLoading && (
+								<Loader2 className="size-4 animate-spin" />
 							)}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+							Delete workspace
+						</button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }

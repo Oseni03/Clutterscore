@@ -1,64 +1,75 @@
 "use client";
 
-import React from "react";
-import { Shield } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Check } from "lucide-react";
 
 interface SubscriptionDetailsCardProps {
-	subscriptionBadge: {
-		variant: "secondary" | "default";
-		text: string;
-		className?: string;
-	};
-	planFeatures?: string[];
+	planLabel: string;
+	isFree: boolean;
 }
 
 export function SubscriptionDetailsCard({
-	subscriptionBadge,
-	planFeatures,
+	planLabel,
+	isFree,
 }: SubscriptionDetailsCardProps) {
-	return (
-		<Card>
-			<CardHeader>
-				<div className="flex items-center gap-3">
-					<Shield className="w-6 h-6 text-primary" />
-					<CardTitle>Subscription Details</CardTitle>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="grid gap-4 sm:grid-cols-2">
-					<div className="space-y-2">
-						<Label className="text-muted-foreground">
-							Current Plan
-						</Label>
-						<div className="flex items-center gap-2">
-							<Badge
-								className={cn(
-									"capitalize font-medium",
-									subscriptionBadge.className
-								)}
-								variant={subscriptionBadge.variant}
-							>
-								<Shield className="w-3 h-3 mr-1" />
-								{subscriptionBadge.text}
-							</Badge>
-						</div>
-					</div>
+	const features = [
+		{ label: "Up to 3 integrations", on: true },
+		{ label: "ClutterScore and waste estimate", on: true },
+		{ label: "Approve-first playbooks", on: true },
+		{ label: "Execute playbooks", on: !isFree },
+		{ label: "Unlimited audits", on: !isFree },
+		{ label: "More members", on: !isFree },
+	];
 
-					<div className="space-y-2">
-						<Label className="text-muted-foreground">
-							Plan Features
-						</Label>
-						<p className="text-sm text-foreground">
-							{planFeatures?.join(", ") ||
-								"Basic features included"}
-						</p>
-					</div>
+	return (
+		<div className="rounded-xl border border-border bg-background p-6">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div>
+					<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+						Subscription
+					</h2>
+					<p className="text-[13px] text-muted-foreground">
+						You are on the {planLabel} plan.
+					</p>
 				</div>
-			</CardContent>
-		</Card>
+				<Link
+					href="/dashboard/settings/billing"
+					className="inline-flex min-h-11 items-center rounded-full bg-lime px-5 text-sm font-semibold text-ink transition-opacity hover:opacity-85"
+				>
+					{isFree ? "Upgrade plan" : "Manage plan"}
+				</Link>
+			</div>
+
+			<div className="mt-5 flex flex-wrap gap-3">
+				{features.map((feature) => (
+					<div
+						key={feature.label}
+						className="flex flex-1 basis-[200px] items-center gap-3 rounded-xl bg-muted px-4 py-3.5 text-sm"
+					>
+						<span
+							className={`flex size-[18px] shrink-0 items-center justify-center rounded-md ${
+								feature.on ? "bg-ink" : "bg-border"
+							}`}
+						>
+							<Check
+								className={`size-3 ${
+									feature.on
+										? "text-lime"
+										: "text-transparent"
+								}`}
+								strokeWidth={3.5}
+							/>
+						</span>
+						<span
+							className={
+								feature.on ? "" : "text-muted-foreground"
+							}
+						>
+							{feature.label}
+						</span>
+					</div>
+				))}
+			</div>
+		</div>
 	);
 }

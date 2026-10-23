@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
 	Form,
 	FormControl,
-	FormDescription,
 	FormField,
 	FormItem,
 	FormLabel,
@@ -16,9 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Building2, Loader2, Target } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Organization } from "@prisma/client";
-import { DialogFooter } from "../ui/dialog";
 import { useOrganizationStore } from "@/zustand/providers/organization-store-provider";
 import { updateOrganization } from "@/server/organizations";
 import { logger } from "@/lib/logger";
@@ -34,11 +32,17 @@ const formSchema = z.object({
 		.max(100, "Target score must be at most 100"),
 });
 
+interface UpdateOrganizationFormProps {
+	organization: Organization;
+	onSuccess?: () => void;
+	onCancel?: () => void;
+}
+
 export function UpdateOrganizationForm({
 	organization,
-}: {
-	organization: Organization;
-}) {
+	onSuccess,
+	onCancel,
+}: UpdateOrganizationFormProps) {
 	const { updateOrganization: updateOrganizationState } =
 		useOrganizationStore((state) => state);
 	const [isLoading, setIsLoading] = useState(false);
@@ -47,33 +51,33 @@ export function UpdateOrganizationForm({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			name: organization.name,
-			targetScore: organization.targetScore || 75,
+			targetScore: organization.targetScore ?? 75,
 		},
 	});
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
-		try {
-			toast.loading("Updating workspace...");
-			setIsLoading(true);
+		const toastId = toast.loading("Updating workspace...");
+		setIsLoading(true);
 
+		try {
 			const { data, success, error } = await updateOrganization(
 				organization.id,
 				values
 			);
 
 			if (!success || !data) {
-				toast.dismiss();
-				toast.error(error || "Failed to update workspace");
+				toast.error(error || "Failed to update workspace", {
+					id: toastId,
+				});
 				return;
 			}
 
 			updateOrganizationState(data as Organization);
-			toast.dismiss();
-			toast.success("Workspace updated successfully");
+			toast.success("Workspace updated", { id: toastId });
+			onSuccess?.();
 		} catch (error) {
 			logger.error("Failed to update workspace", error);
-			toast.dismiss();
-			toast.error("Failed to update workspace");
+			toast.error("Failed to update workspace", { id: toastId });
 		} finally {
 			setIsLoading(false);
 		}
@@ -81,26 +85,25 @@ export function UpdateOrganizationForm({
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+			<form
+				onSubmit={form.handleSubmit(onSubmit)}
+				className="mt-5 space-y-5"
+			>
 				<FormField
 					control={form.control}
 					name="name"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Workspace Name</FormLabel>
+							<FormLabel className="text-[13px] font-medium">
+								Workspace name
+							</FormLabel>
 							<FormControl>
-								<div className="relative">
-									<Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-									<Input
-										placeholder="My Workspace"
-										className="pl-10"
-										{...field}
-									/>
-								</div>
+								<Input
+									placeholder="My workspace"
+									className="h-12 rounded-xl border-border bg-background px-4 text-[15px]"
+									{...field}
+								/>
 							</FormControl>
-							<FormDescription>
-								The display name for your workspace
-							</FormDescription>
 							<FormMessage />
 						</FormItem>
 					)}
@@ -111,60 +114,54 @@ export function UpdateOrganizationForm({
 					name="targetScore"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Target Score</FormLabel>
+							<FormLabel className="text-[13px] font-medium">
+								Target ClutterScore
+							</FormLabel>
 							<FormControl>
-								<div className="relative">
-									<Target className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-									<Input
-										type="number"
-										min="0"
-										max="100"
-										placeholder="75"
-										className="pl-10"
-										{...field}
-										onChange={(e) =>
-											field.onChange(
-												parseInt(e.target.value) || 0
-											)
-										}
-									/>
-								</div>
+								<Input
+									type="number"
+									min="0"
+									max="100"
+									placeholder="75"
+									className="h-12 rounded-xl border-border bg-background px-4 text-[15px]"
+									{...field}
+									onChange={(event) =>
+										field.onChange(
+											parseInt(event.target.value) || 0
+										)
+									}
+								/>
 							</FormControl>
-							<FormDescription>
-								{`Your organization's target ClutterScore (0-100)`}
-							</FormDescription>
 							<FormMessage />
 						</FormItem>
 					)}
 				/>
 
-				<div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
-					<p className="font-medium text-foreground">
-						📝 Note about workspace URL
-					</p>
-					<p className="text-muted-foreground">
-						{`The workspace slug (URL) cannot be changed after
-						creation. If you need a different URL, you'll need to
-						create a new workspace.`}
-					</p>
-				</div>
-
-				<DialogFooter>
+				<div className="flex flex-wrap justify-end gap-3 pt-1">
+					<Button
+						type="button"
+						variant="secondary"
+						onClick={onCancel}
+						disabled={isLoading}
+						className="h-11 rounded-full px-6 text-sm font-semibold"
+					>
+						Cancel
+					</Button>
 					<Button
 						disabled={isLoading}
 						type="submit"
-						className="w-full sm:w-auto"
+						className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
 					>
 						{isLoading ? (
 							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								<Loader2 className="size-4 animate-spin" />
 								Updating...
 							</>
 						) : (
-							"Update Workspace"
+							"Save changes"
 						)}
 					</Button>
-				</DialogFooter>
+				</div>
 			</form>
 		</Form>
 	);
