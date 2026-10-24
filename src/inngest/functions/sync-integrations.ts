@@ -20,8 +20,8 @@ export const syncIntegrationsJob = inngest.createFunction(
 		id: "sync-integrations",
 		name: "Sync Tool Integrations",
 		retries: 2,
+		triggers: { event: "integrations/sync" },
 	},
-	{ event: "integrations/sync" },
 	async ({ event, step }) => {
 		const { organizationId, userId, source } = event.data;
 

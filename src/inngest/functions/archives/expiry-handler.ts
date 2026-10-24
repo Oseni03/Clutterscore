@@ -10,8 +10,8 @@ export const handleFileExpiring = inngest.createFunction(
 	{
 		id: "handle-file-expiring",
 		name: "Send expiry warning for individual file",
+		triggers: { event: "archive/file.expiring" },
 	},
-	{ event: "archive/file.expiring" },
 	async ({ event, step }) => {
 		const { archiveId, organizationId, fileName, daysRemaining } =
 			event.data;
@@ -125,8 +125,8 @@ export const sendFinalExpiryWarnings = inngest.createFunction(
 	{
 		id: "send-final-expiry-warnings",
 		name: "Send final 24-hour expiry warnings",
+		triggers: { cron: "0 10 * * *" }, // Daily at 10 AM UTC
 	},
-	{ cron: "0 10 * * *" }, // Daily at 10 AM UTC
 	async ({ step }) => {
 		// Find archives expiring in the next 24 hours
 		const expiringTomorrow = await step.run(

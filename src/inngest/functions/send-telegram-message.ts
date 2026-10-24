@@ -6,8 +6,8 @@ export const sendTelegramMessageJob = inngest.createFunction(
 		id: "send-telegram-messae",
 		name: "Send Telegram Message Actions",
 		retries: 1,
+		triggers: { event: "telegram/send-message" },
 	},
-	{ event: "telegram/send-message" },
 	async ({ event, step }) => {
 		const { bot_token, chat_id, text } = event.data;
 

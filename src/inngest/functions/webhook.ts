@@ -6,8 +6,8 @@ export const webhookHandler = inngest.createFunction(
 		id: "handle-webhook",
 		name: "Handle Webhook Event",
 		retries: 2,
+		triggers: { event: "handler/webhook" },
 	},
-	{ event: "handler/webhook" },
 	async ({ event, step }) => {
 		const { source, eventType, data } = event.data;
 

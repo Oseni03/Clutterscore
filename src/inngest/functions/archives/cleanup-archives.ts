@@ -12,8 +12,8 @@ export const cleanupExpiredArchives = inngest.createFunction(
 		id: "cleanup-expired-archives",
 		name: "Clean up expired archived files",
 		retries: 3,
+		triggers: { cron: "0 2 * * 0" }, // Every week at 2 AM UTC
 	},
-	{ cron: "0 2 * * 0" }, // Every week at 2 AM UTC
 	async ({ step }) => {
 		const archiveService = new ArchiveService();
 
@@ -147,8 +147,8 @@ export const sendExpiryWarnings = inngest.createFunction(
 	{
 		id: "send-expiry-warnings",
 		name: "Send warnings for expiring archives",
+		triggers: { cron: "0 9 * * *" }, // Daily at 9 AM UTC
 	},
-	{ cron: "0 9 * * *" }, // Daily at 9 AM UTC
 	async ({ step }) => {
 		// Find archives expiring in the next 7 days
 		const expiringSoon = await step.run(

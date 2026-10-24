@@ -7,8 +7,8 @@ export const sendEmailJob = inngest.createFunction(
 		id: "send-email",
 		name: "Send Email Actions",
 		retries: 2,
+		triggers: { event: "email/send" },
 	},
-	{ event: "email/send" },
 	async ({ event, step }) => {
 		const { to, subject, html } = event.data; // Change body to html
 

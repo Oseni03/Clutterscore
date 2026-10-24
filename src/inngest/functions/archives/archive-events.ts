@@ -11,8 +11,8 @@ export const handleArchiveCreated = inngest.createFunction(
 	{
 		id: "handle-archive-created",
 		name: "Process newly archived file",
+		triggers: { event: "archive/file.created" },
 	},
-	{ event: "archive/file.created" },
 	async ({ event, step }) => {
 		const { archiveId, organizationId, fileName } = event.data;
 
@@ -122,8 +122,8 @@ export const handleArchiveRestored = inngest.createFunction(
 	{
 		id: "handle-archive-restored",
 		name: "Process restored archive",
+		triggers: { event: "archive/file.restored" },
 	},
-	{ event: "archive/file.restored" },
 	async ({ event, step }) => {
 		const { archiveId, organizationId, fileName, source } = event.data;
 
@@ -214,8 +214,8 @@ export const batchArchiveFiles = inngest.createFunction(
 		concurrency: {
 			limit: 5, // Process 5 files at a time
 		},
+		triggers: { event: "playbook/executed" },
 	},
-	{ event: "playbook/executed" },
 	async ({ event, step }) => {
 		const { playbookId, organizationId, archivedFiles } = event.data;
 

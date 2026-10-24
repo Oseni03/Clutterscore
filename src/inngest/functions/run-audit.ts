@@ -12,8 +12,8 @@ export const runAuditJob = inngest.createFunction(
 		id: "run-audit",
 		name: "Run Organization Audit",
 		retries: 2,
+		triggers: { event: "audit/run" },
 	},
-	{ event: "audit/run" },
 	async ({ event, step }) => {
 		const { organizationId, userId } = event.data;
 

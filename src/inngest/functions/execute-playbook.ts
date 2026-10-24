@@ -11,8 +11,8 @@ export const executePlaybookJob = inngest.createFunction(
 		id: "execute-playbook",
 		name: "Execute Playbook Actions",
 		retries: 1, // Only retry once for playbook execution
+		triggers: { event: "playbook/execute" },
 	},
-	{ event: "playbook/execute" },
 	async ({ event, step }) => {
 		const { playbookId, userId, organizationId } = event.data;
 
