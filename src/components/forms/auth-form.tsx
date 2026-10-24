@@ -31,7 +31,8 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 	const pathname = usePathname();
 	const params = useSearchParams();
 	const [isLoading, setIsLoading] = useState<boolean>(false);
-	const [googleLoading, setGoogleLoading] = useState<boolean>(false);
+	// Google sign-in disabled
+	// const [googleLoading, setGoogleLoading] = useState<boolean>(false);
 	const [sentEmail, setSentEmail] = useState<string | null>(null);
 
 	const coupon = params.get("coupon");
@@ -44,25 +45,26 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 		},
 	});
 
-	const signInWithGoogle = async () => {
-		try {
-			setGoogleLoading(true);
-			await authClient.signIn.social({
-				provider: "google",
-				callbackURL: isLogin
-					? "/dashboard"
-					: coupon
-						? `/onboarding?coupon=${coupon}`
-						: "/onboarding",
-			});
-			toast.success("Redirecting to Google sign-in...");
-		} catch (error) {
-			logger.error("Error during Google sign-in:", error as Error);
-			toast.error("Failed to sign in with Google");
-		} finally {
-			setGoogleLoading(false);
-		}
-	};
+	// Google sign-in disabled
+	// const signInWithGoogle = async () => {
+	// 	try {
+	// 		setGoogleLoading(true);
+	// 		await authClient.signIn.social({
+	// 			provider: "google",
+	// 			callbackURL: isLogin
+	// 				? "/dashboard"
+	// 				: coupon
+	// 					? `/onboarding?coupon=${coupon}`
+	// 					: "/onboarding",
+	// 		});
+	// 		toast.success("Redirecting to Google sign-in...");
+	// 	} catch (error) {
+	// 		logger.error("Error during Google sign-in:", error as Error);
+	// 		toast.error("Failed to sign in with Google");
+	// 	} finally {
+	// 		setGoogleLoading(false);
+	// 	}
+	// };
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
@@ -139,6 +141,7 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 							: "Create an account, connect a tool, and see your ClutterScore in about 90 seconds."}
 					</p>
 
+					{/* Google sign-in disabled
 					<Button
 						variant="secondary"
 						type="button"
@@ -168,12 +171,13 @@ const AuthContent = ({ className, ...props }: React.ComponentProps<"div">) => {
 						or
 						<span className="h-px flex-1 bg-border" />
 					</div>
+					*/}
 
 					<FormField
 						control={form.control}
 						name="email"
 						render={({ field }) => (
-							<FormItem>
+							<FormItem className="mt-8">
 								<FormLabel className="text-[13px] font-medium">
 									Work email
 								</FormLabel>
