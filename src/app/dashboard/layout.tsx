@@ -131,7 +131,7 @@ export default function Page({
 					</span>
 					<NotificationDropdown />
 				</header>
-				<div className="flex flex-1 flex-col">
+				<div className="mx-auto flex w-full max-w-[1040px] flex-1 flex-col">
 					<DashboardStoreProvider>{children}</DashboardStoreProvider>
 				</div>
 			</SidebarInset>

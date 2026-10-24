@@ -329,7 +329,7 @@ export default function MembersCard() {
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-[1040px] space-y-6 p-6 md:p-8">
+		<div className="space-y-6 p-6 md:p-8">
 			<Dialog open={isInviteOpen} onOpenChange={handleInviteOpenChange}>
 				<SettingsHeader
 					title="Users"
