@@ -35,9 +35,9 @@ export function useIntegrations() {
 	);
 	const subscriptionTier = activeOrganization?.subscriptionTier || "free";
 
-	const fetchIntegrations = async () => {
+	const fetchIntegrations = async (showLoading = true) => {
 		try {
-			setIsLoading(true);
+			if (showLoading) setIsLoading(true);
 			const response = await fetch("/api/integrations");
 			const data = await response.json();
 
@@ -51,7 +51,7 @@ export function useIntegrations() {
 			setError((err as Error).message);
 			toast.error((err as Error).message);
 		} finally {
-			setIsLoading(false);
+			if (showLoading) setIsLoading(false);
 		}
 	};
 
@@ -95,7 +95,7 @@ export function useIntegrations() {
 			}
 
 			toast.success(data.message);
-			await fetchIntegrations();
+			await fetchIntegrations(false);
 		} catch (err) {
 			toast.error((err as Error).message);
 			throw err;
@@ -117,7 +117,7 @@ export function useIntegrations() {
 			}
 
 			toast.success(data.message);
-			await fetchIntegrations();
+			await fetchIntegrations(false);
 		} catch (err) {
 			toast.error((err as Error).message);
 			throw err;
@@ -139,7 +139,29 @@ export function useIntegrations() {
 			}
 
 			toast.success(data.message);
-			await fetchIntegrations();
+			await fetchIntegrations(false);
+		} catch (err) {
+			toast.error((err as Error).message);
+			throw err;
+		}
+	};
+
+	const unregisterWebhook = async (source: ToolSource) => {
+		try {
+			const response = await fetch("/api/webhooks/unregister", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ source }),
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.error || "Failed to disable webhook");
+			}
+
+			toast.success(data.message);
+			await fetchIntegrations(false);
 		} catch (err) {
 			toast.error((err as Error).message);
 			throw err;
@@ -184,7 +206,8 @@ export function useIntegrations() {
 		disconnectIntegration,
 		refreshToken,
 		registerWebhook,
-		refetch: fetchIntegrations,
+		unregisterWebhook,
+		refetch: () => fetchIntegrations(false),
 
 		// Subscription helpers
 		canAddIntegration,

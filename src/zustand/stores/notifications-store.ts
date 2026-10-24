@@ -7,6 +7,7 @@ import { Notification } from "@prisma/client";
 
 export interface PaginationMeta {
 	page: number;
+	pageSize: number;
 	totalPages: number;
 	totalCount: number;
 	hasNext: boolean;
@@ -147,7 +148,7 @@ export const createNotificationStore = () => {
 						if (!response.ok)
 							throw new Error("Failed to fetch notifications");
 
-						const { notifications, pagination } =
+						const { notifications, pagination, unreadCount } =
 							await response.json();
 
 						notifications.sort(
@@ -158,9 +159,12 @@ export const createNotificationStore = () => {
 
 						set({
 							notifications,
-							unreadCount: notifications.filter(
-								(n: Notification) => !n.read
-							).length,
+							unreadCount:
+								typeof unreadCount === "number"
+									? unreadCount
+									: notifications.filter(
+											(n: Notification) => !n.read
+										).length,
 							pagination,
 						});
 					} catch (err) {

@@ -1,158 +1,82 @@
 "use client";
 
-import React from "react";
-import {
-	Building2,
-	Edit,
-	Trash2,
-	Calendar,
-	Link as LinkIcon,
-	Target,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Organization } from "@prisma/client";
 
 interface OrganizationProfileCardProps {
 	organization: Organization;
 	isAdmin: boolean;
+	memberCount: number;
+	planLabel: string;
 	onEdit: () => void;
-	onDelete: () => void;
-	subscriptionBadge: {
-		variant: "secondary" | "default";
-		text: string;
-		className?: string;
-	};
-	PlanIcon: React.ElementType;
+	onChangeLogo: () => void;
 }
 
 export function OrganizationProfileCard({
 	organization,
 	isAdmin,
+	memberCount,
+	planLabel,
 	onEdit,
-	onDelete,
-	subscriptionBadge,
-	PlanIcon,
+	onChangeLogo,
 }: OrganizationProfileCardProps) {
-	const formattedDate = format(
-		new Date(organization.createdAt),
-		"MMM d, yyyy"
-	);
+	const initial = organization.name.charAt(0).toUpperCase();
+	const createdDate = format(new Date(organization.createdAt), "MMM yyyy");
 
 	return (
-		<Card className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-shadow">
-			{/* Header with gradient */}
-			<div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background h-32">
-				<div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+		<div className="rounded-xl border border-border bg-background p-6">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+					Workspace profile
+				</h2>
+				<span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium">
+					{planLabel}
+				</span>
+			</div>
+
+			<div className="mt-5 flex flex-wrap items-center gap-5">
+				<span className="flex size-[72px] shrink-0 items-center justify-center rounded-2xl bg-ink font-display text-[28px] font-semibold text-paper">
+					{initial}
+				</span>
+
+				<div className="min-w-0 flex-1 basis-[280px]">
+					<div className="text-[13px] text-muted-foreground">
+						Workspace name
+					</div>
+					<div className="truncate font-display text-[26px] font-semibold leading-tight tracking-[-0.02em]">
+						{organization.name}
+					</div>
+					<div className="mt-0.5 text-[13px] text-muted-foreground">
+						Created {createdDate} · {memberCount}{" "}
+						{memberCount === 1 ? "member" : "members"}
+					</div>
+				</div>
+
 				{isAdmin && (
-					<div className="absolute top-4 right-4 flex gap-2">
+					<div className="flex flex-wrap gap-2.5">
 						<Button
 							variant="secondary"
-							size="icon"
-							className="h-9 w-9 bg-background/80 backdrop-blur-sm hover:bg-background"
-							onClick={onEdit}
-							aria-label="Edit workspace"
+							onClick={onChangeLogo}
+							className="h-11 rounded-full px-5 text-sm font-semibold"
 						>
-							<Edit className="w-4 h-4" />
+							Change logo
 						</Button>
 						<Button
-							variant="secondary"
-							size="icon"
-							className="h-9 w-9 bg-background/80 backdrop-blur-sm hover:bg-red-50 hover:text-red-600"
-							onClick={onDelete}
-							aria-label="Delete workspace"
+							onClick={onEdit}
+							className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90"
 						>
-							<Trash2 className="w-4 h-4" />
+							Edit workspace
 						</Button>
 					</div>
 				)}
 			</div>
 
-			<CardContent className="p-6 -mt-8 space-y-6">
-				{/* Organization icon and name */}
-				<div className="flex items-start gap-4">
-					<div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center ring-4 ring-background shadow-sm">
-						<Building2 className="w-8 h-8 text-primary" />
-					</div>
-					<div className="flex-1 min-w-0 pt-2">
-						<h3 className="text-2xl font-bold tracking-tight truncate">
-							{organization.name}
-						</h3>
-						<div className="flex items-center gap-2 mt-1">
-							<Badge
-								className={cn(
-									"capitalize font-medium",
-									subscriptionBadge.className ||
-										"bg-secondary text-secondary-foreground"
-								)}
-								variant={subscriptionBadge.variant}
-							>
-								<PlanIcon className="w-3 h-3 mr-1" />
-								{subscriptionBadge.text}
-							</Badge>
-						</div>
-					</div>
+			{!isAdmin && (
+				<div className="mt-4 rounded-xl bg-muted px-4 py-3 text-[13px] text-muted-foreground">
+					Only workspace admins can edit or delete this workspace.
 				</div>
-
-				<Separator />
-
-				{/* Details grid */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-					{/* Slug */}
-					<div className="space-y-2">
-						<div className="flex items-center gap-2 text-sm text-muted-foreground">
-							<LinkIcon className="w-4 h-4" />
-							<span className="font-medium">Workspace URL</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<code className="text-sm font-mono bg-muted px-2 py-1 rounded">
-								{organization.slug}
-							</code>
-						</div>
-					</div>
-
-					{/* Target Score */}
-					<div className="space-y-2">
-						<div className="flex items-center gap-2 text-sm text-muted-foreground">
-							<Target className="w-4 h-4" />
-							<span className="font-medium">Target Score</span>
-						</div>
-						<div className="flex items-center gap-2">
-							<span className="text-2xl font-bold text-primary">
-								{organization.targetScore || 75}
-							</span>
-							<span className="text-sm text-muted-foreground">
-								/100
-							</span>
-						</div>
-					</div>
-
-					{/* Created date */}
-					<div className="space-y-2">
-						<div className="flex items-center gap-2 text-sm text-muted-foreground">
-							<Calendar className="w-4 h-4" />
-							<span className="font-medium">Created</span>
-						</div>
-						<p className="text-base font-medium">{formattedDate}</p>
-					</div>
-				</div>
-
-				{/* Stats bar */}
-				<div className="pt-4 border-t">
-					<div className="flex items-center justify-between text-sm">
-						<span className="text-muted-foreground">
-							Workspace ID
-						</span>
-						<code className="text-xs font-mono bg-muted px-2 py-1 rounded">
-							{organization.id.slice(0, 8)}...
-						</code>
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+			)}
+		</div>
 	);
 }

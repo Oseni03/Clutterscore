@@ -2,23 +2,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PlaybooksSkeleton() {
 	return (
-		<div className="p-4 md:p-6 space-y-6">
-			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-				<div className="space-y-2">
-					<Skeleton className="h-8 w-64" />
-					<Skeleton className="h-4 w-96" />
+		<div className="space-y-6 p-6 md:p-8">
+			<div className="flex flex-wrap items-end justify-between gap-4">
+				<div className="space-y-3">
+					<Skeleton className="h-9 w-40" />
+					<Skeleton className="h-4 w-96 max-w-full" />
 				</div>
-				<Skeleton className="h-10 w-40" />
+				<div className="flex gap-3">
+					<Skeleton className="h-11 w-28 rounded-full" />
+					<Skeleton className="h-11 w-28 rounded-full" />
+				</div>
 			</div>
 
-			<div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-				<Skeleton className="h-10 w-full md:w-[400px]" />
-				<Skeleton className="h-10 w-full md:w-64" />
+			<div className="grid gap-4 sm:grid-cols-3">
+				{[1, 2, 3].map((item) => (
+					<Skeleton
+						key={item}
+						className="h-[104px] rounded-md bg-background"
+					/>
+				))}
 			</div>
 
-			<div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-				{[1, 2, 3, 4].map((i) => (
-					<Skeleton key={i} className="h-[200px]" />
+			<div className="flex flex-wrap items-center justify-between gap-4">
+				<Skeleton className="h-12 w-[420px] max-w-full rounded-full bg-background" />
+				<Skeleton className="h-11 w-[320px] max-w-full rounded-md bg-background" />
+			</div>
+
+			<div className="grid gap-5 lg:grid-cols-2">
+				{[1, 2, 3, 4].map((item) => (
+					<Skeleton
+						key={item}
+						className="h-[230px] rounded-md bg-background"
+					/>
 				))}
 			</div>
 		</div>

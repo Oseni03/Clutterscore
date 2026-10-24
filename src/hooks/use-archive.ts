@@ -14,9 +14,9 @@ export function useArchive() {
 		loadArchives();
 	}, []);
 
-	const loadArchives = async () => {
+	const loadArchives = async (showLoading = true) => {
 		try {
-			setLoading(true);
+			if (showLoading) setLoading(true);
 			setError(null);
 
 			const [archivesRes, statsRes] = await Promise.all([
@@ -37,7 +37,7 @@ export function useArchive() {
 			setError((err as Error).message);
 			toast.error("Failed to load archives");
 		} finally {
-			setLoading(false);
+			if (showLoading) setLoading(false);
 		}
 	};
 
@@ -56,9 +56,11 @@ export function useArchive() {
 			}
 
 			toast.success(`Restored ${archive.name} to ${archive.source}`);
-			loadArchives();
+			await loadArchives(false);
+			return true;
 		} catch (err) {
 			toast.error((err as Error).message);
+			return false;
 		}
 	};
 	return { archives, stats, loading, error, loadArchives, handleRestore };

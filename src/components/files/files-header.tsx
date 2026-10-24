@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Download } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface FilesHeaderProps {
 	isRefreshing: boolean;
@@ -17,41 +17,34 @@ export function FilesHeader({
 	onExport,
 }: FilesHeaderProps) {
 	return (
-		<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+		<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 			<div>
-				<h1 className="text-xl md:text-2xl font-display font-bold">
-					File Explorer
+				<h1 className="font-display text-[32px] font-semibold leading-none tracking-[-0.04em] md:text-[36px]">
+					Files
 				</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Manage large and unused files across all connected apps.
+				<p className="mt-1.5 text-sm text-muted-foreground">
+					Manage large and unused files across every connected app.
 				</p>
 			</div>
-			<div className="flex gap-2 w-full md:w-auto">
+			<div className="flex flex-wrap gap-2">
 				<Button
 					variant="outline"
 					onClick={onRefresh}
 					disabled={isRefreshing}
-					size="sm"
+					className="h-11 rounded-full border-border bg-background px-5 text-sm font-semibold"
 				>
-					{isRefreshing ? (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					) : (
-						<RefreshCw className="mr-2 h-4 w-4" />
+					{isRefreshing && (
+						<Loader2 className="size-4 animate-spin" />
 					)}
 					Refresh
 				</Button>
 				<Button
-					variant="outline"
 					onClick={onExport}
-					disabled={isExporting}
-					size="sm"
+					disabled={isExporting || isRefreshing}
+					className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90"
 				>
-					{isExporting ? (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					) : (
-						<Download className="mr-2 h-4 w-4" />
-					)}
-					Export
+					{isExporting && <Loader2 className="size-4 animate-spin" />}
+					Export CSV
 				</Button>
 			</div>
 		</div>

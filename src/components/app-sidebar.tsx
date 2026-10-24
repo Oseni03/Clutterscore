@@ -2,20 +2,20 @@
 
 import * as React from "react";
 import {
+	CreditCard,
 	Fan,
+	Files,
 	HardDrive,
+	History,
 	LayoutDashboard,
+	Plug,
 	Settings,
 	Settings2,
 	User,
-	Building2,
 	Users,
-	CreditCard,
-	Plug,
-	ChevronRight,
-	Files,
-	Archive,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
 import {
@@ -24,211 +24,130 @@ import {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarRail,
-	SidebarMenuSub,
-	SidebarMenuSubButton,
-	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { NavSecondary } from "./nav-secondary";
 
-const dashboardItems = {
-	navMain: [
-		{
-			id: "overview",
-			title: "Overview",
-			icon: LayoutDashboard,
-			url: "/dashboard",
-		},
-		{
-			id: "playbooks",
-			title: "Playbooks",
-			icon: Fan,
-			url: "/dashboard/playbooks",
-		},
-		{
-			id: "files",
-			title: "Files",
-			icon: Files,
-			url: "/dashboard/files",
-		},
-		{
-			id: "storage",
-			title: "Storage Audit",
-			icon: HardDrive,
-			url: "/dashboard/storage",
-		},
-		// {
-		// 	id: "archives",
-		// 	title: "Archives",
-		// 	icon: Archive,
-		// 	url: "/dashboard/archives",
-		// },
-		{
-			id: "settings",
-			title: "Settings",
-			icon: Settings,
-			url: "/dashboard/settings",
-			items: [
-				{
-					title: "Integrations",
-					url: "/dashboard/settings/integrations",
-					icon: Plug,
-				},
-				{
-					title: "Workspace",
-					url: "/dashboard/settings/workspace",
-					icon: Building2,
-				},
-				{
-					title: "Users",
-					url: "/dashboard/settings/users",
-					icon: Users,
-				},
-				{
-					title: "Billing",
-					url: "/dashboard/settings/billing",
-					icon: CreditCard,
-				},
-			],
-		},
-	],
-	account: [
-		{
-			id: "profile",
-			title: "Profile",
-			url: "/dashboard/account",
-			icon: User,
-			items: [],
-		},
-		{
-			id: "preferences",
-			title: "Preferences",
-			url: "/dashboard/account/preferences",
-			icon: Settings2,
-			items: [],
-		},
-	],
-};
+const dashboardItems = [
+	{
+		id: "overview",
+		title: "Overview",
+		icon: LayoutDashboard,
+		url: "/dashboard",
+	},
+	{
+		id: "playbooks",
+		title: "Playbooks",
+		icon: Fan,
+		url: "/dashboard/playbooks",
+	},
+	{
+		id: "files",
+		title: "Files",
+		icon: Files,
+		url: "/dashboard/files",
+	},
+	{
+		id: "storage",
+		title: "Storage",
+		icon: HardDrive,
+		url: "/dashboard/storage",
+	},
+	{
+		id: "audit-logs",
+		title: "Audit logs",
+		icon: History,
+		url: "/dashboard/audit-logs",
+	},
+	{
+		id: "integrations",
+		title: "Integrations",
+		icon: Plug,
+		url: "/dashboard/settings/integrations",
+	},
+	{
+		id: "members",
+		title: "Members",
+		icon: Users,
+		url: "/dashboard/settings/users",
+	},
+	{
+		id: "billing",
+		title: "Billing",
+		icon: CreditCard,
+		url: "/dashboard/settings/billing",
+	},
+	{
+		id: "settings",
+		title: "Settings",
+		icon: Settings,
+		url: "/dashboard/settings/workspace",
+	},
+];
+
+const accountItems = [
+	{
+		id: "profile",
+		title: "Profile",
+		icon: User,
+		url: "/dashboard/account",
+	},
+	{
+		id: "preferences",
+		title: "Preferences",
+		icon: Settings2,
+		url: "/dashboard/account/preferences",
+	},
+];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const pathname = usePathname();
 	const isAccountPage = pathname.includes("/dashboard/account");
-	const items = isAccountPage
-		? dashboardItems.account
-		: dashboardItems.navMain;
+	const items = isAccountPage ? accountItems : dashboardItems;
 
 	return (
 		<Sidebar collapsible="icon" {...props}>
-			<SidebarHeader>
+			<SidebarHeader className="p-3">
 				<TeamSwitcher />
 			</SidebarHeader>
-			<SidebarContent>
-				<SidebarGroup>
-					<SidebarGroupLabel>
-						{isAccountPage ? "Account" : "Application"}
-					</SidebarGroupLabel>
+			<SidebarContent className="px-3">
+				<SidebarGroup className="p-0">
 					<SidebarGroupContent>
-						<SidebarMenu>
-							{items.map((item) =>
-								item.items ? (
-									// Collapsible item with subitems (Settings)
-									<Collapsible
-										key={item.id}
-										asChild
-										defaultOpen={pathname.includes(
-											item.url
-										)}
-										className="group/collapsible"
-									>
-										<SidebarMenuItem>
-											<CollapsibleTrigger asChild>
-												<SidebarMenuButton
-													tooltip={item.title}
-													isActive={pathname.includes(
-														item.url
-													)}
-												>
-													{item.icon && (
-														<item.icon className="h-5 w-5 mr-2" />
-													)}
-													<span>{item.title}</span>
-													<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-												</SidebarMenuButton>
-											</CollapsibleTrigger>
-											<CollapsibleContent>
-												<SidebarMenuSub>
-													{item.items.map(
-														(subItem) => (
-															<SidebarMenuSubItem
-																key={
-																	subItem.title
-																}
-															>
-																<SidebarMenuSubButton
-																	asChild
-																	isActive={
-																		pathname ===
-																		subItem.url
-																	}
-																>
-																	<Link
-																		href={
-																			subItem.url
-																		}
-																	>
-																		{subItem.icon && (
-																			<subItem.icon className="h-4 w-4 mr-2" />
-																		)}
-																		<span>
-																			{
-																				subItem.title
-																			}
-																		</span>
-																	</Link>
-																</SidebarMenuSubButton>
-															</SidebarMenuSubItem>
-														)
-													)}
-												</SidebarMenuSub>
-											</CollapsibleContent>
-										</SidebarMenuItem>
-									</Collapsible>
-								) : (
-									// Regular item without subitems
+						<SidebarMenu className="gap-0.5">
+							{items.map((item) => {
+								const isActive =
+									item.url === "/dashboard"
+										? pathname === item.url
+										: pathname === item.url ||
+											pathname.startsWith(`${item.url}/`);
+
+								return (
 									<SidebarMenuItem key={item.id}>
 										<SidebarMenuButton
-											tooltip={item.title}
-											isActive={item.url === pathname}
 											asChild
+											tooltip={item.title}
+											isActive={isActive}
+											className="h-11 rounded-[8px] px-3 text-sm font-medium"
 										>
 											<Link href={item.url}>
-												{item.icon && (
-													<item.icon className="h-5 w-5 mr-2" />
-												)}
+												<item.icon
+													className="size-4"
+													strokeWidth={1.75}
+												/>
 												<span>{item.title}</span>
 											</Link>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
-								)
-							)}
+								);
+							})}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter>
-				<NavSecondary items={[]} />
+			<SidebarFooter className="p-3">
 				<NavUser />
 			</SidebarFooter>
 			<SidebarRail />

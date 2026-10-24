@@ -1,107 +1,62 @@
 "use client";
 
-import React from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function OrganizationSkeleton() {
 	return (
-		<div className="w-full flex justify-center">
-			<div className="w-full max-w-6xl p-6 space-y-6">
-				{/* Page Header Skeleton */}
-				<div className="mb-8 space-y-2">
-					<div className="h-8 bg-muted rounded w-64 animate-pulse" />
-					<div className="h-4 bg-muted rounded w-96 animate-pulse" />
+		<div className="space-y-6">
+			<div className="rounded-xl border border-border bg-background p-6">
+				<div className="flex items-center justify-between gap-3">
+					<Skeleton className="h-7 w-48" />
+					<Skeleton className="h-6 w-20" />
 				</div>
+				<div className="mt-5 flex flex-wrap items-center gap-5">
+					<Skeleton className="size-[72px] rounded-2xl" />
+					<div className="flex-1 basis-[280px] space-y-2">
+						<Skeleton className="h-4 w-28" />
+						<Skeleton className="h-8 w-56" />
+						<Skeleton className="h-4 w-44" />
+					</div>
+					<div className="flex gap-2.5">
+						<Skeleton className="h-11 w-32 rounded-full" />
+						<Skeleton className="h-11 w-32 rounded-full" />
+					</div>
+				</div>
+			</div>
 
-				<div className="space-y-6">
-					{/* Organization Profile Card Skeleton */}
-					<Card className="overflow-hidden">
-						<div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background h-32" />
-						<CardContent className="p-6 -mt-8">
-							<div className="animate-pulse space-y-6">
-								<div className="flex items-start gap-4">
-									<div className="h-16 w-16 bg-muted rounded-xl" />
-									<div className="flex-1 pt-2 space-y-3">
-										<div className="h-8 bg-muted rounded w-48" />
-										<div className="h-6 bg-muted rounded w-32" />
-									</div>
-								</div>
-								<Separator />
-								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-									<div className="space-y-2">
-										<div className="h-4 bg-muted rounded w-28" />
-										<div className="h-6 bg-muted rounded w-32" />
-									</div>
-									<div className="space-y-2">
-										<div className="h-4 bg-muted rounded w-24" />
-										<div className="h-8 bg-muted rounded w-20" />
-									</div>
-									<div className="space-y-2">
-										<div className="h-4 bg-muted rounded w-20" />
-										<div className="h-6 bg-muted rounded w-28" />
-									</div>
-								</div>
-								<div className="pt-4 border-t">
-									<div className="flex items-center justify-between">
-										<div className="h-4 bg-muted rounded w-24" />
-										<div className="h-4 bg-muted rounded w-20" />
-									</div>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
+			<div className="rounded-xl border border-border bg-background p-6">
+				<div className="flex items-center justify-between gap-3">
+					<div className="space-y-2">
+						<Skeleton className="h-7 w-40" />
+						<Skeleton className="h-4 w-52" />
+					</div>
+					<Skeleton className="h-11 w-32 rounded-full" />
+				</div>
+				<div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+					{Array.from({ length: 6 }).map((_, index) => (
+						<Skeleton key={index} className="h-[52px] rounded-xl" />
+					))}
+				</div>
+			</div>
 
-					{/* Subscription Details Card Skeleton */}
-					<Card>
-						<CardHeader>
-							<div className="flex items-center gap-3">
-								<div className="h-6 w-6 bg-muted rounded animate-pulse" />
-								<div className="h-6 bg-muted rounded w-48 animate-pulse" />
-							</div>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="grid gap-4 sm:grid-cols-2">
-								<div className="space-y-2 animate-pulse">
-									<div className="h-4 bg-muted rounded w-24" />
-									<div className="h-6 bg-muted rounded w-32" />
-								</div>
-								<div className="space-y-2 animate-pulse">
-									<div className="h-4 bg-muted rounded w-28" />
-									<div className="h-4 bg-muted rounded w-full" />
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Danger Zone Card Skeleton */}
-					<Card className="border-destructive/50 bg-destructive/5">
-						<CardHeader>
-							<div className="flex items-center gap-2">
-								<div className="h-5 w-5 bg-muted rounded animate-pulse" />
-								<div className="h-6 bg-muted rounded w-32 animate-pulse" />
-							</div>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-destructive/20 bg-background animate-pulse">
-								<div className="max-w-2xl space-y-2">
-									<div className="h-5 bg-muted rounded w-32" />
-									<div className="h-4 bg-muted rounded w-full" />
-								</div>
-								<div className="h-9 w-32 bg-muted rounded shrink-0" />
-							</div>
-
-							<Separator />
-
-							<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-destructive/20 bg-background animate-pulse">
-								<div className="max-w-2xl space-y-2">
-									<div className="h-5 bg-muted rounded w-40" />
-									<div className="h-4 bg-muted rounded w-full" />
-								</div>
-								<div className="h-9 w-36 bg-muted rounded shrink-0" />
-							</div>
-						</CardContent>
-					</Card>
+			<div className="rounded-xl bg-night p-6">
+				<Skeleton className="h-7 w-36 bg-white/10" />
+				<Skeleton className="mt-2 h-4 w-52 bg-white/10" />
+				<div className="mt-5 space-y-4 border-t border-white/10 pt-4">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<div className="space-y-2">
+							<Skeleton className="h-5 w-40 bg-white/10" />
+							<Skeleton className="h-4 w-72 bg-white/10" />
+						</div>
+						<Skeleton className="h-11 w-28 rounded-full bg-white/10" />
+					</div>
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<div className="space-y-2">
+							<Skeleton className="h-5 w-36 bg-white/10" />
+							<Skeleton className="h-4 w-72 bg-white/10" />
+						</div>
+						<Skeleton className="h-11 w-36 rounded-full bg-white/10" />
+					</div>
 				</div>
 			</div>
 		</div>

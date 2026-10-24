@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FilesPaginationProps {
 	currentPage: number;
@@ -22,33 +21,27 @@ export function FilesPagination({
 	const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
 	return (
-		<div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4">
-			<div className="text-sm text-muted-foreground">
-				Showing {startIndex + 1}-{endIndex} of {totalItems} files
+		<div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5">
+			<div className="text-[13px] text-muted-foreground">
+				Showing {startIndex + 1}–{endIndex} of{" "}
+				{totalItems.toLocaleString()} files · Page {currentPage} of{" "}
+				{Math.max(totalPages, 1)}
 			</div>
 			<div className="flex gap-2">
 				<Button
-					variant="outline"
-					size="sm"
+					variant="secondary"
 					onClick={() => onPageChange(currentPage - 1)}
 					disabled={currentPage === 1}
+					className="h-9 rounded-full bg-muted px-4 text-xs font-semibold"
 				>
-					<ChevronLeft className="h-4 w-4" />
 					Previous
 				</Button>
-				<div className="flex items-center gap-1">
-					<span className="text-sm">
-						Page {currentPage} of {totalPages}
-					</span>
-				</div>
 				<Button
-					variant="outline"
-					size="sm"
 					onClick={() => onPageChange(currentPage + 1)}
 					disabled={currentPage >= totalPages}
+					className="h-9 rounded-full px-4 text-xs font-semibold"
 				>
 					Next
-					<ChevronRight className="h-4 w-4" />
 				</Button>
 			</div>
 		</div>

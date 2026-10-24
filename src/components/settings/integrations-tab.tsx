@@ -1,56 +1,22 @@
-// components/settings/integrations-tab.tsx
-
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { Loader2, RefreshCw, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-} from "@/components/ui/card";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-	CheckCircle2,
-	RefreshCw,
-	Plug,
-	Trash2,
-	AlertCircle,
-	Loader2,
-	Webhook,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useIntegrations } from "@/hooks/use-integrations";
 import { useConnectorSync } from "@/hooks/use-connector-sync";
+import { getPlanByTier } from "@/lib/subscription-plans";
 import { ToolSource } from "@prisma/client";
-import { toast } from "sonner";
-import { logger } from "better-auth";
-import { SOURCE_ICONS } from "@/lib/utils";
-import Image from "next/image";
+import { logger } from "@/lib/logger";
 
 const SOURCE_NAMES: Record<ToolSource, string> = {
 	SLACK: "Slack",
@@ -59,79 +25,109 @@ const SOURCE_NAMES: Record<ToolSource, string> = {
 	NOTION: "Notion",
 	DROPBOX: "Dropbox",
 	FIGMA: "Figma",
-	// LINEAR: "Linear",
 	JIRA: "Jira",
 };
 
 const SOURCE_DESCRIPTIONS: Record<ToolSource, string> = {
-	SLACK: "Channels, files, and users",
-	GOOGLE: "Drive, users, and groups",
+	SLACK: "Channels and members",
+	GOOGLE: "Drive files, users and sharing",
 	MICROSOFT: "OneDrive, SharePoint, and users",
 	NOTION: "Pages and workspace members",
-	DROPBOX: "Files and team members",
+	DROPBOX: "Files and folders",
 	FIGMA: "Design files and projects",
-	// LINEAR: "Users and teams",
 	JIRA: "Users and projects",
+};
+
+const SOURCE_BRANDS: Record<
+	ToolSource,
+	{ initial: string; className: string }
+> = {
+	GOOGLE: { initial: "G", className: "bg-lime text-ink" },
+	SLACK: { initial: "S", className: "bg-[#B9A9D6] text-ink" },
+	DROPBOX: { initial: "D", className: "bg-[#8FA9A8] text-ink" },
+	NOTION: { initial: "N", className: "bg-[#F4B183] text-ink" },
+	MICROSOFT: { initial: "M", className: "bg-muted text-foreground" },
+	FIGMA: { initial: "F", className: "bg-muted text-foreground" },
+	JIRA: { initial: "J", className: "bg-muted text-foreground" },
 };
 
 const AVAILABLE_SOURCES: ToolSource[] = [
 	"GOOGLE",
 	"SLACK",
-	// "MICROSOFT",
 	"DROPBOX",
 	"NOTION",
-	// "FIGMA",
-	// "LINEAR",
-	// "JIRA",
 ];
+
+function relativeTime(value: Date | string | null) {
+	if (!value) return "never";
+
+	const diff = Date.now() - new Date(value).getTime();
+	const minutes = Math.floor(diff / 60000);
+
+	if (minutes < 1) return "just now";
+	if (minutes < 60) return `${minutes} min ago`;
+
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+	const days = Math.floor(hours / 24);
+	if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+
+	return new Date(value).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+}
 
 export default function IntegrationsTab() {
 	const {
 		integrations,
 		isLoading,
 		error,
+		subscriptionTier,
 		connectIntegration,
 		disconnectIntegration,
 		refreshToken,
 		registerWebhook,
+		unregisterWebhook,
+		refetch,
+		integrationLimit,
 	} = useIntegrations();
 
 	const { syncIntegration, isSyncing } = useConnectorSync();
 
-	const [selectedSource, setSelectedSource] = useState<ToolSource | null>(
-		null
-	);
-	const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+	const [manageSource, setManageSource] = useState<ToolSource | null>(null);
+	const [disconnectOpen, setDisconnectOpen] = useState(false);
 	const [actionLoading, setActionLoading] = useState<string | null>(null);
+	const [autoSync, setAutoSync] = useState<
+		Partial<Record<ToolSource, boolean>>
+	>({});
 
 	const getIntegrationBySource = (source: ToolSource) => {
-		return integrations.find((i) => i.source === source && i.isActive);
+		return integrations.find((item) => item.source === source && item.isActive);
 	};
+
+	const activeCount = integrations.filter((item) => item.isActive).length;
+	const extraConnectedSources = Object.values(ToolSource).filter(
+		(source) =>
+			!AVAILABLE_SOURCES.includes(source) &&
+			!!getIntegrationBySource(source)
+	);
+	const displaySources = [...AVAILABLE_SOURCES, ...extraConnectedSources];
+	const plan = getPlanByTier(subscriptionTier);
+	const planLabel = plan.id === "free" ? "Free plan" : plan.name;
+	const selectedIntegration = manageSource
+		? getIntegrationBySource(manageSource)
+		: null;
+	const selectedName = manageSource ? SOURCE_NAMES[manageSource] : "";
 
 	const handleSync = async (source: ToolSource) => {
 		setActionLoading("sync");
 		try {
-			await syncIntegration(source);
-			toast.success(`${SOURCE_NAMES[source]} synced successfully`);
+			await syncIntegration(source, refetch);
 		} catch (error) {
 			logger.error("Sync error:", error);
-			// Error already handled by hook
-		} finally {
-			setActionLoading(null);
-		}
-	};
-
-	const handleDisconnect = async () => {
-		if (!selectedSource) return;
-
-		setActionLoading("disconnect");
-		try {
-			await disconnectIntegration(selectedSource);
-			setShowDisconnectDialog(false);
-			setSelectedSource(null);
-		} catch (error) {
-			logger.error("Disconnect error:", error);
-			// Error already handled by hook
 		} finally {
 			setActionLoading(null);
 		}
@@ -143,19 +139,39 @@ export default function IntegrationsTab() {
 			await refreshToken(source);
 		} catch (error) {
 			logger.error("Refresh token error:", error);
-			// Error already handled by hook
 		} finally {
 			setActionLoading(null);
 		}
 	};
 
-	const handleRegisterWebhook = async (source: ToolSource) => {
+	const handleDisconnect = async () => {
+		if (!manageSource) return;
+
+		setActionLoading("disconnect");
+		try {
+			await disconnectIntegration(manageSource);
+			setDisconnectOpen(false);
+			setManageSource(null);
+		} catch (error) {
+			logger.error("Disconnect error:", error);
+		} finally {
+			setActionLoading(null);
+		}
+	};
+
+	const handleWebhookToggle = async (
+		source: ToolSource,
+		checked: boolean
+	) => {
 		setActionLoading("webhook");
 		try {
-			await registerWebhook(source);
+			if (checked) {
+				await registerWebhook(source);
+			} else {
+				await unregisterWebhook(source);
+			}
 		} catch (error) {
-			logger.error("Register webhook error:", error);
-			// Error already handled by hook
+			logger.error("Webhook update error:", error);
 		} finally {
 			setActionLoading(null);
 		}
@@ -163,407 +179,369 @@ export default function IntegrationsTab() {
 
 	if (isLoading) {
 		return (
-			<Card>
-				<CardHeader>
-					<Skeleton className="h-6 w-48" />
-					<Skeleton className="h-4 w-96 mt-2" />
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{[1, 2, 3, 4].map((i) => (
-						<div
-							key={i}
-							className="flex items-center justify-between"
-						>
-							<div className="flex items-center gap-4">
-								<Skeleton className="h-10 w-10 rounded-lg" />
-								<div className="space-y-2">
-									<Skeleton className="h-4 w-32" />
-									<Skeleton className="h-3 w-24" />
-								</div>
-							</div>
-							<Skeleton className="h-9 w-24" />
+			<div className="overflow-hidden rounded-xl border border-border bg-background">
+				<div className="border-b border-border p-5">
+					<Skeleton className="h-7 w-44" />
+					<Skeleton className="mt-2 h-4 w-72" />
+				</div>
+				{Array.from({ length: 4 }).map((_, index) => (
+					<div
+						key={index}
+						className="flex flex-wrap items-center gap-4 border-b border-border px-6 py-4 last:border-0"
+					>
+						<Skeleton className="size-11 rounded-xl" />
+						<div className="flex-1 space-y-2">
+							<Skeleton className="h-4 w-40" />
+							<Skeleton className="h-3.5 w-56" />
 						</div>
-					))}
-				</CardContent>
-			</Card>
+						<Skeleton className="h-4 w-24" />
+						<Skeleton className="h-10 w-24 rounded-full" />
+					</div>
+				))}
+			</div>
 		);
 	}
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Connected Apps</CardTitle>
-				<CardDescription>
-					Manage the tools ClutterScore has access to.
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-6">
-				{error && (
-					<Alert variant="destructive">
-						<AlertCircle className="h-4 w-4" />
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
+		<>
+			{error && (
+				<div className="mb-4 flex items-center gap-3 rounded-xl border border-border bg-background px-5 py-4">
+					<span className="size-2.5 rounded-full bg-[#F4B183]" />
+					<p className="text-sm">{error}</p>
+				</div>
+			)}
 
-				{AVAILABLE_SOURCES.map((source) => {
+			<div className="overflow-hidden rounded-xl border border-border bg-background">
+				<div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-5">
+					<div>
+						<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em]">
+							Connected Apps
+						</h2>
+						<p className="text-[13px] text-muted-foreground">
+							{integrationLimit !== null
+								? `${planLabel}: ${activeCount} of ${integrationLimit} active integrations used.`
+								: `${planLabel}: ${activeCount} active integration${
+										activeCount === 1 ? "" : "s"
+									}.`}
+						</p>
+					</div>
+				</div>
+
+				{displaySources.map((source) => {
 					const integration = getIntegrationBySource(source);
-					const isConnected = !!integration;
+					const connected = !!integration;
+					const status = integration?.syncStatus ?? "IDLE";
+					const brand = SOURCE_BRANDS[source];
+
+					const statusLabel = !connected
+						? "Not connected"
+						: status === "SYNCING"
+							? "Syncing"
+							: status === "ERROR"
+								? "Error"
+								: "Active";
+
+					const detail = !connected
+						? SOURCE_DESCRIPTIONS[source]
+						: status === "ERROR"
+							? `Sync failed.${
+									integration?.lastSyncedAt
+										? ` Last synced ${relativeTime(integration.lastSyncedAt)}.`
+										: ""
+								}`
+							: status === "SYNCING"
+								? "Syncing now"
+								: integration?.lastSyncedAt
+									? `Last synced ${relativeTime(integration.lastSyncedAt)}`
+									: "Ready to sync";
+
+					const dotClass = !connected
+						? "bg-border"
+						: status === "ERROR"
+							? "bg-[#F4B183]"
+							: status === "SYNCING"
+								? "bg-lime"
+								: "bg-[#8FA9A8]";
 
 					return (
 						<div
 							key={source}
-							className="flex items-center justify-between"
+							className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-[18px] last:border-0"
 						>
-							<div className="flex items-center gap-4">
-								<div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xl">
-									<Image
-										src={SOURCE_ICONS[source as ToolSource]}
-										alt={`${source} icon`}
-										width={20}
-										height={20}
-									/>
+							<span
+								className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-base font-semibold ${brand.className}`}
+							>
+								{brand.initial}
+							</span>
+
+							<div className="min-w-0 flex-1 basis-[280px]">
+								<div className="text-[15px] font-semibold">
+									{SOURCE_NAMES[source]}
 								</div>
-								<div>
-									<div className="font-medium flex items-center gap-2">
-										{SOURCE_NAMES[source]}
-										{integration?.syncStatus ===
-											"SYNCING" && (
-											<Loader2 className="h-3 w-3 animate-spin text-blue-500" />
-										)}
-										{integration?.syncStatus ===
-											"ERROR" && (
-											<AlertCircle className="h-3 w-3 text-destructive" />
-										)}
-									</div>
-									<div className="text-xs text-muted-foreground">
-										{isConnected
-											? integration.lastSyncedAt
-												? `Last synced ${new Date(integration.lastSyncedAt).toLocaleString()}`
-												: "Never synced"
-											: SOURCE_DESCRIPTIONS[source]}
-									</div>
+								<div className="truncate text-[13px] text-muted-foreground">
+									{detail}
 								</div>
 							</div>
 
-							<Dialog>
-								<DialogTrigger asChild>
-									<Button
-										variant={
-											isConnected ? "outline" : "default"
-										}
-										size="sm"
-										onClick={() =>
-											setSelectedSource(source)
-										}
-									>
-										{isConnected ? "Manage" : "Connect"}
-									</Button>
-								</DialogTrigger>
-								<DialogContent>
-									<DialogHeader>
-										<DialogTitle className="flex items-center gap-2">
-											<Image
-												src={
-													SOURCE_ICONS[
-														source as ToolSource
-													]
-												}
-												alt={`${source} icon`}
-												width={20}
-												height={20}
-											/>
-											{SOURCE_NAMES[source]} Settings
-										</DialogTitle>
-										<DialogDescription>
-											Configure synchronization and
-											permission settings for{" "}
-											{SOURCE_NAMES[source]}.
-										</DialogDescription>
-									</DialogHeader>
+							<div className="flex min-w-[110px] items-center gap-2 text-[13px] font-medium">
+								<span
+									className={`size-2.5 rounded-full ${dotClass}`}
+								/>
+								{statusLabel}
+							</div>
 
-									{isConnected ? (
-										<div className="space-y-6 py-4">
-											{/* Status Banner */}
-											{integration.syncStatus ===
-											"ERROR" ? (
-												<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-													<div className="flex items-center gap-2 text-destructive font-medium">
-														<AlertCircle className="h-4 w-4" />
-														Integration Error
-													</div>
-													<p className="text-xs text-destructive/80 mt-1">
-														{integration.lastError ||
-															"Connection failed"}
-													</p>
-													<Button
-														size="sm"
-														variant="outline"
-														className="mt-3"
-														onClick={() =>
-															handleRefreshToken(
-																source
-															)
-														}
-														disabled={
-															actionLoading ===
-															"refresh"
-														}
-													>
-														{actionLoading ===
-														"refresh" ? (
-															<Loader2 className="h-3 w-3 animate-spin mr-2" />
-														) : (
-															<RefreshCw className="h-3 w-3 mr-2" />
-														)}
-														Retry Connection
-													</Button>
-												</div>
-											) : (
-												<div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:bg-emerald-900/20 dark:border-emerald-900">
-													<div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
-														<CheckCircle2 className="h-4 w-4" />
-														Integration Active
-													</div>
-													<p className="text-xs text-emerald-600/80 dark:text-emerald-500/80 mt-1">
-														{integration.lastSyncedAt
-															? `Last synchronized ${new Date(integration.lastSyncedAt).toLocaleString()}`
-															: "Ready to sync"}
-													</p>
-												</div>
-											)}
-
-											{/* Permissions */}
-											{integration.scopes &&
-												integration.scopes.length >
-													0 && (
-													<div className="space-y-3">
-														<h4 className="text-sm font-medium">
-															Active Permissions
-														</h4>
-														<div className="grid gap-2 max-h-40 overflow-y-auto">
-															{integration.scopes.map(
-																(scope) => (
-																	<div
-																		key={
-																			scope
-																		}
-																		className="flex items-center justify-between text-sm border p-2 rounded bg-card"
-																	>
-																		<span className="text-xs">
-																			{
-																				scope
-																			}
-																		</span>
-																		<Badge
-																			variant="secondary"
-																			className="text-[10px]"
-																		>
-																			Granted
-																		</Badge>
-																	</div>
-																)
-															)}
-														</div>
-													</div>
-												)}
-
-											{/* Webhook Settings */}
-											{["GOOGLE", "MICROSOFT"].includes(
-												source
-											) && (
-												<div className="space-y-3">
-													<h4 className="text-sm font-medium">
-														Real-time Updates
-													</h4>
-													{integration.metadata
-														?.webhook ? (
-														<div className="flex items-center justify-between text-sm border p-3 rounded bg-card">
-															<div className="flex items-center gap-2">
-																<Webhook className="h-4 w-4 text-green-500" />
-																<span>
-																	Webhooks
-																	Active
-																</span>
-															</div>
-															<Badge
-																variant="secondary"
-																className="text-[10px]"
-															>
-																Enabled
-															</Badge>
-														</div>
-													) : (
-														<div className="border p-3 rounded bg-muted/50">
-															<p className="text-xs text-muted-foreground mb-2">
-																Enable real-time
-																sync for instant
-																updates
-															</p>
-															<Button
-																size="sm"
-																variant="outline"
-																onClick={() =>
-																	handleRegisterWebhook(
-																		source
-																	)
-																}
-																disabled={
-																	actionLoading ===
-																	"webhook"
-																}
-															>
-																{actionLoading ===
-																"webhook" ? (
-																	<Loader2 className="h-3 w-3 animate-spin mr-2" />
-																) : (
-																	<Webhook className="h-3 w-3 mr-2" />
-																)}
-																Enable Webhooks
-															</Button>
-														</div>
-													)}
-												</div>
-											)}
-
-											{/* Sync Settings */}
-											<div className="space-y-3">
-												<h4 className="text-sm font-medium">
-													Sync Settings
-												</h4>
-												<div className="flex items-center justify-between">
-													<Label
-														htmlFor="auto-sync"
-														className="font-normal"
-													>
-														Auto-sync enabled
-													</Label>
-													<Switch
-														id="auto-sync"
-														defaultChecked
-													/>
-												</div>
-											</div>
-										</div>
-									) : (
-										<div className="py-8 text-center space-y-4">
-											<div className="h-12 w-12 rounded-full bg-muted mx-auto flex items-center justify-center text-2xl">
-												<Image
-													src={
-														SOURCE_ICONS[
-															source as ToolSource
-														]
-													}
-													alt={`${source} icon`}
-													width={20}
-													height={20}
-												/>
-											</div>
-											<div>
-												<h3 className="font-medium">
-													Connect{" "}
-													{SOURCE_NAMES[source]}
-												</h3>
-												<p className="text-sm text-muted-foreground max-w-[280px] mx-auto mt-1">
-													Grant read-only access to
-													allow ClutterScore to audit
-													your workspace and identify
-													optimization opportunities.
-												</p>
-											</div>
-										</div>
-									)}
-
-									<DialogFooter className="sm:justify-between gap-2">
-										{isConnected ? (
-											<>
-												<Button
-													variant="ghost"
-													className="text-destructive hover:text-destructive hover:bg-destructive/10"
-													onClick={() =>
-														setShowDisconnectDialog(
-															true
-														)
-													}
-												>
-													<Trash2 className="mr-2 h-4 w-4" />
-													Disconnect
-												</Button>
-												<Button
-													variant="outline"
-													onClick={() =>
-														handleSync(source)
-													}
-													disabled={
-														isSyncing ||
-														actionLoading ===
-															"sync" ||
-														integration.syncStatus ===
-															"SYNCING"
-													}
-												>
-													{isSyncing ||
-													actionLoading === "sync" ||
-													integration.syncStatus ===
-														"SYNCING" ? (
-														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-													) : (
-														<RefreshCw className="mr-2 h-4 w-4" />
-													)}
-													Sync Now
-												</Button>
-											</>
-										) : (
-											<Button
-												className="w-full"
-												onClick={() =>
-													connectIntegration(source)
-												}
-											>
-												<Plug className="mr-2 h-4 w-4" />
-												Connect Integration
-											</Button>
-										)}
-									</DialogFooter>
-								</DialogContent>
-							</Dialog>
+							<Button
+								onClick={() => {
+									if (connected) {
+										setManageSource(source);
+									} else {
+										connectIntegration(source);
+									}
+								}}
+								variant={connected ? "secondary" : "default"}
+								className={`h-10 rounded-full px-5 text-sm font-semibold ${
+									connected
+										? "bg-muted text-ink hover:bg-border"
+										: "bg-ink text-paper hover:bg-ink/90"
+								}`}
+							>
+								{connected ? "Manage" : "Connect"}
+							</Button>
 						</div>
 					);
 				})}
-			</CardContent>
+			</div>
 
-			{/* Disconnect Confirmation Dialog */}
-			<AlertDialog
-				open={showDisconnectDialog}
-				onOpenChange={setShowDisconnectDialog}
+			<Dialog
+				open={!!manageSource}
+				onOpenChange={(open) => {
+					if (!open) setManageSource(null);
+				}}
 			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Disconnect Integration?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will disconnect{" "}
-							{selectedSource && SOURCE_NAMES[selectedSource]}{" "}
-							from your organization. Historical audit data will
-							be preserved, but you won&apos;t receive new
-							updates. You can reconnect at any time.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleDisconnect}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							disabled={actionLoading === "disconnect"}
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[520px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="flex-row items-center justify-between gap-3 space-y-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Manage {selectedName}
+						</DialogTitle>
+						<DialogDescription className="sr-only">
+							Manage the {selectedName} integration.
+						</DialogDescription>
+						<button
+							type="button"
+							onClick={() => setManageSource(null)}
+							aria-label="Close"
+							className="flex size-10 items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-border"
 						>
-							{actionLoading === "disconnect" ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : null}
+							<X className="size-[18px]" />
+						</button>
+					</DialogHeader>
+
+					{selectedIntegration && manageSource && (
+						<>
+							<div
+								className={`mt-5 flex flex-wrap items-center gap-3 rounded-xl px-4 py-3.5 ${
+									selectedIntegration.syncStatus === "ERROR"
+										? "bg-[#FBE3D2]"
+										: "bg-muted"
+								}`}
+							>
+								<span
+									className={`size-2.5 rounded-full ${
+										selectedIntegration.syncStatus ===
+										"ERROR"
+											? "bg-[#F4B183]"
+											: "bg-[#8FA9A8]"
+									}`}
+								/>
+								<div className="min-w-0 flex-1 basis-[200px] text-sm">
+									<span className="font-semibold">
+										{selectedIntegration.syncStatus ===
+										"ERROR"
+											? "Connection error."
+											: "Connection active."}
+									</span>{" "}
+									<span className="text-muted-foreground">
+										{selectedIntegration.syncStatus ===
+										"ERROR"
+											? selectedIntegration.lastError ||
+												"The last sync failed. Retry or reconnect."
+											: selectedIntegration.lastSyncedAt
+												? `Last synced ${relativeTime(
+														selectedIntegration.lastSyncedAt
+													)}.`
+												: "Not synced yet."}
+									</span>
+								</div>
+								{selectedIntegration.syncStatus ===
+									"ERROR" && (
+									<Button
+										onClick={() =>
+											handleRefreshToken(manageSource)
+										}
+										disabled={
+											actionLoading === "refresh"
+										}
+										className="h-9 rounded-full bg-ink px-4 text-[13px] font-semibold text-paper hover:bg-ink/90"
+									>
+										{actionLoading === "refresh" ? (
+											<Loader2 className="size-4 animate-spin" />
+										) : (
+											<RefreshCw className="size-3.5" />
+										)}
+										Retry
+									</Button>
+								)}
+							</div>
+
+							<div className="mt-5">
+								<div className="text-[13px] font-medium text-muted-foreground">
+									Granted scopes
+								</div>
+								<div className="mt-2 flex flex-wrap gap-2">
+									{selectedIntegration.scopes?.length ? (
+										selectedIntegration.scopes.map(
+											(scope) => (
+												<span
+													key={scope}
+													className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium"
+												>
+													{scope}
+												</span>
+											)
+										)
+									) : (
+										<span className="text-[13px] text-muted-foreground">
+											No scopes recorded.
+										</span>
+									)}
+								</div>
+							</div>
+
+							{["GOOGLE", "MICROSOFT"].includes(manageSource) && (
+								<div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
+									<div>
+										<div className="text-sm font-semibold">
+											Webhooks
+										</div>
+										<div className="text-[13px] text-muted-foreground">
+											Get change events so audits stay
+											current.
+										</div>
+									</div>
+									<Switch
+										checked={Boolean(
+											selectedIntegration.metadata
+												?.webhook
+										)}
+										onCheckedChange={(checked) =>
+											handleWebhookToggle(
+												manageSource,
+												checked
+											)
+										}
+										disabled={actionLoading === "webhook"}
+										aria-label="Webhooks"
+									/>
+								</div>
+							)}
+
+							<div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4">
+								<div>
+									<div className="text-sm font-semibold">
+										Auto-sync
+									</div>
+									<div className="text-[13px] text-muted-foreground">
+										Sync this app automatically every day.
+									</div>
+								</div>
+								<Switch
+									checked={autoSync[manageSource] ?? true}
+									onCheckedChange={(checked) =>
+										setAutoSync((current) => ({
+											...current,
+											[manageSource]: checked,
+										}))
+									}
+									aria-label="Auto-sync"
+								/>
+							</div>
+
+							<div className="mt-6 flex flex-wrap justify-between gap-3">
+								<Button
+									variant="outline"
+									onClick={() => setDisconnectOpen(true)}
+									disabled={actionLoading === "disconnect"}
+									className="h-11 rounded-full border-border bg-background px-5 text-sm font-semibold"
+								>
+									Disconnect
+								</Button>
+								<Button
+									onClick={() => handleSync(manageSource)}
+									disabled={
+										isSyncing ||
+										actionLoading === "sync" ||
+										selectedIntegration.syncStatus ===
+											"SYNCING"
+									}
+									className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90"
+								>
+									{isSyncing ||
+									actionLoading === "sync" ||
+									selectedIntegration.syncStatus ===
+										"SYNCING" ? (
+										<Loader2 className="size-4 animate-spin" />
+									) : (
+										<RefreshCw className="size-4" />
+									)}
+									Sync now
+								</Button>
+							</div>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-2xl p-7"
+				>
+					<DialogHeader className="gap-0 text-left">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Disconnect {selectedName}?
+						</DialogTitle>
+						<DialogDescription className="mt-2.5 text-sm text-muted-foreground">
+							Clutterscore will stop syncing and auditing this
+							app. Your past audits and logs are kept. You can
+							reconnect anytime.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							variant="secondary"
+							onClick={() => setDisconnectOpen(false)}
+							disabled={actionLoading === "disconnect"}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={handleDisconnect}
+							disabled={actionLoading === "disconnect"}
+							className="h-11 rounded-full bg-ink px-6 text-sm font-semibold text-paper hover:bg-ink/90"
+						>
+							{actionLoading === "disconnect" && (
+								<Loader2 className="size-4 animate-spin" />
+							)}
 							Disconnect
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</Card>
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }

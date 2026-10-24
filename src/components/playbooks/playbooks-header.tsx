@@ -1,5 +1,5 @@
+import { Crown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Crown, Loader2, RefreshCw } from "lucide-react";
 
 interface PlaybooksHeaderProps {
 	onRunAudit: () => void;
@@ -17,50 +17,45 @@ export default function PlaybooksHeader({
 	isThrottled,
 }: PlaybooksHeaderProps) {
 	return (
-		<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+		<div className="flex flex-wrap items-end justify-between gap-4">
 			<div>
-				<h1 className="text-xl md:text-2xl font-display font-bold">
-					Cleanup Playbooks
+				<h1 className="font-display text-[28px] font-semibold leading-[1.05] tracking-[-0.035em] md:text-[36px]">
+					Playbooks
 				</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					One-click actions to improve your digital hygiene.
+				<p className="mt-2 text-sm text-muted-foreground">
+					Safe cleanup plans drafted from your latest audit. Review
+					each one before anything runs.
 				</p>
 			</div>
-			<div className="flex gap-2 w-full md:w-auto">
+			<div className="flex flex-wrap gap-3">
 				<Button
 					variant="outline"
 					onClick={onRefresh}
 					disabled={isRefreshing}
-					size="sm"
+					className="h-11 rounded-full border-border bg-background px-5 text-sm font-semibold"
 				>
-					{isRefreshing ? (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					) : (
-						<RefreshCw className="mr-2 h-4 w-4" />
+					{isRefreshing && (
+						<Loader2 className="size-4 animate-spin" />
 					)}
 					Refresh
 				</Button>
 				<Button
 					onClick={onRunAudit}
 					disabled={isAuditRunning || isThrottled}
-					size="sm"
-					variant={isThrottled ? "outline" : "default"}
+					className="h-11 rounded-full px-5 text-sm font-semibold"
 				>
 					{isAuditRunning ? (
 						<>
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							<Loader2 className="size-4 animate-spin" />
 							Running...
 						</>
 					) : isThrottled ? (
 						<>
-							<Crown className="mr-2 h-4 w-4" />
-							Upgrade to Run
+							<Crown className="size-4" />
+							Upgrade to run
 						</>
 					) : (
-						<>
-							<RefreshCw className="mr-2 h-4 w-4" />
-							Run Audit
-						</>
+						"Run audit"
 					)}
 				</Button>
 			</div>

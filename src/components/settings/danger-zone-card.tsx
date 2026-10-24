@@ -1,11 +1,5 @@
 "use client";
 
-import React from "react";
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-
 interface DangerZoneCardProps {
 	onResetData: () => void;
 	onDeleteOrganization: () => void;
@@ -16,57 +10,51 @@ export function DangerZoneCard({
 	onDeleteOrganization,
 }: DangerZoneCardProps) {
 	return (
-		<Card className="border-destructive/50 bg-destructive/5">
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2 text-destructive">
-					<AlertTriangle className="w-5 h-5" />
-					Danger Zone
-				</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-destructive/20 bg-background">
-					<div className="max-w-2xl">
-						<h4 className="font-semibold text-foreground">
-							Reset All Data
-						</h4>
-						<p className="text-sm text-muted-foreground mt-1">
-							Permanently delete all audit history, playbooks,
-							files, and integrations. Reset your Clutterscore to
-							zero. This cannot be undone.
-						</p>
-					</div>
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={onResetData}
-						className="shrink-0"
-					>
-						Reset All Data
-					</Button>
-				</div>
+		<div className="rounded-xl bg-night p-6 text-paper">
+			<h2 className="font-display text-[22px] font-semibold tracking-[-0.02em] text-[#F4B183]">
+				Danger zone
+			</h2>
+			<p className="text-[13px] text-[#A8A8A2]">
+				Only admins can see these actions.
+			</p>
 
-				<Separator />
-
-				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-destructive/20 bg-background">
-					<div className="max-w-2xl">
-						<h4 className="font-semibold text-foreground">
-							Delete Organization
-						</h4>
-						<p className="text-sm text-muted-foreground mt-1">
-							Permanently delete this workspace and all associated
-							data. This action cannot be undone.
-						</p>
+			<div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 py-4">
+				<div className="min-w-0 flex-1 basis-[280px]">
+					<div className="text-[15px] font-semibold">
+						Reset workspace data
 					</div>
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={onDeleteOrganization}
-						className="shrink-0"
-					>
-						Delete Workspace
-					</Button>
+					<p className="text-[13px] text-[#A8A8A2]">
+						Clears audits, files, scores, playbooks and logs.
+						Integrations stay connected.
+					</p>
 				</div>
-			</CardContent>
-		</Card>
+				<button
+					type="button"
+					onClick={onResetData}
+					className="inline-flex min-h-11 items-center rounded-full border border-[#3A3A3A] px-5 text-sm font-semibold text-paper transition-colors hover:bg-white/5"
+				>
+					Reset data
+				</button>
+			</div>
+
+			<div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+				<div className="min-w-0 flex-1 basis-[280px]">
+					<div className="text-[15px] font-semibold">
+						Delete workspace
+					</div>
+					<p className="text-[13px] text-[#A8A8A2]">
+						Permanently removes this workspace, its members and all
+						data.
+					</p>
+				</div>
+				<button
+					type="button"
+					onClick={onDeleteOrganization}
+					className="inline-flex min-h-11 items-center rounded-full bg-[#F4B183] px-5 text-sm font-semibold text-ink transition-opacity hover:opacity-85"
+				>
+					Delete workspace
+				</button>
+			</div>
+		</div>
 	);
 }

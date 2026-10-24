@@ -3,5 +3,9 @@ export default function AccountLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	return <div className="container max-w-4xl mx-auto py-6">{children}</div>;
+	return (
+		<div className="mx-auto w-full max-w-[800px] space-y-6 p-6 md:p-8">
+			{children}
+		</div>
+	);
 }

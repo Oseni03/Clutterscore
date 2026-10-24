@@ -24,6 +24,13 @@ export async function POST(
 				);
 			}
 
+			if (archivedFile.status !== "ARCHIVED") {
+				return NextResponse.json(
+					{ error: "Only archived files can be restored" },
+					{ status: 400 }
+				);
+			}
+
 			// Get integration
 			const integration = await prisma.toolIntegration.findUnique({
 				where: {
@@ -63,6 +70,17 @@ export async function POST(
 				actionType: "ARCHIVE_FILE",
 				originalMetadata: archivedFile.metadata as Record<string, any>,
 				executedAt: archivedFile.archivedAt,
+			});
+
+			await prisma.archivedFile.update({
+				where: { id },
+				data: {
+					status: "RESTORED",
+					metadata: {
+						...(archivedFile.metadata as Record<string, any>),
+						restoredAt: new Date().toISOString(),
+					},
+				},
 			});
 
 			return NextResponse.json({

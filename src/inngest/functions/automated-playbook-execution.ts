@@ -27,8 +27,8 @@ export const automatedPlaybookExecution = inngest.createFunction(
 			limit: 1,
 			key: "event.data.organizationId",
 		},
+		triggers: { cron: "0 3 * * 0" }, // Weekly on Sunday at 3 AM UTC
 	},
-	{ cron: "0 3 * * 0" }, // Weekly on Sunday at 3 AM UTC
 	async ({ step }) => {
 		const executionResults = {
 			organizations: 0,
@@ -434,8 +434,8 @@ export const manualPlaybookExecution = inngest.createFunction(
 	{
 		id: "manual-playbook-execution",
 		name: "Manual Playbook Execution",
+		triggers: { event: "playbook/execute" },
 	},
-	{ event: "playbook/execute" },
 	async ({ event, step }) => {
 		const { playbookId, userId } = event.data;
 

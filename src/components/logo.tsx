@@ -40,7 +40,7 @@ export const Logo: React.FC<LogoProps> = ({
 						width="60"
 						height="12"
 						rx="6"
-						fill="#9CA3AF"
+						fill="#0E0E0E"
 					/>
 					<rect
 						x="2"
@@ -48,7 +48,7 @@ export const Logo: React.FC<LogoProps> = ({
 						width="60"
 						height="12"
 						rx="6"
-						fill="#D1D5DB"
+						fill="#DDF35B"
 					/>
 					<rect
 						x="34"
@@ -56,7 +56,7 @@ export const Logo: React.FC<LogoProps> = ({
 						width="12"
 						height="60"
 						rx="6"
-						fill="#D1D5DB"
+						fill="#DDF35B"
 					/>
 					<rect
 						x="14"
@@ -64,7 +64,7 @@ export const Logo: React.FC<LogoProps> = ({
 						width="20"
 						height="12"
 						rx="6"
-						fill="#E5E7EB"
+						fill="#E4E4DF"
 					/>
 				</svg>
 			)}

@@ -1,11 +1,9 @@
 "use client";
 
+import { differenceInCalendarDays } from "date-fns";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Crown, Loader2, RefreshCw, Calendar } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import ThrottleAlert from "@/components/dashboard/throttle-alert";
 
 interface ThrottleInfo {
 	error: string;
@@ -27,95 +25,68 @@ export default function DashboardEmptyState({
 	onRunAudit,
 	onUpgrade,
 }: DashboardEmptyStateProps) {
+	const daysUntilReset = throttleInfo?.resetDate
+		? differenceInCalendarDays(
+				new Date(throttleInfo.resetDate),
+				new Date()
+			)
+		: null;
+
 	return (
-		<div className="p-4 md:p-6 space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-xl md:text-2xl font-bold text-foreground">
-					Dashboard
+		<div className="space-y-6 p-6 md:p-8">
+			<div>
+				<h1 className="font-display text-[28px] font-semibold leading-[1.05] tracking-[-0.035em] md:text-[36px]">
+					Overview
 				</h1>
+				<p className="mt-2 text-sm text-muted-foreground">
+					Your workspace health will appear here after your first
+					audit.
+				</p>
 			</div>
 
 			{isThrottled && throttleInfo && (
-				<Alert
-					variant="destructive"
-					className="border-orange-600 bg-orange-50 dark:bg-orange-950"
-				>
-					<AlertCircle className="h-4 w-4 text-orange-600" />
-					<AlertDescription className="text-orange-900 dark:text-orange-100">
-						<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-							<div className="space-y-1">
-								<p className="font-medium">
-									{throttleInfo.error}
-								</p>
-								{throttleInfo.resetDate && (
-									<p className="text-sm flex items-center gap-1 text-orange-700 dark:text-orange-200">
-										<Calendar className="h-3 w-3" />
-										Next audit available:{" "}
-										{format(
-											new Date(throttleInfo.resetDate),
-											"MMM d, yyyy"
-										)}
-									</p>
-								)}
-							</div>
-							<Button
-								size="sm"
-								variant="outline"
-								className="border-orange-600 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900 w-full md:w-auto"
-								onClick={onUpgrade}
-							>
-								<Crown className="mr-2 h-4 w-4" />
-								Upgrade to Pro
-							</Button>
-						</div>
-					</AlertDescription>
-				</Alert>
+				<ThrottleAlert
+					throttleInfo={throttleInfo}
+					onUpgrade={onUpgrade}
+				/>
 			)}
 
-			<Card className="p-8 md:p-12 text-center">
-				<div className="max-w-md mx-auto space-y-4">
-					<div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center text-3xl">
-						📊
-					</div>
-					<h2 className="text-lg md:text-xl font-semibold">
-						No Audit Data Available
-					</h2>
-					<p className="text-sm md:text-base text-muted-foreground">
-						Run your first audit to start tracking your workspace
-						hygiene and get actionable recommendations.
-					</p>
-					{isThrottled ? (
-						<div className="space-y-3 mt-4">
-							<p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-								Free tier audit limit reached
-							</p>
-							<Button onClick={onUpgrade} size="lg">
-								<Crown className="mr-2 h-4 w-4" />
-								Upgrade for Unlimited Audits
-							</Button>
-						</div>
-					) : (
-						<Button
-							onClick={onRunAudit}
-							disabled={isRefreshing}
-							size="lg"
-							className="mt-4"
-						>
-							{isRefreshing ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Running Audit...
-								</>
-							) : (
-								<>
-									<RefreshCw className="mr-2 h-4 w-4" />
-									Run First Audit
-								</>
-							)}
-						</Button>
-					)}
-				</div>
-			</Card>
+			<div className="flex flex-col items-center rounded-xl border border-border bg-background px-6 py-16 text-center sm:px-8">
+				<div
+					aria-hidden="true"
+					className="size-24 rounded-full bg-orb"
+				/>
+				<h2 className="mt-7 font-display text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">
+					No audit yet
+				</h2>
+				<p className="mt-3 max-w-[460px] text-muted-foreground">
+					Run your first audit to get your ClutterScore, a waste
+					estimate and a list of cleanup playbooks.
+				</p>
+
+				{isThrottled ? (
+					<span className="mt-7 inline-flex h-12 items-center rounded-full bg-muted px-7 text-[15px] font-semibold text-muted-foreground">
+						{daysUntilReset && daysUntilReset > 0
+							? `Run audit in ${daysUntilReset} day${daysUntilReset === 1 ? "" : "s"}`
+							: "Run audit unavailable"}
+					</span>
+				) : (
+					<Button
+						onClick={onRunAudit}
+						disabled={isRefreshing}
+						className="mt-7 h-12 rounded-full bg-lime px-7 text-[15px] font-semibold text-ink hover:bg-lime/85"
+					>
+						{isRefreshing ? (
+							<>
+								<Loader2 className="size-4 animate-spin" />
+								Running audit...
+							</>
+						) : (
+							"Run audit"
+						)}
+					</Button>
+				)}
+			</div>
 		</div>
 	);
 }

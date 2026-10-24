@@ -27,15 +27,15 @@ const getIconForType = (type: NotificationType) => {
 	switch (type) {
 		case "PLAYBOOK_READY":
 		case "AUDIT_COMPLETE":
-			return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+			return <CheckCircle2 className="h-4 w-4 text-foreground" />;
 		case "RISK_DETECTED":
 		case "SUBSCRIPTION_EXPIRING":
 		case "APPROVAL_REQUIRED":
-			return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+			return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
 		case "INTEGRATION_ERROR":
-			return <XCircle className="h-4 w-4 text-red-500" />;
+			return <XCircle className="h-4 w-4 text-destructive" />;
 		default:
-			return <Info className="h-4 w-4 text-blue-500" />;
+			return <Info className="h-4 w-4 text-muted-foreground" />;
 	}
 };
 
@@ -73,7 +73,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 			{actionUrl && (
 				<Link
 					href={actionUrl}
-					className="text-xs text-primary hover:underline"
+					className="text-xs text-foreground underline-offset-4 hover:underline"
 				>
 					Take action
 				</Link>
@@ -104,17 +104,12 @@ export const NotificationDropdown = () => {
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="ghost"
-					className="relative h-8 w-8 p-0 rounded-full"
+					className="relative size-11 rounded-full bg-muted p-0 hover:bg-border"
 					aria-label="Notifications"
 				>
-					<Bell className="h-5 w-5" />
+					<Bell className="size-[18px]" />
 					{unreadCount > 0 && (
-						<Badge
-							variant="destructive"
-							className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-xs"
-						>
-							{unreadCount > 9 ? "9+" : unreadCount}
-						</Badge>
+						<span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-foreground ring-2 ring-muted" />
 					)}
 				</Button>
 			</DropdownMenuTrigger>
@@ -126,7 +121,7 @@ export const NotificationDropdown = () => {
 					<span className="font-semibold">Notifications</span>
 					<Link
 						href="/dashboard/notifications"
-						className="text-xs text-primary hover:underline"
+						className="text-xs text-foreground underline-offset-4 hover:underline"
 					>
 						View all
 					</Link>

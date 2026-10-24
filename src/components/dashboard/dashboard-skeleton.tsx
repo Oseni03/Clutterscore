@@ -2,31 +2,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardSkeleton() {
 	return (
-		<div className="p-4 md:p-6 space-y-6">
-			<div className="flex items-center justify-between">
-				<Skeleton className="h-8 w-48" />
-				<Skeleton className="h-10 w-32" />
-			</div>
-
-			<div className="grid md:grid-cols-12 gap-4 md:gap-6">
-				<Skeleton className="md:col-span-4 h-[320px]" />
-				<div className="md:col-span-8 space-y-4 md:space-y-6">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-						<Skeleton className="h-[140px]" />
-						<Skeleton className="h-[140px]" />
-					</div>
-					<Skeleton className="h-[240px]" />
+		<div className="space-y-6 p-6 md:p-8">
+			<div className="flex flex-wrap items-end justify-between gap-4">
+				<div className="space-y-3">
+					<Skeleton className="h-9 w-48" />
+					<Skeleton className="h-4 w-80" />
+				</div>
+				<div className="flex gap-3">
+					<Skeleton className="h-11 w-28 rounded-full" />
+					<Skeleton className="h-11 w-32 rounded-full" />
 				</div>
 			</div>
 
-			<div className="space-y-4">
-				<Skeleton className="h-8 w-64" />
-				<div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-					{[1, 2, 3, 4].map((i) => (
-						<Skeleton key={i} className="h-[200px]" />
-					))}
-				</div>
+			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+				{[1, 2, 3, 4].map((item) => (
+					<Skeleton
+						key={item}
+						className="h-[260px] rounded-md bg-background"
+					/>
+				))}
 			</div>
+
+			<Skeleton className="h-[360px] rounded-md bg-background" />
+			<Skeleton className="h-[280px] rounded-md bg-background" />
 		</div>
 	);
 }

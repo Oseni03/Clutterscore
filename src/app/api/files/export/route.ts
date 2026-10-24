@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
 				headers: {
 					"Content-Type": "text/csv",
 					"Content-Disposition": `attachment; filename="files-export-${new Date().toISOString().split("T")[0]}.csv"`,
+					"X-Export-Count": files.length.toString(),
 				},
 			});
 		} catch (error) {

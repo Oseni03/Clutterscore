@@ -15,8 +15,8 @@ export const batchRestoreArchives = inngest.createFunction(
 			limit: 3,
 			scope: "account",
 		},
+		triggers: { event: "archive/batch.restore" },
 	},
-	{ event: "archive/batch.restore" },
 	async ({ event, step }) => {
 		const { archiveIds, organizationId, userId } = event.data;
 
@@ -152,8 +152,8 @@ export const batchDeleteArchives = inngest.createFunction(
 			limit: 5,
 			scope: "account",
 		},
+		triggers: { event: "archive/batch.delete" },
 	},
-	{ event: "archive/batch.delete" },
 	async ({ event, step }) => {
 		const { archiveIds, organizationId, userId, reason } = event.data;
 
@@ -284,8 +284,8 @@ export const migrateArchiveStorage = inngest.createFunction(
 		concurrency: {
 			limit: 2,
 		},
+		triggers: { event: "archive/migrate.storage" },
 	},
-	{ event: "archive/migrate.storage" },
 	async ({ event, step }) => {
 		const { archiveIds, fromProvider, toProvider, organizationId } =
 			event.data;

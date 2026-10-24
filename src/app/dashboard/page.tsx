@@ -24,6 +24,7 @@ export default function DashboardPage() {
 		error,
 		isThrottled,
 		throttleInfo,
+		stats,
 		runAudit,
 		getPreviousScore,
 	} = useDashboard();
@@ -47,7 +48,7 @@ export default function DashboardPage() {
 	const previousScore = getPreviousScore();
 
 	return (
-		<div className="p-4 md:p-6 space-y-6">
+		<div className="space-y-6 p-6 md:p-8">
 			<DashboardHeader
 				auditedAt={auditData.auditedAt}
 				isRefreshing={isRefreshing}
@@ -75,9 +76,11 @@ export default function DashboardPage() {
 				activeRisks={auditData.activeRisks}
 				criticalRisks={auditData.criticalRisks}
 				moderateRisks={auditData.moderateRisks}
-				isThrottled={isThrottled}
-				isRefreshing={isRefreshing}
-				onRunAudit={runAudit}
+				monthlySavings={stats?.monthlySavings ?? 0}
+				estimatedAnnualSavings={
+					stats?.estimatedAnnualSavings ?? auditData.estimatedSavings
+				}
+				nextScanDate={stats?.nextScanDate ?? null}
 			/>
 
 			<ClutterscoreTrend />

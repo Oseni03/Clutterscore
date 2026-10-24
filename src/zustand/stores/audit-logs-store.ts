@@ -1,12 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { AuditLogData } from "@/types/audit";
-import { AuditLogActionType, AuditLogStatus } from "@prisma/client";
+import type { AuditLogData } from "@/types/audit";
+import type { AuditLogStatus } from "@prisma/client";
+
+export type AuditLogCategory = "all" | "archive" | "remove" | "revoke";
 
 export interface AuditLogsState {
 	logs: AuditLogData[];
 	filters: {
-		actionType: AuditLogActionType | "all";
+		category: AuditLogCategory;
 		status: AuditLogStatus | "all";
 		search: string;
 	};
@@ -23,16 +25,18 @@ export interface AuditLogsState {
 	reset: () => void;
 }
 
+const initialFilters: AuditLogsState["filters"] = {
+	category: "all",
+	status: "all",
+	search: "",
+};
+
 export const createAuditLogsStore = () => {
 	return create<AuditLogsState>()(
 		persist(
 			(set) => ({
 				logs: [],
-				filters: {
-					actionType: "all",
-					status: "all",
-					search: "",
-				},
+				filters: initialFilters,
 				pagination: {
 					page: 1,
 					limit: 50,
@@ -52,11 +56,7 @@ export const createAuditLogsStore = () => {
 				reset: () =>
 					set({
 						logs: [],
-						filters: {
-							actionType: "all",
-							status: "all",
-							search: "",
-						},
+						filters: initialFilters,
 						pagination: {
 							page: 1,
 							limit: 50,
@@ -66,6 +66,14 @@ export const createAuditLogsStore = () => {
 			}),
 			{
 				name: "audit-logs-store",
+				version: 2,
+				migrate: (persistedState) => {
+					const state = persistedState as AuditLogsState;
+					return {
+						...state,
+						filters: initialFilters,
+					};
+				},
 				partialize: (state) => ({
 					filters: state.filters,
 					pagination: { limit: state.pagination.limit },

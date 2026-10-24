@@ -17,6 +17,7 @@ export function useOrganization() {
 		(state) => state.setActiveOrganization
 	);
 	const organizations = useOrganizationStore((state) => state.organizations);
+	const members = useOrganizationStore((state) => state.members);
 	const isAdmin = useOrganizationStore((state) => state.isAdmin);
 	const removeOrganization = useOrganizationStore(
 		(state) => state.removeOrganization
@@ -67,13 +68,17 @@ export function useOrganization() {
 				return;
 			}
 
+			const remainingOrganizations = organizations.filter(
+				(organization) => organization.id !== activeOrganization.id
+			);
+
 			removeOrganization(activeOrganization.id);
 			toast.success("Workspace deleted successfully", { id: toastId });
 			setDeleteDialogOpen(false);
 			setIsLoading(false);
 
-			if (organizations.length > 0) {
-				setActiveOrganization(organizations[0].id);
+			if (remainingOrganizations.length > 0) {
+				setActiveOrganization(remainingOrganizations[0].id);
 			} else {
 				router.push("/onboarding");
 			}
@@ -144,10 +149,11 @@ export function useOrganization() {
 				setIsLoading(false);
 			}
 		}
-	}, [activeOrganization, isMountedRef]);
+	}, [activeOrganization, isMountedRef, router]);
 
 	return {
 		activeOrganization,
+		members,
 		isAdmin,
 		deleteDialogOpen,
 		resetDialogOpen,

@@ -14,8 +14,8 @@ export const archiveHealthCheck = inngest.createFunction(
 	{
 		id: "archive-health-check",
 		name: "Daily archive system health check",
+		triggers: { cron: "0 6 * * *" }, // Daily at 6 AM UTC
 	},
-	{ cron: "0 6 * * *" }, // Daily at 6 AM UTC
 	async ({ step }) => {
 		const archiveService = new ArchiveService();
 
@@ -204,8 +204,8 @@ export const weeklyArchiveReport = inngest.createFunction(
 	{
 		id: "weekly-archive-report",
 		name: "Weekly archive statistics report",
+		triggers: { cron: "0 9 * * 1" }, // Every Monday at 9 AM UTC
 	},
-	{ cron: "0 9 * * 1" }, // Every Monday at 9 AM UTC
 	async ({ step }) => {
 		// Get date range (last 7 days)
 		const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -345,8 +345,8 @@ export const monitorFailedArchives = inngest.createFunction(
 	{
 		id: "monitor-failed-archives",
 		name: "Monitor failed archive operations",
+		triggers: { cron: "0 * * * *" }, // Every hour
 	},
-	{ cron: "0 * * * *" }, // Every hour
 	async ({ step }) => {
 		// Check for recent failed activities
 		const failedActivities = await step.run(

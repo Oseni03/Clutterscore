@@ -1,26 +1,23 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Undo2, Loader2, Clock } from "lucide-react";
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 
 interface UndoButtonProps {
 	logId: string;
 	canUndo: boolean;
 	daysUntilExpiry: number | null;
+	undoExpiresAt: Date | string | null;
+	isUndone: boolean;
 	actionType: string;
 	target: string;
 	onUndoComplete?: () => void;
@@ -30,11 +27,14 @@ export function UndoButton({
 	logId,
 	canUndo,
 	daysUntilExpiry,
+	undoExpiresAt,
+	isUndone,
 	actionType,
 	target,
 	onUndoComplete,
 }: UndoButtonProps) {
 	const [isUndoing, setIsUndoing] = useState(false);
+	const [open, setOpen] = useState(false);
 
 	const handleUndo = async () => {
 		setIsUndoing(true);
@@ -52,6 +52,7 @@ export function UndoButton({
 			toast.success("Action undone successfully", {
 				description: `Restored: ${target}`,
 			});
+			setOpen(false);
 
 			if (onUndoComplete) {
 				onUndoComplete();
@@ -67,77 +68,91 @@ export function UndoButton({
 	};
 
 	if (!canUndo) {
+		const expired =
+			!!undoExpiresAt &&
+			new Date(undoExpiresAt).getTime() <= new Date().getTime();
+		const label = isUndone ? "Undone" : expired ? "Expired" : "Unavailable";
+
 		return (
-			<Badge variant="secondary" className="text-xs">
-				<Clock className="h-3 w-3 mr-1" />
-				Expired
-			</Badge>
+			<button
+				type="button"
+				disabled
+				className="inline-flex h-9 cursor-not-allowed items-center rounded-full bg-muted px-4 text-xs font-semibold text-muted-foreground opacity-70"
+			>
+				{label}
+			</button>
 		);
 	}
 
 	return (
-		<AlertDialog>
-			<AlertDialogTrigger asChild>
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={isUndoing}
-					className="h-8 text-xs"
+		<>
+			<Button
+				onClick={() => setOpen(true)}
+				className="h-9 rounded-full bg-ink px-4 text-xs font-semibold text-paper hover:bg-ink/90"
+			>
+				Undo
+			</Button>
+
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogContent
+					showCloseButton={false}
+					className="max-w-[460px] gap-0 rounded-xl border-border p-7"
 				>
-					{isUndoing ? (
-						<Loader2 className="h-3 w-3 mr-1 animate-spin" />
-					) : (
-						<Undo2 className="h-3 w-3 mr-1" />
-					)}
-					Undo
-				</Button>
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Undo Action?</AlertDialogTitle>
-					<AlertDialogDescription className="space-y-2">
-						<p>You are about to undo the following action:</p>
-						<div className="bg-muted p-3 rounded-lg space-y-1">
-							<p className="font-medium text-foreground">
-								{actionType.replace(/_/g, " ")}
-							</p>
-							<p className="text-sm text-muted-foreground">
-								Target: {target}
-							</p>
-							{daysUntilExpiry !== null && (
-								<p className="text-xs text-orange-600 flex items-center gap-1 mt-2">
-									<Clock className="h-3 w-3" />
-									Expires in {daysUntilExpiry} day
-									{daysUntilExpiry !== 1 ? "s" : ""}
-								</p>
-							)}
-						</div>
-						<p className="text-sm">
-							This will restore the item to its previous state.
-							This action cannot be reversed.
+					<DialogHeader className="gap-0">
+						<DialogTitle className="font-display text-[24px] font-semibold tracking-[-0.03em]">
+							Undo this action?
+						</DialogTitle>
+						<DialogDescription className="mt-2.5 text-sm text-muted-foreground">
+							<span className="font-semibold text-foreground">
+								{actionType}
+							</span>{" "}
+							on{" "}
+							<span className="font-semibold text-foreground">
+								{target}
+							</span>{" "}
+							will be restored to its previous state.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="mt-4 flex gap-3 rounded-md bg-muted px-4 py-3.5 text-[13px]">
+						<span className="mt-1.5 size-2 shrink-0 rounded-full bg-ink" />
+						<p>
+							{daysUntilExpiry !== null
+								? daysUntilExpiry <= 0
+									? "This undo window expires today."
+									: `This undo window expires in ${daysUntilExpiry} day${
+											daysUntilExpiry === 1 ? "" : "s"
+										}.`
+								: "This action can only be undone once."}
 						</p>
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						onClick={handleUndo}
-						disabled={isUndoing}
-					>
-						{isUndoing ? (
-							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Undoing...
-							</>
-						) : (
-							<>
-								<Undo2 className="mr-2 h-4 w-4" />
-								Confirm Undo
-							</>
-						)}
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+					</div>
+
+					<div className="mt-6 flex flex-wrap justify-end gap-3">
+						<Button
+							variant="secondary"
+							onClick={() => setOpen(false)}
+							disabled={isUndoing}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={handleUndo}
+							disabled={isUndoing}
+							className="h-11 rounded-full px-6 text-sm font-semibold"
+						>
+							{isUndoing ? (
+								<>
+									<Loader2 className="size-4 animate-spin" />
+									Undoing...
+								</>
+							) : (
+								"Confirm undo"
+							)}
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }

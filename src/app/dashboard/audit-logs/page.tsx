@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+	Archive,
+	FileText,
+	ShieldCheck,
+	Trash2,
+	Loader2,
+	Search,
+} from "lucide-react";
+import type { AuditLogActionType, AuditLogStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	Table,
 	TableBody,
@@ -15,79 +22,175 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Search,
-	ShieldAlert,
-	Trash2,
-	UserX,
-	Download,
-	AlertCircle,
-	Loader2,
-	RefreshCw,
-	Archive,
-	Key,
-	FileText,
-	ChevronLeft,
-	ChevronRight,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuditLogs } from "@/hooks/use-audit-logs";
-import { AuditLogActionType, AuditLogStatus } from "@prisma/client";
 import { UndoButton } from "@/components/audit-logs/undo-button";
+import { useAuditLogs } from "@/hooks/use-audit-logs";
+import type { AuditLogCategory } from "@/zustand/stores/audit-logs-store";
+import type { AuditLogData } from "@/types/audit";
 
-const ACTION_ICONS = {
-	REVOKE_ACCESS: UserX,
-	ARCHIVE_FILE: Trash2,
-	ARCHIVE_CHANNEL: Archive,
-	ARCHIVE_PAGE: Archive,
-	REMOVE_GUEST: UserX,
-	REMOVE_LICENSE: Key,
-	UPDATE_PERMISSIONS: ShieldAlert,
-	OTHER: FileText,
+const CATEGORY_TABS: { value: AuditLogCategory; label: string }[] = [
+	{ value: "all", label: "All actions" },
+	{ value: "archive", label: "Archive" },
+	{ value: "remove", label: "Remove" },
+	{ value: "revoke", label: "Revoke" },
+];
+
+const STATUS_TABS: {
+	value: AuditLogStatus | "all";
+	label: string;
+}[] = [
+	{ value: "all", label: "All" },
+	{ value: "SUCCESS", label: "Success" },
+	{ value: "FAILED", label: "Failed" },
+];
+
+const SOURCE_LABELS: Record<string, string> = {
+	GOOGLE: "Google Workspace",
+	SLACK: "Slack",
+	DROPBOX: "Dropbox",
+	NOTION: "Notion",
+	MICROSOFT: "Microsoft 365",
+	FIGMA: "Figma",
+	JIRA: "Jira",
 };
 
-const ACTION_COLORS = {
-	REVOKE_ACCESS: "bg-orange-100 text-orange-600 dark:bg-orange-900/30",
-	ARCHIVE_FILE: "bg-red-100 text-red-600 dark:bg-red-900/30",
-	ARCHIVE_CHANNEL: "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
-	ARCHIVE_PAGE: "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
-	REMOVE_GUEST: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30",
-	REMOVE_LICENSE: "bg-purple-100 text-purple-600 dark:bg-purple-900/30",
-	UPDATE_PERMISSIONS: "bg-green-100 text-green-600 dark:bg-green-900/30",
-	OTHER: "bg-gray-100 text-gray-600 dark:bg-gray-900/30",
-};
+function getCategory(actionType: AuditLogActionType) {
+	switch (actionType) {
+		case "ARCHIVE_FILE":
+		case "ARCHIVE_CHANNEL":
+		case "ARCHIVE_PAGE":
+			return "archive";
+		case "REMOVE_GUEST":
+		case "REMOVE_LICENSE":
+			return "remove";
+		case "REVOKE_ACCESS":
+		case "UPDATE_PERMISSIONS":
+			return "revoke";
+		default:
+			return "other";
+	}
+}
+
+function getActionMeta(actionType: AuditLogActionType) {
+	const category = getCategory(actionType);
+
+	if (category === "archive") {
+		return {
+			label: "Archive",
+			icon: Archive,
+			iconClass: "bg-lime text-ink",
+		};
+	}
+	if (category === "remove") {
+		return {
+			label: "Remove",
+			icon: Trash2,
+			iconClass: "bg-[#F4B183] text-ink",
+		};
+	}
+	if (category === "revoke") {
+		return {
+			label: "Revoke",
+			icon: ShieldCheck,
+			iconClass: "bg-[#B9A9D6] text-ink",
+		};
+	}
+
+	return {
+		label: "Other",
+		icon: FileText,
+		iconClass: "bg-muted text-foreground",
+	};
+}
+
+function relativeTime(value: Date | string) {
+	const diff = Date.now() - new Date(value).getTime();
+	const minutes = Math.floor(diff / 60000);
+
+	if (minutes < 1) return "Just now";
+	if (minutes < 60) return `${minutes} min ago`;
+
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+	const days = Math.floor(hours / 24);
+	if (days === 1) return "Yesterday";
+	if (days < 30) return `${days} days ago`;
+
+	const months = Math.floor(days / 30);
+	if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+
+	const years = Math.floor(days / 365);
+	return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
+function isLogUndone(log: AuditLogData) {
+	if (log.isUndone) return true;
+	const details = (log.details ?? {}) as Record<string, unknown>;
+	return details.undone === true;
+}
+
+function StatusPill({ log }: { log: AuditLogData }) {
+	const undone = isLogUndone(log);
+
+	if (undone) {
+		return (
+			<span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+				<span className="size-1.5 rounded-full bg-muted-foreground" />
+				Undone
+			</span>
+		);
+	}
+
+	if (log.status === "FAILED") {
+		return (
+			<span className="inline-flex items-center gap-1.5 rounded-full bg-[#F4B183]/40 px-2.5 py-1 text-xs font-medium text-ink">
+				<span className="size-1.5 rounded-full bg-[#C67A51]" />
+				Failed
+			</span>
+		);
+	}
+
+	if (log.status === "PENDING") {
+		return (
+			<span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
+				<span className="size-1.5 rounded-full bg-muted-foreground" />
+				Pending
+			</span>
+		);
+	}
+
+	return (
+		<span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium">
+			<span className="size-1.5 rounded-full bg-[#8FA9A8]" />
+			Success
+		</span>
+	);
+}
 
 export default function AuditLogsPage() {
 	const {
 		logs,
 		filters,
 		pagination,
+		stats,
 		isLoading,
 		error,
 		setFilters,
 		setPagination,
 		exportLogs,
 		refresh,
-		getActionStats,
 	} = useAuditLogs();
 
 	const [isExporting, setIsExporting] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-	const handleSearch = (value: string) => {
-		setFilters({ search: value });
-	};
+	useEffect(() => {
+		if (!toastMessage) return;
 
-	const handlePageChange = (newPage: number) => {
-		setPagination({ page: newPage });
-	};
+		const timer = setTimeout(() => setToastMessage(null), 5000);
+		return () => clearTimeout(timer);
+	}, [toastMessage]);
 
 	const handleExport = async () => {
 		setIsExporting(true);
@@ -107,393 +210,424 @@ export default function AuditLogsPage() {
 		}
 	};
 
-	const formatActionType = (actionType: AuditLogActionType) => {
-		return actionType
-			.replace(/_/g, " ")
-			.toLowerCase()
-			.replace(/\b\w/g, (l) => l.toUpperCase());
+	const handleUndoComplete = (target: string) => {
+		setToastMessage(`Undone: ${target} was restored.`);
+		void handleRefresh();
 	};
 
-	const formatTimestamp = (timestamp: Date) => {
-		const now = new Date();
-		const diff = now.getTime() - new Date(timestamp).getTime();
-		const minutes = Math.floor(diff / 60000);
-		const hours = Math.floor(diff / 3600000);
-		const days = Math.floor(diff / 86400000);
+	const totalActions = stats?.totalActions ?? pagination.total;
+	const successful =
+		stats?.successful ??
+		logs.filter((log) => log.status === "SUCCESS").length;
+	const failed =
+		stats?.failed ?? logs.filter((log) => log.status === "FAILED").length;
+	const undoable =
+		stats?.undoable ?? logs.filter((log) => log.canUndo).length;
+	const hasData = totalActions > 0 || logs.length > 0;
 
-		if (minutes < 1) return "Just now";
-		if (minutes < 60)
-			return `${minutes} min${minutes === 1 ? "" : "s"} ago`;
-		if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-		return `${days} day${days === 1 ? "" : "s"} ago`;
-	};
+	const page = pagination.page || 1;
+	const pageSize = pagination.limit || 50;
+	const totalPages = Math.max(1, Math.ceil(pagination.total / pageSize));
 
-	const getActionIcon = (actionType: AuditLogActionType) => {
-		const Icon = ACTION_ICONS[actionType] || FileText;
-		return Icon;
-	};
-
-	const getActionColor = (actionType: AuditLogActionType) => {
-		return ACTION_COLORS[actionType] || ACTION_COLORS.OTHER;
-	};
-
-	const stats = getActionStats();
-	const totalPages = Math.ceil(pagination.total / pagination.limit);
-	const startIndex = (pagination.page - 1) * pagination.limit;
-
-	if (isLoading) {
+	if (isLoading && !stats) {
 		return (
-			<div className="p-4 md:p-6 space-y-6">
-				<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-					<div className="space-y-2">
-						<Skeleton className="h-8 w-64" />
-						<Skeleton className="h-4 w-96" />
-					</div>
-					<Skeleton className="h-10 w-32" />
+			<div className="space-y-6 p-6 md:p-8">
+				<div className="space-y-2">
+					<Skeleton className="h-9 w-44" />
+					<Skeleton className="h-5 w-80" />
 				</div>
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-					{[1, 2, 3, 4].map((i) => (
-						<Skeleton key={i} className="h-24" />
+				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					{Array.from({ length: 4 }).map((_, index) => (
+						<Skeleton
+							key={index}
+							className="h-[130px] rounded-xl bg-background"
+						/>
 					))}
 				</div>
-				<Card>
-					<CardHeader>
-						<Skeleton className="h-10 w-full" />
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-2">
-							{[1, 2, 3, 4, 5].map((i) => (
-								<Skeleton key={i} className="h-16 w-full" />
-							))}
-						</div>
-					</CardContent>
-				</Card>
+				<Skeleton className="h-[64px] rounded-xl bg-background" />
+				<Skeleton className="h-[420px] rounded-xl bg-background" />
 			</div>
 		);
 	}
 
 	return (
-		<div className="p-4 md:p-6 space-y-6">
-			{/* Header */}
-			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+		<div className="space-y-6 p-6 md:p-8">
+			<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 				<div>
-					<h1 className="text-xl md:text-2xl font-display font-bold">
-						Audit Logs & Undo History
+					<h1 className="font-display text-[32px] font-semibold leading-none tracking-[-0.04em] md:text-[36px]">
+						Audit logs
 					</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						Track actions with 30-day undo safety net
+					<p className="mt-1.5 text-sm text-muted-foreground">
+						Every cleanup action, recorded. Undo within the 30-day
+						window.
 					</p>
 				</div>
-				<div className="flex gap-2 w-full md:w-auto">
-					<Button
-						variant="outline"
-						onClick={handleRefresh}
-						disabled={isRefreshing}
-						size="sm"
-					>
-						{isRefreshing ? (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						) : (
-							<RefreshCw className="mr-2 h-4 w-4" />
-						)}
-						Refresh
-					</Button>
-					<Button
-						variant="outline"
-						onClick={handleExport}
-						disabled={isExporting}
-						size="sm"
-					>
-						{isExporting ? (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						) : (
-							<Download className="mr-2 h-4 w-4" />
-						)}
-						Export
-					</Button>
-				</div>
-			</div>
-
-			{/* Error Alert */}
-			{error && (
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
-
-			{/* Stats */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-				<Card className="p-4">
-					<p className="text-xs text-muted-foreground mb-1">
-						Total Actions
-					</p>
-					<p className="text-2xl font-bold">{pagination.total}</p>
-				</Card>
-				<Card className="p-4">
-					<p className="text-xs text-muted-foreground mb-1">
-						Successful
-					</p>
-					<p className="text-2xl font-bold text-green-600">
-						{stats.success}
-					</p>
-				</Card>
-				<Card className="p-4">
-					<p className="text-xs text-muted-foreground mb-1">Failed</p>
-					<p className="text-2xl font-bold text-red-600">
-						{stats.failed}
-					</p>
-				</Card>
-				<Card className="p-4">
-					<p className="text-xs text-muted-foreground mb-1">
-						Can Undo
-					</p>
-					<p className="text-2xl font-bold text-blue-600">
-						{logs.filter((l) => l.canUndo).length}
-					</p>
-				</Card>
-			</div>
-
-			{/* Main Card */}
-			<Card>
-				<CardHeader className="pb-3">
-					<div className="flex flex-col md:flex-row gap-4 justify-between">
-						<div className="relative flex-1 md:max-w-sm">
-							<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-							<Input
-								placeholder="Search logs..."
-								className="pl-9"
-								value={filters.search}
-								onChange={(e) => handleSearch(e.target.value)}
-							/>
-						</div>
-						<div className="flex gap-2 flex-wrap">
-							<Select
-								value={filters.actionType}
-								onValueChange={(value) =>
-									setFilters({
-										actionType: value as
-											| AuditLogActionType
-											| "all",
-									})
-								}
-							>
-								<SelectTrigger className="w-[160px]">
-									<SelectValue placeholder="Action Type" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">
-										All Actions
-									</SelectItem>
-									{Object.keys(ACTION_ICONS).map((type) => (
-										<SelectItem key={type} value={type}>
-											{formatActionType(
-												type as AuditLogActionType
-											)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Select
-								value={filters.status}
-								onValueChange={(value) =>
-									setFilters({
-										status: value as AuditLogStatus | "all",
-									})
-								}
-							>
-								<SelectTrigger className="w-[140px]">
-									<SelectValue placeholder="Status" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">
-										All Status
-									</SelectItem>
-									<SelectItem value="SUCCESS">
-										Success
-									</SelectItem>
-									<SelectItem value="FAILED">
-										Failed
-									</SelectItem>
-									<SelectItem value="PENDING">
-										Pending
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
+				{hasData && (
+					<div className="flex flex-wrap gap-3">
+						<Button
+							variant="outline"
+							onClick={handleRefresh}
+							disabled={isRefreshing}
+							className="h-11 rounded-full border-border bg-background px-5 text-sm font-semibold"
+						>
+							{isRefreshing && (
+								<Loader2 className="size-4 animate-spin" />
+							)}
+							Refresh
+						</Button>
+						<Button
+							onClick={handleExport}
+							disabled={isExporting}
+							className="h-11 rounded-full bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink/90"
+						>
+							{isExporting && (
+								<Loader2 className="size-4 animate-spin" />
+							)}
+							Export CSV
+						</Button>
 					</div>
-				</CardHeader>
+				)}
+			</div>
 
-				<CardContent>
-					{logs.length > 0 ? (
-						<>
-							<div className="overflow-x-auto">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>Action</TableHead>
-											<TableHead>Target</TableHead>
-											<TableHead>Executor</TableHead>
-											<TableHead>Time</TableHead>
-											<TableHead>Status</TableHead>
-											<TableHead className="text-right">
-												Undo
-											</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{logs.map((log) => {
-											const Icon = getActionIcon(
-												log.actionType
-											);
-											return (
-												<TableRow key={log.id}>
-													<TableCell>
-														<div className="flex items-center gap-2">
-															<div
-																className={cn(
-																	"h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0",
-																	getActionColor(
-																		log.actionType
-																	)
-																)}
-															>
-																<Icon className="h-4 w-4" />
-															</div>
-															<span className="font-medium text-sm">
-																{formatActionType(
-																	log.actionType
-																)}
-															</span>
-														</div>
-													</TableCell>
-													<TableCell>
-														<div>
-															<div className="font-medium text-sm max-w-[200px] truncate">
-																{log.target}
-															</div>
-															<div className="text-xs text-muted-foreground">
-																{log.targetType}
-															</div>
-														</div>
-													</TableCell>
-													<TableCell className="text-sm text-muted-foreground">
-														{log.executor}
-													</TableCell>
-													<TableCell className="text-sm text-muted-foreground">
-														{formatTimestamp(
-															log.timestamp
-														)}
-													</TableCell>
-													<TableCell>
-														<Badge
-															variant={
-																log.status ===
-																"SUCCESS"
-																	? "outline"
-																	: log.status ===
-																		  "FAILED"
-																		? "destructive"
-																		: "secondary"
-															}
-															className={
-																log.status ===
-																"SUCCESS"
-																	? "text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/30"
-																	: ""
-															}
-														>
-															{log.status}
-														</Badge>
-													</TableCell>
-													<TableCell className="text-right">
-														<UndoButton
-															logId={log.id}
-															canUndo={
-																log.canUndo
-															}
-															daysUntilExpiry={
-																log.daysUntilExpiry
-															}
-															actionType={formatActionType(
-																log.actionType
-															)}
-															target={log.target}
-															onUndoComplete={
-																handleRefresh
-															}
-														/>
-													</TableCell>
-												</TableRow>
-											);
-										})}
-									</TableBody>
-								</Table>
+			{!hasData ? (
+				<div className="flex flex-col items-center rounded-2xl border border-border bg-background px-6 py-16 text-center">
+					<div
+						className="size-20 rounded-full"
+						style={{
+							background:
+								"radial-gradient(circle at 35% 30%, #F6C09A, #E9A39B 45%, #B7A6D8 100%)",
+						}}
+					/>
+					<h2 className="mt-6 font-display text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">
+						No actions yet
+					</h2>
+					<p className="mt-3 max-w-[440px] text-sm text-muted-foreground">
+						When you archive, remove, or revoke something, the
+						action and its undo window will appear here.
+					</p>
+					<Button
+						asChild
+						className="mt-7 h-12 rounded-full bg-lime px-7 text-[15px] font-semibold text-ink hover:bg-lime/90"
+					>
+						<Link href="/dashboard/playbooks">Go to playbooks</Link>
+					</Button>
+					{error && (
+						<p className="mt-4 text-xs text-muted-foreground">
+							{error}
+						</p>
+					)}
+				</div>
+			) : (
+				<>
+					{toastMessage && (
+						<div className="flex items-center justify-between gap-4 rounded-md bg-night px-5 py-4 text-paper">
+							<div className="flex items-center gap-3">
+								<span className="size-2 rounded-full bg-lime" />
+								<p className="text-sm font-medium">
+									{toastMessage}
+								</p>
 							</div>
-
-							{/* Pagination */}
-							<div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4">
-								<div className="text-sm text-muted-foreground">
-									Showing {startIndex + 1}-
-									{Math.min(
-										startIndex + pagination.limit,
-										pagination.total
-									)}{" "}
-									of {pagination.total} logs
-								</div>
-								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() =>
-											handlePageChange(
-												pagination.page - 1
-											)
-										}
-										disabled={pagination.page === 1}
-									>
-										<ChevronLeft className="h-4 w-4" />
-										Previous
-									</Button>
-									<div className="flex items-center gap-1">
-										<span className="text-sm">
-											Page {pagination.page} of{" "}
-											{totalPages}
-										</span>
-									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() =>
-											handlePageChange(
-												pagination.page + 1
-											)
-										}
-										disabled={pagination.page >= totalPages}
-									>
-										Next
-										<ChevronRight className="h-4 w-4" />
-									</Button>
-								</div>
-							</div>
-						</>
-					) : (
-						<div className="text-center py-12 text-muted-foreground">
-							<ShieldAlert className="h-12 w-12 mx-auto mb-4 opacity-50" />
-							<h3 className="text-lg font-medium mb-2">
-								No audit logs found
-							</h3>
-							<p className="text-sm">
-								{filters.search ||
-								filters.actionType !== "all" ||
-								filters.status !== "all"
-									? "Try adjusting your filters"
-									: "Actions will appear here once playbooks are executed"}
-							</p>
+							<button
+								type="button"
+								onClick={() => setToastMessage(null)}
+								className="text-xs font-medium text-[#A8A8A2] transition-colors hover:text-paper"
+							>
+								Dismiss
+							</button>
 						</div>
 					)}
-				</CardContent>
-			</Card>
+
+					{error && (
+						<div className="flex items-center gap-3 rounded-md border border-border bg-background px-5 py-4">
+							<span className="size-2.5 rounded-full bg-[#F4B183]" />
+							<p className="text-sm">{error}</p>
+						</div>
+					)}
+
+					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+						<div className="rounded-xl border border-border bg-background p-5">
+							<div className="text-[13px] font-medium text-muted-foreground">
+								Total actions
+							</div>
+							<div className="mt-2 font-display text-[40px] font-semibold leading-none tracking-[-0.03em]">
+								{totalActions}
+							</div>
+						</div>
+						<div className="rounded-xl border border-border bg-background p-5">
+							<div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
+								<span className="size-1.5 rounded-full bg-[#8FA9A8]" />
+								Successful
+							</div>
+							<div className="mt-2 font-display text-[40px] font-semibold leading-none tracking-[-0.03em]">
+								{successful}
+							</div>
+						</div>
+						<div className="rounded-xl border border-border bg-background p-5">
+							<div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
+								<span className="size-1.5 rounded-full bg-[#C67A51]" />
+								Failed
+							</div>
+							<div className="mt-2 font-display text-[40px] font-semibold leading-none tracking-[-0.03em]">
+								{failed}
+							</div>
+						</div>
+						<div className="rounded-xl bg-night p-5 text-paper">
+							<div className="text-[13px] font-medium text-[#A8A8A2]">
+								Undoable
+							</div>
+							<div className="mt-2 font-display text-[40px] font-semibold leading-none tracking-[-0.03em] text-lime">
+								{undoable}
+							</div>
+							<div className="mt-2 text-xs text-[#A8A8A2]">
+								Within 30-day window
+							</div>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 xl:flex-row xl:items-center">
+						<div className="relative min-w-0 flex-1">
+							<Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								value={filters.search}
+								onChange={(event) =>
+									setFilters({ search: event.target.value })
+								}
+								placeholder="Search by target or executor..."
+								aria-label="Search audit logs"
+								className="h-11 rounded-xl border-border bg-background pl-10"
+							/>
+						</div>
+
+						<div className="flex flex-wrap items-center gap-3">
+							<div
+								className="inline-flex flex-wrap gap-1 rounded-full bg-muted p-1"
+								role="group"
+								aria-label="Filter by action"
+							>
+								{CATEGORY_TABS.map((tab) => {
+									const active =
+										filters.category === tab.value;
+									return (
+										<button
+											key={tab.value}
+											type="button"
+											onClick={() =>
+												setFilters({
+													category: tab.value,
+												})
+											}
+											aria-pressed={active}
+											className={`h-8 rounded-full px-3.5 text-[13px] font-medium transition-colors ${
+												active
+													? "bg-ink text-paper"
+													: "text-muted-foreground hover:text-foreground"
+											}`}
+										>
+											{tab.label}
+										</button>
+									);
+								})}
+							</div>
+
+							<div
+								className="inline-flex gap-1 rounded-full bg-muted p-1"
+								role="group"
+								aria-label="Filter by status"
+							>
+								{STATUS_TABS.map((tab) => {
+									const active = filters.status === tab.value;
+									return (
+										<button
+											key={tab.value}
+											type="button"
+											onClick={() =>
+												setFilters({
+													status: tab.value,
+												})
+											}
+											aria-pressed={active}
+											className={`h-8 rounded-full px-3.5 text-[13px] font-medium transition-colors ${
+												active
+													? "bg-ink text-paper"
+													: "text-muted-foreground hover:text-foreground"
+											}`}
+										>
+											{tab.label}
+										</button>
+									);
+								})}
+							</div>
+						</div>
+					</div>
+
+					<div className="overflow-hidden rounded-xl border border-border bg-background">
+						<Table className="min-w-[900px]">
+							<TableHeader>
+								<TableRow className="border-border bg-muted/60 hover:bg-muted/60">
+									<TableHead className="h-11 w-[15%] px-4 text-xs font-medium text-muted-foreground">
+										Action
+									</TableHead>
+									<TableHead className="h-11 w-[31%] px-4 text-xs font-medium text-muted-foreground">
+										Target
+									</TableHead>
+									<TableHead className="h-11 w-[14%] px-4 text-xs font-medium text-muted-foreground">
+										Executor
+									</TableHead>
+									<TableHead className="h-11 w-[13%] px-4 text-xs font-medium text-muted-foreground">
+										When
+									</TableHead>
+									<TableHead className="h-11 w-[12%] px-4 text-xs font-medium text-muted-foreground">
+										Status
+									</TableHead>
+									<TableHead className="h-11 w-[15%] px-4 text-right text-xs font-medium text-muted-foreground">
+										Undo
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{logs.length === 0 ? (
+									<TableRow className="hover:bg-transparent">
+										<TableCell
+											colSpan={6}
+											className="py-16 text-center"
+										>
+											<p className="font-display text-xl font-semibold">
+												No matching actions
+											</p>
+											<p className="mt-2 text-sm text-muted-foreground">
+												Try a different search or clear
+												your filters.
+											</p>
+											<Button
+												variant="outline"
+												onClick={() =>
+													setFilters({
+														category: "all",
+														status: "all",
+														search: "",
+													})
+												}
+												className="mt-5 h-10 rounded-full border-border bg-background px-5 text-sm font-semibold"
+											>
+												Clear filters
+											</Button>
+										</TableCell>
+									</TableRow>
+								) : (
+									logs.map((log) => {
+										const meta = getActionMeta(
+											log.actionType
+										);
+										const Icon = meta.icon;
+										const source = log.playbook?.source
+											? (SOURCE_LABELS[
+													log.playbook.source
+												] ??
+												log.playbook.source)
+											: null;
+										const targetType = source
+											? `${log.targetType} · ${source}`
+											: log.targetType;
+
+										return (
+											<TableRow
+												key={log.id}
+												className="border-border"
+											>
+												<TableCell className="px-4 py-3.5">
+													<div className="flex items-center gap-2.5">
+														<span
+															className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${meta.iconClass}`}
+														>
+															<Icon className="size-4" />
+														</span>
+														<span className="text-sm font-medium">
+															{meta.label}
+														</span>
+													</div>
+												</TableCell>
+												<TableCell className="px-4 py-3.5">
+													<div className="max-w-[320px] truncate text-sm font-medium">
+														{log.target ||
+															"Unknown target"}
+													</div>
+													<div className="mt-0.5 truncate text-xs text-muted-foreground">
+														{targetType}
+													</div>
+												</TableCell>
+												<TableCell className="px-4 py-3.5 text-sm text-muted-foreground">
+													{log.executor === "SYSTEM"
+														? "System"
+														: log.executor}
+												</TableCell>
+												<TableCell className="px-4 py-3.5 text-sm text-muted-foreground">
+													{relativeTime(log.timestamp)}
+												</TableCell>
+												<TableCell className="px-4 py-3.5">
+													<StatusPill log={log} />
+												</TableCell>
+												<TableCell className="px-4 py-3.5 text-right">
+													<UndoButton
+														logId={log.id}
+														canUndo={log.canUndo}
+														daysUntilExpiry={
+															log.daysUntilExpiry
+														}
+														undoExpiresAt={
+															log.undoExpiresAt
+														}
+														isUndone={isLogUndone(
+															log
+														)}
+														actionType={meta.label}
+														target={log.target}
+														onUndoComplete={() =>
+															handleUndoComplete(
+																log.target
+															)
+														}
+													/>
+												</TableCell>
+											</TableRow>
+										);
+									})
+								)}
+							</TableBody>
+						</Table>
+
+						<div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
+							<p className="text-xs text-muted-foreground">
+								Showing {logs.length} of {pagination.total}{" "}
+								actions · Page {page} of {totalPages}
+							</p>
+							<div className="flex gap-2">
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={() =>
+										setPagination({ page: page - 1 })
+									}
+									disabled={page <= 1 || isLoading}
+									className="h-9 rounded-full px-4 text-xs font-semibold"
+								>
+									Previous
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={() =>
+										setPagination({ page: page + 1 })
+									}
+									disabled={page >= totalPages || isLoading}
+									className="h-9 rounded-full px-4 text-xs font-semibold"
+								>
+									Next
+								</Button>
+							</div>
+						</div>
+					</div>
+				</>
+			)}
 		</div>
 	);
 }

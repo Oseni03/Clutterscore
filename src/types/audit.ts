@@ -107,10 +107,12 @@ export type AuditLogData = Prisma.AuditLogGetPayload<{
 				impactType: true;
 			};
 		};
-		canUndo: boolean;
-		daysUntilExpiry: number | null;
 	};
-}>;
+}> & {
+	canUndo: boolean;
+	daysUntilExpiry: number | null;
+	isUndone?: boolean;
+};
 
 /**
  * Transform AuditResult to DashboardAuditData
@@ -210,10 +212,21 @@ export interface PaginatedResponse<T> {
 }
 
 /**
+ * File stats across the latest audit
+ */
+export interface FileStats {
+	totalFiles: number;
+	totalSizeMb: number;
+	duplicatesCount: number;
+	publicFilesCount: number;
+}
+
+/**
  * Files list response
  */
 export interface FilesListResponse extends PaginatedResponse<FileData> {
 	files: FileData[];
+	stats?: FileStats;
 }
 
 /**
@@ -228,8 +241,16 @@ export interface PlaybooksListResponse {
 /**
  * Audit logs list response
  */
+export interface AuditLogStats {
+	totalActions: number;
+	successful: number;
+	failed: number;
+	undoable: number;
+}
+
 export interface AuditLogsListResponse extends PaginatedResponse<AuditLogData> {
 	logs: AuditLogData[];
+	stats?: AuditLogStats;
 }
 
 /**

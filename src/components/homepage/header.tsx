@@ -1,73 +1,61 @@
-"use client";
-
-import { authClient } from "@/lib/auth-client";
-import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React from "react";
-import { Button } from "../ui/button";
 
 function Header() {
-	const router = useRouter();
-	const { user } = authClient.useSession().data || {};
-
 	return (
-		<nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-			<div className="container mx-auto px-4 h-16 flex items-center justify-between">
-				<div className="flex items-center gap-2">
-					<Image
-						src={"/generated_images/logo.png"}
-						alt="Clutterscore Logo"
-						width={32}
-						height={32}
-						className="h-8 w-8"
-					/>
-					<span className="font-display font-bold text-xl tracking-tight">
-						Clutterscore
-					</span>
-				</div>
-				<div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+		<header className="w-full">
+			<div className="bg-ink px-6 py-[11px] text-center text-[13px] text-paper">
+				Start free: connect up to 3 integrations and see your first
+				ClutterScore.
+			</div>
+			<div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-8 gap-y-4 px-6 py-[18px]">
+				<Link
+					href="/"
+					className="font-display text-2xl font-bold tracking-[-0.03em]"
+				>
+					Clutterscore
+				</Link>
+				<nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
 					<Link
-						href="#features"
-						className="hover:text-foreground transition-colors"
+						href="#how"
+						className="transition-opacity hover:opacity-70"
 					>
-						Features
+						How it works
+					</Link>
+					<Link
+						href="#integrations"
+						className="transition-opacity hover:opacity-70"
+					>
+						Integrations
+					</Link>
+					<Link
+						href="#safety"
+						className="transition-opacity hover:opacity-70"
+					>
+						Safety
 					</Link>
 					<Link
 						href="#pricing"
-						className="hover:text-foreground transition-colors"
+						className="transition-opacity hover:opacity-70"
 					>
 						Pricing
 					</Link>
+				</nav>
+				<div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
 					<Link
-						href="#about"
-						className="hover:text-foreground transition-colors"
+						href="/login"
+						className="transition-opacity hover:opacity-70"
 					>
-						About
+						Log in
+					</Link>
+					<Link
+						href="/signup"
+						className="rounded-full bg-primary px-[18px] py-2.5 text-primary-foreground transition-opacity hover:opacity-70"
+					>
+						Get started
 					</Link>
 				</div>
-				<div className="flex items-center gap-4">
-					{user?.id ? (
-						<Button onClick={() => router.push("/dashboard")}>
-							Dashboard
-						</Button>
-					) : (
-						<>
-							<Button
-								variant="ghost"
-								className="hidden sm:flex"
-								onClick={() => router.push("/login")}
-							>
-								Log in
-							</Button>
-							<Button onClick={() => router.push("/signup")}>
-								Start Free Audit
-							</Button>
-						</>
-					)}
-				</div>
 			</div>
-		</nav>
+		</header>
 	);
 }
 

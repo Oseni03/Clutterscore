@@ -1,15 +1,27 @@
-export default function NoFilteredMessage() {
+import { Button } from "@/components/ui/button";
+
+interface NoFilteredMessageProps {
+	onClear: () => void;
+}
+
+export default function NoFilteredMessage({
+	onClear,
+}: NoFilteredMessageProps) {
 	return (
-		<div className="col-span-2">
-			<div className="text-center py-12 md:py-20 text-muted-foreground">
-				<div className="text-3xl md:text-4xl mb-4">🔍</div>
-				<h3 className="text-base md:text-lg font-medium mb-2">
-					No playbooks found
-				</h3>
-				<p className="text-sm">
-					Try adjusting your filters or search criteria.
-				</p>
-			</div>
+		<div className="flex flex-col items-center rounded-xl border border-border bg-background px-6 py-16 text-center sm:px-8">
+			<h2 className="font-display text-[28px] font-semibold tracking-[-0.03em]">
+				No playbooks match
+			</h2>
+			<p className="mt-3 max-w-[420px] text-muted-foreground">
+				Try a different search or impact filter.
+			</p>
+			<Button
+				onClick={onClear}
+				variant="secondary"
+				className="mt-6 h-12 px-7"
+			>
+				Clear filters
+			</Button>
 		</div>
 	);
 }

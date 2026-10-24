@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/middleware";
-import { ToolSource } from "@prisma/client";
+import { FileStatus, FileType, ToolSource } from "@prisma/client";
 import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
 			const page = parseInt(searchParams.get("page") || "1");
 			const limit = parseInt(searchParams.get("limit") || "100");
 			const source = searchParams.get("source");
+			const type = searchParams.get("type");
+			const search = searchParams.get("search")?.trim();
 			const isDuplicate = searchParams.get("isDuplicate");
 			const isPubliclyShared = searchParams.get("isPubliclyShared");
 
@@ -34,21 +36,63 @@ export async function GET(req: NextRequest) {
 					success: true,
 					files: [],
 					pagination: { page, limit, total: 0, totalPages: 0 },
+					stats: {
+						totalFiles: 0,
+						totalSizeMb: 0,
+						duplicatesCount: 0,
+						publicFilesCount: 0,
+					},
 				});
 			}
 
-			const [files, total] = await Promise.all([
+			const auditWhere = {
+				auditResultId: latestAudit.id,
+				status: FileStatus.ACTIVE,
+			};
+			const filteredWhere = {
+				...auditWhere,
+				...(source && { source: source as ToolSource }),
+				...(type && { type: type as FileType }),
+				...(search && {
+					OR: [
+						{
+							name: {
+								contains: search,
+								mode: "insensitive" as const,
+							},
+						},
+						{
+							path: {
+								contains: search,
+								mode: "insensitive" as const,
+							},
+						},
+						{
+							ownerEmail: {
+								contains: search,
+								mode: "insensitive" as const,
+							},
+						},
+					],
+				}),
+				...(isDuplicate !== null && {
+					isDuplicate: isDuplicate === "true",
+				}),
+				...(isPubliclyShared !== null && {
+					isPubliclyShared: isPubliclyShared === "true",
+				}),
+			};
+
+			const [
+				files,
+				total,
+				totalFiles,
+				sizeAggregate,
+				duplicatesCount,
+				publicFilesCount,
+			] = await Promise.all([
 				prisma.file.findMany({
-					where: {
-						auditResultId: latestAudit.id,
-						...(source && { source: source as ToolSource }),
-						...(isDuplicate !== null && {
-							isDuplicate: isDuplicate === "true",
-						}),
-						...(isPubliclyShared !== null && {
-							isPubliclyShared: isPubliclyShared === "true",
-						}),
-					},
+					where: filteredWhere,
 					orderBy: {
 						sizeMb: "desc",
 					},
@@ -56,15 +100,25 @@ export async function GET(req: NextRequest) {
 					take: limit,
 				}),
 				prisma.file.count({
+					where: filteredWhere,
+				}),
+				prisma.file.count({
+					where: auditWhere,
+				}),
+				prisma.file.aggregate({
+					where: auditWhere,
+					_sum: { sizeMb: true },
+				}),
+				prisma.file.count({
 					where: {
-						auditResultId: latestAudit.id,
-						...(source && { source: source as ToolSource }),
-						...(isDuplicate !== null && {
-							isDuplicate: isDuplicate === "true",
-						}),
-						...(isPubliclyShared !== null && {
-							isPubliclyShared: isPubliclyShared === "true",
-						}),
+						...auditWhere,
+						isDuplicate: true,
+					},
+				}),
+				prisma.file.count({
+					where: {
+						...auditWhere,
+						isPubliclyShared: true,
 					},
 				}),
 			]);
@@ -77,6 +131,12 @@ export async function GET(req: NextRequest) {
 					limit,
 					total,
 					totalPages: Math.ceil(total / limit),
+				},
+				stats: {
+					totalFiles,
+					totalSizeMb: sizeAggregate._sum.sizeMb ?? 0,
+					duplicatesCount,
+					publicFilesCount,
 				},
 			});
 		} catch (error) {

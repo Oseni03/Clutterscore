@@ -3,77 +3,62 @@ import { cn } from "@/lib/utils";
 interface ScoreRingProps {
 	score: number;
 	size?: number;
-	strokeWidth?: number;
 	className?: string;
 }
 
+const VIEWBOX = 180;
+const RADIUS = 70;
+const STROKE_WIDTH = 16;
+const CIRCUMFERENCE = RADIUS * 2 * Math.PI;
+
 export function ScoreRing({
 	score,
-	size = 120,
-	strokeWidth = 8,
+	size = 140,
 	className,
 }: ScoreRingProps) {
-	const radius = (size - strokeWidth) / 2;
-	const circumference = radius * 2 * Math.PI;
-	const offset = circumference - (score / 100) * circumference;
-
-	// Color logic based on score
-	// Low score = Bad (Red), High score = Good (Green)
-	// But wait, for "Clutterscore", is high good or bad?
-	// PRD says "Clutterscore (1-100)". Usually higher score = better in these apps (like credit score).
-	// BUT "Clutterscore" sounds like amount of clutter.
-	// Let's assume 100 is PERFECT (Clean), 1 is FILTHY.
-	// Or let's assume it's a hygiene score.
-	// Let's go with 100 = Cleanest.
-
-	const getColor = (s: number) => {
-		if (s >= 80) return "text-emerald-500";
-		if (s >= 50) return "text-yellow-500";
-		return "text-destructive";
-	};
+	const offset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE;
 
 	return (
 		<div
-			className={cn(
-				"relative flex items-center justify-center",
-				className
-			)}
+			className={cn("relative", className)}
 			style={{ width: size, height: size }}
 		>
-			{/* Background Ring */}
-			<svg className="transform -rotate-90 w-full h-full">
+			<svg
+				width={size}
+				height={size}
+				viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
+				role="img"
+				aria-label={`ClutterScore ${score} out of 100`}
+			>
 				<circle
-					className="text-muted/30"
+					cx={VIEWBOX / 2}
+					cy={VIEWBOX / 2}
+					r={RADIUS}
+					fill="none"
+					className="text-border"
 					stroke="currentColor"
-					strokeWidth={strokeWidth}
-					fill="transparent"
-					r={radius}
-					cx={size / 2}
-					cy={size / 2}
+					strokeWidth={STROKE_WIDTH}
 				/>
-				{/* Progress Ring */}
 				<circle
-					className={cn(
-						"transition-all duration-1000 ease-out",
-						getColor(score)
-					)}
+					cx={VIEWBOX / 2}
+					cy={VIEWBOX / 2}
+					r={RADIUS}
+					fill="none"
+					className="text-foreground"
 					stroke="currentColor"
-					strokeWidth={strokeWidth}
-					strokeDasharray={circumference}
-					strokeDashoffset={offset}
+					strokeWidth={STROKE_WIDTH}
 					strokeLinecap="round"
-					fill="transparent"
-					r={radius}
-					cx={size / 2}
-					cy={size / 2}
+					strokeDasharray={CIRCUMFERENCE}
+					strokeDashoffset={offset}
+					transform={`rotate(-90 ${VIEWBOX / 2} ${VIEWBOX / 2})`}
 				/>
 			</svg>
 			<div className="absolute inset-0 flex flex-col items-center justify-center">
-				<span className="text-4xl font-display font-bold tracking-tighter">
+				<span className="font-display text-[40px] font-semibold leading-none tracking-[-0.03em]">
 					{score}
 				</span>
-				<span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mt-1">
-					Score
+				<span className="mt-1 text-[11px] text-muted-foreground">
+					out of 100
 				</span>
 			</div>
 		</div>

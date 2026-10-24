@@ -1,5 +1,5 @@
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Crown, Loader2, RefreshCw } from "lucide-react";
 
 interface NoPlaybooksMessageProps {
 	onRunAudit: () => void;
@@ -15,42 +15,41 @@ export default function NoPlaybooksMessage({
 	onUpgrade,
 }: NoPlaybooksMessageProps) {
 	return (
-		<div className="col-span-2">
-			<div className="text-center py-12 md:py-20 border rounded-lg bg-muted/20">
-				<div className="text-4xl md:text-5xl mb-4">✨</div>
-				<h3 className="text-lg md:text-xl font-semibold mb-2">
-					No Playbooks Yet
-				</h3>
-				<p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto px-4">
-					Run your first audit to generate automated cleanup playbooks
-					for your workspace.
-				</p>
-				{isThrottled ? (
-					<div className="space-y-3">
-						<p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-							Monthly audit limit reached
-						</p>
-						<Button onClick={onUpgrade} variant="default">
-							<Crown className="mr-2 h-4 w-4" />
-							Upgrade for Unlimited Audits
-						</Button>
-					</div>
-				) : (
-					<Button onClick={onRunAudit} disabled={isAuditRunning}>
-						{isAuditRunning ? (
-							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Running Audit...
-							</>
-						) : (
-							<>
-								<RefreshCw className="mr-2 h-4 w-4" />
-								Run First Audit
-							</>
-						)}
-					</Button>
-				)}
-			</div>
+		<div className="flex flex-col items-center rounded-xl border border-border bg-background px-6 py-16 text-center sm:px-8">
+			<div
+				aria-hidden="true"
+				className="size-[88px] rounded-full bg-orb"
+			/>
+			<h2 className="mt-6 font-display text-[28px] font-semibold tracking-[-0.03em]">
+				No playbooks yet
+			</h2>
+			<p className="mt-3 max-w-[420px] text-muted-foreground">
+				Playbooks are drafted after an audit. Run one to see safe cleanup
+				actions for your workspace.
+			</p>
+			{isThrottled ? (
+				<Button
+					onClick={onUpgrade}
+					className="mt-6 h-12 px-7"
+				>
+					Upgrade plan
+				</Button>
+			) : (
+				<Button
+					onClick={onRunAudit}
+					disabled={isAuditRunning}
+					className="mt-6 h-12 rounded-full bg-lime px-7 text-[15px] font-semibold text-ink hover:bg-lime/85"
+				>
+					{isAuditRunning ? (
+						<>
+							<Loader2 className="size-4 animate-spin" />
+							Running audit...
+						</>
+					) : (
+						"Run audit"
+					)}
+				</Button>
+			)}
 		</div>
 	);
 }

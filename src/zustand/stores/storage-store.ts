@@ -6,10 +6,12 @@ export interface StorageStats {
 	totalQuotaGb: number;
 	wastedStorageGb: number;
 	estimatedMonthlyCost: number;
+	duplicateCount: number;
+	publicCount: number;
 	largestWaster: {
 		type: string;
 		sizeGb: number;
-		location: string;
+		source: string | null;
 	};
 }
 
@@ -17,7 +19,6 @@ export interface StorageDistribution {
 	name: string;
 	value: number;
 	sizeGb: number;
-	color: string;
 }
 
 export interface StorageState {
@@ -26,9 +27,9 @@ export interface StorageState {
 	lastUpdated: Date | null;
 
 	// Actions
-	setStats: (stats: StorageStats) => void;
+	setStats: (stats: StorageStats | null) => void;
 	setDistribution: (distribution: StorageDistribution[]) => void;
-	setLastUpdated: (date: Date) => void;
+	setLastUpdated: (date: Date | null) => void;
 	reset: () => void;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Building2, ChevronsUpDown, Plus } from "lucide-react";
+import { ChevronsUpDown, Plus } from "lucide-react";
 
 import {
 	DropdownMenu,
@@ -32,7 +32,6 @@ import { useOrganizationStore } from "@/zustand/providers/organization-store-pro
 import { getPlanByTier } from "@/lib/subscription-plans";
 import { Member } from "@/types";
 import { Organization } from "@prisma/client";
-import Logo from "./logo";
 import { logger } from "@/lib/logger";
 
 export function TeamSwitcher() {
@@ -47,48 +46,54 @@ export function TeamSwitcher() {
 	} = useOrganizationStore((state) => state);
 	const [dialogOpen, setDialogOpen] = React.useState(false);
 
-	const handleChangeOrganization = async (organizationId: string) => {
-		try {
-			const { error, data } = await authClient.organization.setActive({
-				organizationId,
-			});
+	const handleChangeOrganization = React.useCallback(
+		async (organizationId: string) => {
+			try {
+				const { error, data } = await authClient.organization.setActive({
+					organizationId,
+				});
 
-			if (error) {
-				logger.error("Error changing active org:", error);
-				toast.error("Failed to switch organization");
-				return;
-			}
+				if (error) {
+					logger.error("Error changing active org:", error);
+					toast.error("Failed to switch organization");
+					return;
+				}
 
-			const isAdmin = !!data?.members?.find(
-				(member) =>
-					member.userId == session?.user?.id && member.role == "admin"
-			);
-
-			if (!error && data) {
-				// Use the sync function to update state
-				setOrganizationData(
-					data as Organization,
-					(data?.members as Member[]) || [],
-					data?.invitations || []
+				const isAdmin = !!data?.members?.find(
+					(member) =>
+						member.userId == session?.user?.id &&
+						member.role == "admin"
 				);
-				loadSubscription(data.id);
-				setAdmin(isAdmin);
-			}
 
-			toast.success("Organization switched successfully");
-		} catch (error) {
-			logger.error("Failed to switch organization:", error);
-			toast.error("Failed to switch organization");
-		}
-	};
+				if (!error && data) {
+					// Use the sync function to update state
+					setOrganizationData(
+						data as Organization,
+						(data?.members as Member[]) || [],
+						data?.invitations || []
+					);
+					loadSubscription(data.id);
+					setAdmin(isAdmin);
+				}
+
+				toast.success("Organization switched successfully");
+			} catch (error) {
+				logger.error("Failed to switch organization:", error);
+				toast.error("Failed to switch organization");
+			}
+		},
+		[session?.user?.id, setAdmin, setOrganizationData, loadSubscription]
+	);
 
 	React.useEffect(() => {
 		if (!activeOrganization && organizations && organizations?.length > 0) {
 			handleChangeOrganization(organizations[0].id);
 		}
-	}, [activeOrganization, organizations]);
+	}, [activeOrganization, organizations, handleChangeOrganization]);
 
 	const plan = getPlanByTier(activeOrganization?.subscriptionTier || "free");
+	const workspaceInitial =
+		activeOrganization?.name?.charAt(0).toUpperCase() || "C";
 
 	return (
 		<Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
@@ -98,18 +103,20 @@ export function TeamSwitcher() {
 						<DropdownMenuTrigger asChild>
 							<SidebarMenuButton
 								size="lg"
-								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+								className="h-12 rounded-md bg-muted px-2.5 hover:bg-border data-[state=open]:bg-border"
 							>
-								<Logo />
+								<span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-ink text-sm font-semibold text-paper">
+									{workspaceInitial}
+								</span>
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">
+									<span className="truncate font-semibold">
 										{activeOrganization?.name}
 									</span>
-									<span className="truncate text-xs">
-										{plan ? `${plan.name}` : "Free"}
+									<span className="truncate text-xs text-muted-foreground">
+										{plan ? `${plan.name} plan` : "Free plan"}
 									</span>
 								</div>
-								<ChevronsUpDown className="ml-auto" />
+								<ChevronsUpDown className="ml-auto size-4" />
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent
@@ -129,8 +136,8 @@ export function TeamSwitcher() {
 									}
 									className="gap-2 p-2"
 								>
-									<div className="flex size-6 items-center justify-center rounded-md border">
-										<Building2 className="size-3.5 shrink-0" />
+									<div className="flex size-6 items-center justify-center rounded-sm bg-ink text-[11px] font-semibold text-paper">
+										{org.name.charAt(0).toUpperCase()}
 									</div>
 									{org.name}
 									<DropdownMenuShortcut>
@@ -147,7 +154,7 @@ export function TeamSwitcher() {
 									<Plus className="size-4" />
 								</div>
 								<div className="text-muted-foreground font-medium">
-									Add Workspace
+									Create workspace
 								</div>
 							</DropdownMenuItem>
 						</DropdownMenuContent>
@@ -156,7 +163,7 @@ export function TeamSwitcher() {
 					{/* Dialog Content */}
 					<DialogContent showCloseButton={true}>
 						<DialogHeader>
-							<DialogTitle>Create Tenanat</DialogTitle>
+							<DialogTitle>Create workspace</DialogTitle>
 							<DialogDescription>
 								Create a new workspace to get started.
 							</DialogDescription>

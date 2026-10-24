@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 			// Calculate estimated cost ($0.10 per GB per month)
 			const estimatedMonthlyCost = wastedStorageGb * 0.1;
 
-			// Find largest waster by type
+			// Group all files by type
 			const typeGroups = files.reduce(
 				(acc, file) => {
 					const type = file.type;
@@ -73,9 +73,51 @@ export async function GET(req: NextRequest) {
 				{} as Record<FileType, { sizeMb: number; count: number }>
 			);
 
-			const largestType = Object.entries(typeGroups).sort(
+			// Find the largest waster among wasted files, then fall back to
+			// the largest type overall when nothing is considered waste.
+			const wastedTypeGroups = wastedFiles.reduce(
+				(acc, file) => {
+					acc[file.type] = (acc[file.type] ?? 0) + file.sizeMb;
+					return acc;
+				},
+				{} as Partial<Record<FileType, number>>
+			);
+
+			const wastedTypeEntries = Object.entries(wastedTypeGroups) as [
+				FileType,
+				number,
+			][];
+			const typeEntries = Object.entries(typeGroups) as [
+				FileType,
+				{ sizeMb: number; count: number },
+			][];
+
+			const largestWastedType = wastedTypeEntries.sort(
+				([, a], [, b]) => b - a
+			)[0];
+			const largestOverallType = typeEntries.sort(
 				([, a], [, b]) => b.sizeMb - a.sizeMb
 			)[0];
+
+			const largestTypeKey =
+				largestWastedType?.[0] ?? largestOverallType?.[0];
+			const largestWasterSize =
+				largestWastedType?.[1] ?? largestOverallType?.[1].sizeMb ?? 0;
+			const largestTypeFiles = largestTypeKey
+				? files.filter((file) => file.type === largestTypeKey)
+				: [];
+
+			const sourceGroups = largestTypeFiles.reduce(
+				(acc, file) => {
+					acc[file.source] = (acc[file.source] ?? 0) + file.sizeMb;
+					return acc;
+				},
+				{} as Partial<Record<string, number>>
+			);
+
+			const largestSource = (
+				Object.entries(sourceGroups) as [string, number][]
+			).sort(([, a], [, b]) => b - a)[0]?.[0];
 
 			// Calculate distribution
 			const totalSize = Object.values(typeGroups).reduce(
@@ -86,7 +128,10 @@ export async function GET(req: NextRequest) {
 			const distribution = Object.entries(typeGroups)
 				.map(([type, data]) => ({
 					name: type.charAt(0) + type.slice(1).toLowerCase(),
-					value: Math.round((data.sizeMb / totalSize) * 100),
+					value:
+						totalSize > 0
+							? Math.round((data.sizeMb / totalSize) * 100)
+							: 0,
 					sizeGb: data.sizeMb / 1024,
 				}))
 				.sort((a, b) => b.sizeGb - a.sizeGb);
@@ -103,7 +148,8 @@ export async function GET(req: NextRequest) {
 				.slice(0, 10);
 
 			// Estimate quota (you might want to get this from organization settings)
-			const totalQuotaGb = Math.ceil(totalUsedGb * 1.2); // 20% buffer
+			const totalQuotaGb =
+				totalUsedGb > 0 ? Math.max(Math.ceil(totalUsedGb * 1.2), 1) : 0;
 
 			const analytics = {
 				stats: {
@@ -111,10 +157,15 @@ export async function GET(req: NextRequest) {
 					totalQuotaGb,
 					wastedStorageGb,
 					estimatedMonthlyCost,
+					duplicateCount: files.filter((f) => f.isDuplicate).length,
+					publicCount: files.filter((f) => f.isPubliclyShared).length,
 					largestWaster: {
-						type: largestType ? largestType[0] : "Unknown",
-						sizeGb: largestType ? largestType[1].sizeMb / 1024 : 0,
-						location: "Multiple folders",
+						type: largestTypeKey
+							? largestTypeKey.charAt(0) +
+								largestTypeKey.slice(1).toLowerCase()
+							: "Unknown",
+						sizeGb: largestWasterSize / 1024,
+						source: largestSource ?? null,
 					},
 				},
 				distribution,
